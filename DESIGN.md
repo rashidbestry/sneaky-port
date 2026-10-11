@@ -32,6 +32,8 @@ Save versioned YAML profiles. File loading and dashboard edits use the same vali
 
 Save each run's raw observations as JSONL and its summary/settings snapshot as JSON, with CSV export for analysis. Preserve enough raw evidence to recompute summaries, including incomplete outcomes. Exact result schemas and file lifecycle remain open under T14; this does not adopt optional S05's future-proxy recommendation profile.
 
+Confirmed on 2026-10-11 (T15): traffic must be configurable, including packet/payload size, payload content, burst timing, directional rates, and run timing, with an ordered sequence of different traffic phases. Each phase supports independent directional steady/repeating-burst settings, burst duration/gap/rate, and payload size/content. Detailed boundary rules and example values are discussed in the contract below; numerical defaults have not been selected. Configurable workloads do not adopt S04's automated size/rate sweeps.
+
 Support tool-generated pairing setup and user-provided TLS certificates. Pairing information is transferred through an already trusted channel and imported into the client dashboard; verify the owned server's identity explicitly and authenticate authorized clients. Keep the server's private identity key on the server and exclude reusable credentials/private keys from reports. User-provided certificates require explicit identity/trust validation; native protocol credentials and recursive-resolver authentication remain distinct. Detailed enrollment, storage, rotation/revocation, and certificate lifecycle remain open under T09/T14. Chart library/layout and exact Linux version targets also remain open.
 
 ## Authentic protocol coverage
@@ -120,7 +122,7 @@ Repeat and alternate matched profiles against the same owned server. Match appli
 
 Compare idle and externally generated busy-network conditions, with direction and load recorded. Record CPU pressure, scheduling lag, interfaces, MTU assumptions, local errors, and network changes. A host timing problem must not automatically be diagnosed as ISP jitter.
 
-FPS quality favors consistent useful delivery, low tail latency/jitter, and few spikes/stalls. The proposed evaluation considers configurable timeliness criteria first, then latency/stability; a numerical score or weighting is not finalized. Keep thresholds, minimum sample evidence, and ranking policy transparent and configurable. Ties/inconclusive outcomes are valid. Failed, unsupported, canceled, insufficient, or incomplete profiles stay visible and cannot win.
+FPS quality favors consistent useful delivery, low tail latency/jitter, and few spikes/stalls. Confirmed on 2026-10-11 (T18): present deadline misses first, then p95/p99 RTT and variation; show ties/inconclusive results and no combined score. Keep thresholds, minimum sample evidence, and ranking policy transparent and configurable; those details remain open. Failed, unsupported, canceled, insufficient, or incomplete profiles stay visible and cannot win.
 
 A winner applies to the measured server/path/workload/time. It is not a universally perfect protocol or proof of improvement on the unmeasured server-to-game-server leg.
 
@@ -136,6 +138,116 @@ Retain JSONL raw observations, a JSON summary/settings snapshot, and CSV export 
 - Reconciled totals, denominators, distribution sample counts, spikes/stalls, setup/recovery outcomes, environmental limits, and incomplete evidence.
 
 Validate intended server identity and session binding appropriately for each mode. Do not log credentials, private keys, or reusable authentication material. A machine-readable winning profile for the future proxy remains an optional backlog proposal.
+
+## Measurement contract draft
+
+Roadmap action 2's documentation milestone completed on 2026-10-11. T14's independent bidirectional data plus correlated receipts, carrying information in the protocol payload, T15's configurable steady/burst traffic and ordered phases, and T18's presentation order are confirmed. This section documents the conceptual contract, examples, and acceptance checks; proposed detailed mechanics and numerical examples remain explicitly open in [CHOICES.md](CHOICES.md#measurement-contract-discussion). No numerical defaults were accepted. Nothing here is a runnable profile, final wire/API schema, or implementation authorization. All authentic protocol/DNS modes remain in scope; the eventual first implementation slice is still undecided.
+
+### Run lifecycle and identities
+
+Proposed lifecycle: validate profile and pairing, prepare managed endpoints, authenticate/verify the intended server, record setup/capabilities, warm up, measure, stop generating new data, drain during grace, reconcile/finalize, and clean up owned resources. Keep setup/handshake and warmup samples separate from established-session statistics. Display errors at the phase where they occur. Cancellation stops new work and triggers bounded draining/cleanup; preserve a partial report with its actual observation window.
+
+Freeze a validated, secret-free settings snapshot for each run. Edits affect a later run; saving a profile is explicit. Both endpoints agree on workload and phase definitions before sending. Each host uses its own monotonic phase anchor; do not claim synchronized phase starts or subtract the two anchors. Record actual phase durations and start uncertainty. A reconnect creates a new session/connection segment rather than concealing setup time inside steady-delivery metrics; retry policy remains open.
+
+Proposed logical identity: schema version, run ID, session/connection-segment ID, lifecycle phase, workload-phase ID, origin direction, message kind, and per-origin sequence number. A receipt references the original data identity. Sequence numbers cannot be reused within a session; fragments, retransmissions, and duplicate receipts retain the original logical identity. Transport-specific framing and DNS fragmentation/encoding belong to later adapter design. Reject malformed, foreign-session, and unauthenticated data as appropriate to the real protocol; a matching run ID alone is not authentication.
+
+### Independent traffic and timing boundaries
+
+Each endpoint schedules its own data messages at the configured rate, independent of received data or receipts. The receiver returns a correlated receipt for each valid data message; receipt traffic is additional overhead and cannot replace independently ready downstream data. Record receipt sizes/counts and adapter polling/retry traffic separately from offered application payload. A protocol unable to meet a requested workload reports that limitation rather than silently lowering it.
+
+Confirmed on 2026-10-11 (T14): use independently scheduled data in both directions plus correlated application receipts, with information carried in the real protocol payload. The logical data payload contains measurement metadata and configurable test content; the receipt payload identifies the received message and carries the receiver-local processing interval when available. Proposed metadata concepts are version, run/session/workload-phase identity, origin direction, message kind, sequence, and content length; exact names, encoding, and widths remain open. Carry these through the authentic adapter, including valid DNS encoding for DNS modes. Native transport acknowledgments alone do not establish receipt of a complete logical application message. Payload identities do not replace protocol-appropriate authentication.
+
+Keep configured test-content bytes, encoded measurement-metadata bytes, total logical message bytes, receipt bytes, and outer transport overhead distinct. In the illustrative 128-byte workload, 128 bytes means test content, with metadata added separately; the dashboard must label that boundary clearly. Configurable content must not overwrite mandatory identities/framing. Sender-local timing records remain available for RTT recomputation; any transmitted timing values have an explicit host-local origin/units and cannot be subtracted across hosts without calibration. Do not put reusable credentials/private keys into measurement payloads or reports.
+
+T14 explanation: client data message C1 goes to the server, which replies with a small receipt saying it received C1. The client measures elapsed time from sending C1 to receiving that receipt using its own clock. Separately, the server generates data message S1 according to its own workload schedule, and the client sends a receipt for S1. S1 is not merely the reply to C1. Both schedules continue while earlier receipts are outstanding. These application receipts are additional traffic, including over transports that already have their own acknowledgments. Missing data and missing receipts have different meanings: receiver records can show C1 arrived even if its receipt never returned. Receipt size, adapter mapping, and overhead limits remain open for integration review.
+
+For each scheduled slot, record planned local time, submission attempt/completion, outcome, and queue/scheduling delay. Record receiver-local arrival and receipt submission times. Proposed elapsed RTT boundaries are original submission attempt to receipt arrival at the origin; also retain scheduled-slot-to-receipt duration for the scheduled-origin deadline. Submission acceptance time and duration remain separate evidence: an attempt or accepted write does not prove on-wire transmission. Receipts include the receiver's local arrival-to-receipt-submission interval for optional processing correction; invalid/missing correction stays explicit.
+
+Use bounded outstanding work and queues; exact limits and skip/block behavior await T14/T15 decisions. Scheduling continues to account for every planned slot under backpressure. No unbounded catch-up burst or hidden reduction of offered rate. Warmup and main-phase messages have distinct phase identities; a warmup response arriving in the main phase does not enter main-phase RTT statistics.
+
+Without calibrated cross-host clocks, report directional send/arrival counts, receiver inter-arrival gaps, ordering, and local queue durations. Local receipt RTT is round-trip evidence from that direction's origin, not a one-way delay. A DNS downstream datum can become ready at the server before any poll; record server-local ready-to-dispatch queue residence and polling costs separately, without inventing ready-to-client one-way latency. The exact receipt mapping for every adapter remains an integration question.
+
+### Accounting and summary concepts
+
+Maintain separate data-delivery and receipt/RTT ledgers in each origin direction. Preserve events so later arrivals can revise classifications without erasing history.
+
+| Ledger / concept | Required meaning |
+| --- | --- |
+| Planned slots | Every scheduled main-phase datum, including locally failed or skipped slots |
+| Submission | Attempted, accepted, locally failed, skipped, or pending/unknown; retain partial-stream-write evidence and uncertainty |
+| Data arrivals | Unique accepted identities seen at the receiver; duplicate arrivals separate; identify late/out-of-window arrivals |
+| Reconciled missing data | Accepted identities absent from complete receiver evidence at the observation cutoff; report missing application data, not proven on-wire packet loss |
+| Receipt completion | First valid receipt at the origin; duplicates do not add samples; receiver data receipt and origin receipt completion can differ |
+| Deadline outcome | On-time, completed late, unresolved at cutoff, locally failed/skipped, or unknown; a late completion remains a deadline miss |
+| Ordering | Within one origin/session/phase, first-arrival sequence below the highest previously seen is reordered; duplicates separate. This is application ordering, not underlying packet ordering. |
+| RTT variation | Proposed absolute differences between adjacent completed RTT samples ordered by original sequence; report pair count and gaps/missing sequences. Distinct from receiver inter-arrival variation. |
+
+Proposed scheduled-slot miss fraction: (late completions + unresolved receipts + locally failed/skipped slots) / planned slots, only when the origin ledger is complete through the declared cutoff. Show the components, plus accepted-submission miss fraction separately. Pending/uncertain writes stay explicit; do not force them into a definitive category. If a run is canceled or evidence is unfinished, report the known counts/window and an incomplete outcome rather than presenting the intended full-run fraction.
+
+Proposed unreliable data-missing fraction: missing accepted identities / accepted submissions, only with complete compatible sender/receiver records and observation windows; show arrivals, duplicates, and cutoff alongside it. Unmatched identities or ambiguous writes require reconciliation warnings. Without remote evidence, missing directional delivery is unknown even when local RTT outcomes are available. Eventual reliable-stream delivery never becomes a zero network-packet-loss claim.
+
+Keep elapsed RTT and scheduled-origin completion distributions separate, with on-time/late/unresolved counts adjacent. Proposed percentile method: nearest rank on sorted completed samples, rank ceil(p * n), with sample count and unrounded values retained for recomputation. Small samples and missing slow responses limit tail conclusions. Spike baseline/threshold/grouping and stall start/end rules remain unresolved; do not produce arbitrarily defined spike scores or imply S02 is adopted.
+
+### Profile, result, and dashboard fields
+
+Confirmed T15 controls: an ordered list of traffic phases, each with its duration and independent steady or repeating-burst settings per direction, application payload byte length/content, intra-burst message rate, burst duration, and gap between bursts. Warmup, RTT deadline, and final grace are also configurable. Keep size/content choices reproducible; literal bytes or deterministic patterns with a recorded seed are candidate content options, not a selected generator API. Record active-message rate and whole-phase average separately for bursts; intentional gaps are not skipped probes. Exact burst boundary/rounding rules, phase-transition behavior, and deadline inheritance/overrides remain open.
+
+Illustrative phase sequence, with no defaults selected: 20 s steady traffic with 128-byte payloads at 60 messages/sec each way; 5 s repeating bursts with 256-byte payloads, 200 ms active/800 ms gap and 120 messages/sec while active in each direction; then 10 s with no new scheduled data. Values and directional patterns are editable. Proposed accounting attributes a datum and its receipt/deadline to the originating workload phase even if they arrive in a later phase; a quiet phase can still receive outstanding traffic. Show per-phase counts/distributions and the complete sequence in reports, alongside whole-run totals. Match phase sequences when comparing profiles; aggregate statistics cannot conceal a phase-specific failure. Schedule boundaries use each host's local monotonic timeline; phase support does not establish cross-host synchronization.
+
+Distinguish configured application payload length, total logical message length including measurement framing, and observed outer packet sizes when available. Protocol headers, encryption, segmentation, MTU, and DNS encoding can change outer sizes. A request for an exact outer packet size requires adapter capability/validation; report unsupported or observed differences rather than claiming the payload length forces that wire size. Control limits must be configurable and explicit, with invalid or infeasible combinations rejected/reported instead of silently rewritten.
+
+Proposed profile concepts: schema/profile identity; server/pairing reference; authentic adapter and inner mode; direct/recursive DNS path and resolver/zone inputs when relevant; requested listener/destination/source ports; independent upstream/downstream outer DSCP; payload/rates; warmup/measurement/deadline/grace; requested resource limits and reconnect policy. Validate units, bounds, compatibility, and unsupported requests through the same model in the dashboard and profile loader. Do not place reusable credentials in a results snapshot.
+
+Proposed raw-event concepts: event/schema version, run/session/phase/message identity, endpoint role, host-local time origin and monotonic offset, event kind, submission/arrival/receipt outcome, bytes, durations, error, and evidence source. Wall-clock labels are separate. Preserve units, explicit unavailable/unknown values, observation cutoffs, and remote-record completeness. Final encoding, exact field names, API operations, and version-migration policy await T14.
+
+The JSON summary/settings snapshot must identify tool/adapter/platform versions, workload requested/observed, protocol/path, ports requested/bound/remotely observed, setup durations, phase/cancellation outcome, directional accounting, distributions/denominators, queue/scheduling limits, and environmental changes. For priority, retain requested/applied/sender-observed/receiver-observed values separately for each direction, with outer/inner and DNS hop locations. Summary metrics must link to the raw records from which they were derived. CSV export retains units, counts, missing values, and run identity; it is not S05's future-proxy configuration.
+
+Proposed dashboard controls: import/view pairing; choose protocol/DNS mode, ports and both directional markings; add/reorder/remove traffic phases and edit their durations, payload size/content, directional rates, steady/burst timing and run/deadline/grace timing, and explicitly save workload; validate and show capability limitations; start/cancel; display lifecycle/current workload phase, progress and live provisional counters; inspect/export finalized or partial results including per-phase outcomes; compare selected matched runs. Show unsaved edits and frozen running settings distinctly. Charts cannot drive scheduling; chart library/layout and live-update cadence remain open under T13/T14. API transport/endpoints and local request protection still need selection.
+
+### Pairing and user-provided certificate flow
+
+Generated setup: server produces protocol-appropriate public identity/trust information and client-specific authorization setup; user transfers a versioned pairing bundle through an already trusted channel, then imports it in the local client dashboard. Preview intended server address/identity and supported modes before connecting. Validate bundle format and endpoint identity, then establish client authorization. Retain native protocol credentials; do not substitute a TLS certificate for WireGuard keys or imply raw UDP is TLS. No server private identity key belongs in the transferred bundle.
+
+User-provided TLS setup: user supplies certificate chain/private key to the server and configures expected endpoint name plus trusted CA or explicitly selected identity mechanism on the client. Validate endpoint name/trust and report certificate errors; never bypass verification after failure. Client authorization remains a separate step. Do not export keys or reusable enrollment/authentication material in logs/reports; use non-secret references/identifiers there. Encrypted recursive-resolver trust remains independent of owned-server pairing.
+
+Remaining decisions: exact bundle format and enrollment proof, authorization for each non-TLS mode, secret storage and file access, expiry, rotation/revocation, renewal/reload, and rollback on failed replacement. Wrong identity, malformed setup, expired credentials, or missing authorization prevents the affected session, with explicit errors. Protocol mapping and credential mechanics require later integration review; this flow is a design draft rather than a validated security implementation.
+
+### Provisional example workload and report
+
+Illustrative T15 profile in prose, with no numerical defaults selected: one owned server, real UDP data mode, explicitly chosen available destination port and automatic client source port, requested outer DSCP 0 in both directions; 128-byte test content excluding measurement metadata/framing, with content recorded; one steady workload phase at 60 independently generated data messages/sec per direction; 5 s warmup, 60 s measurement, 100 ms scheduled-origin receipt RTT deadline, 5 s final grace. Receipt traffic adds overhead under the confirmed T14 pattern. All workload values and phase sequences are editable. This example chooses neither a default port nor the first implementation slice; stream/tunnel/DNS modes use the same accounting concepts with their actual overhead and limits.
+
+The 60 s main phase schedules 3,600 slots per direction, at local offsets k/60 seconds for k = 0 through 3,599. Warmup is excluded. Stop generating data at each endpoint's main-phase end, continue bounded receipt/observation work through grace, and record actual cutoffs; never assume the two local cutoff timestamps are identical.
+
+The following is a synthetic accounting example, not observed performance or predicted success:
+
+| Main-phase field | Client-origin data | Server-origin data |
+| --- | --- | --- |
+| Planned / accepted / local failed / skipped | 3,600 / 3,588 / 4 / 8 | 3,600 / 3,600 / 0 / 0 |
+| Unique receiver arrivals / extra duplicates | 3,570 / 3 | 3,600 / 0 |
+| Missing accepted data at cutoff | 18 / 3,588, about 0.50% | 0 / 3,600 |
+| Receipts on time / completed late / unresolved | 3,500 / 40 / 48 | 3,600 / 0 / 0 |
+| Scheduled-slot deadline misses | 100 / 3,600, about 2.78% (12 local + 40 late + 48 unresolved) | 0 / 3,600 |
+| Accepted-submission deadline misses | 88 / 3,588, about 2.45% | 0 / 3,600 |
+| Completed elapsed RTT sample count | 3,540, including 40 scheduled-deadline-late completions | 3,600 |
+
+Assume complete reconciled ledgers through grace only for this example. Some data arrived even though its receipt did not; 18 missing data messages and 48 unresolved receipts describe different outcomes. Directional missing-data counts do not establish physical packet-loss counts. RTT values, p95/p99, variation, setup/overhead, ports/priority observations, and environment are absent from this synthetic example and must appear as unavailable rather than fabricated values. It cannot support a winner.
+
+Confirmed T18 presentation: display scheduled-deadline misses and their causes first, then p95/p99 completed RTT and variation with counts, data delivery, scheduling limits, and actual settings; show ties/inconclusive results and no combined score. Use repeated matched measurements before conclusions. Automatic screening, repetition defaults, material-difference/evidence thresholds, and an additional confidence model remain unselected; the presentation order alone does not establish an automatic winner.
+
+### Contract acceptance examples
+
+These are required checks for a later authorized implementation, not tests performed now:
+
+- A blocked stream still accounts for all planned slots and reports local backpressure/skips; its eventual delivery does not prove zero network loss.
+- A received datum with a missing receipt contributes to receiver delivery but not completed RTT; duplicate data/receipts do not inflate unique/sample counts.
+- Real data/receipt payloads carry their logical identities through each adapter. Edited test content preserves metadata/framing; reports separately account for content, metadata, receipts, and observable transport bytes. Invalid identity/content-length records cannot become valid delivery samples.
+- A receipt at 120 ms after its scheduled slot with a 100 ms deadline is late, remains a deadline miss, and enters completed distributions; an arrival after final grace retains its event/window identity without silently rewriting the finalized cutoff.
+- Warmup/foreign-session traffic cannot contaminate main-phase samples; both origins generate data without waiting for incoming probes.
+- Reordering/editing traffic phases changes the saved next-run schedule; actual planned slots match the selected sequence. Late receipts retain the originating workload-phase identity, intentional burst/quiet gaps are not skipped probes, and phase summaries reconcile with whole-run counts.
+- Missing remote evidence makes directional loss unknown; cancellation yields a partial report; raw replay recomputes the declared summary and denominator.
+- Host wall-clock changes do not change elapsed timing; the two hosts' monotonic values never produce an uncalibrated one-way claim; invalid correction remains visible.
+- Busy/unsupported ports, unavailable outer markings, invalid pairing/certificates, and cleanup failures have explicit outcomes with no silent substitutions; cleanup preserves user-owned resources.
+- The synthetic report balances planned/submission and receipt counts; dashboard saving/editing does not alter the active snapshot; exports preserve unknowns and exclude secrets.
 
 ## Validation before support/performance claims
 

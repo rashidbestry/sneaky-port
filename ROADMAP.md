@@ -14,15 +14,17 @@ Outcome: confirmed answers and remaining uncertainties recorded in `CHOICES.md`,
 
 Confirmed: one executable per OS/CPU with client/server modes (T03), embedded plain HTML/CSS/JavaScript (T04/T13), Windows 11 client/Linux server roles on ARM64/x86-64 with broad mainstream Linux distribution coverage (T12), shared-engine boundaries (T06), versioned YAML profiles with shared validation/explicit save (T07), JSONL/JSON results with CSV export (T08), and generated pairing plus user-provided TLS certificates (T09). [Foundation discussion](CHOICES.md#foundation-discussion) records answers and alternatives. Exact schemas/pairing mechanics and chart/layout needs follow in the contract discussion; Linux version/support boundaries follow in the integration review. Completion is a design milestone, not implementation authorization.
 
-## 2. Define a small measurement contract
+## 2. Define a small measurement contract (completed)
 
-**State: next action; not started.**
+**State: complete as a documentation milestone, 2026-10-11. Configurable steady/burst traffic with ordered phase sequences, independent bidirectional data plus receipts carrying payload information, and report presentation confirmed; detailed schemas/defaults/mechanics remain explicitly open.**
 
 Document the first run's lifecycle, message identities, independent directional scheduling, timing boundaries, delivery accounting, result fields, and dashboard controls (T14). Choose an initial configurable workload and comparison criteria (T15, T18), preserving the correctness rules in `DESIGN.md`.
 
 Describe the selected pairing import and user-provided certificate flows sufficiently for the first slice, and identify unresolved credential lifecycle details. Use dashboard control needs to guide later chart/layout choices; do not select a library by assumption.
 
 Outcome: a concrete example test profile and expected report described in documentation, with acceptance checks. No runnable configuration or application code yet.
+
+Outcome recorded: [measurement contract](DESIGN.md#measurement-contract-draft) covers lifecycle, identities, scheduling/timing, data-versus-receipt accounting, logical report/control fields, pairing/certificate flows, an editable prose example workload, a synthetic expected report, and future acceptance checks. [Contract discussion](CHOICES.md#measurement-contract-discussion) distinguishes confirmed T14/T15/T18 answers from unresolved refinements. Numerical examples are not selected defaults; exact schemas, resource/phase policies, credential lifecycle and recommendation evidence rules follow as needed before an implementation slice. Completion does not authorize implementation.
 
 ## 3. Check integration constraints before locking the plan
 
@@ -39,6 +41,8 @@ Outcome: documented capability expectations and gaps. Source/API review is not p
 **State: planned; implementation requires explicit user authorization.**
 
 Use the preceding answers to propose a small, reviewable first deliverable and its checks. A possible starting point is the shared measurement engine, managed client/server lifecycle, local dashboard, and real UDP/TCP exchanges with configurable ports and directional priority capability reporting (parts of F01, F02, F05-F07). This starting scope is a suggestion, not an accepted implementation order.
+
+Resolve the precise schemas, resource/phase policies, credential mechanics, and comparison evidence rules needed by the selected slice, using action 3's integration findings. Keep other unresolved choices explicit rather than inventing defaults.
 
 Outcome: agreed scope, success criteria, and explicit authorization before implementation begins. Once authorized, build and validate that slice, record actual evidence in `WORK_LOG.md`, and update partial feature status in `PROPOSALS.md`.
 
