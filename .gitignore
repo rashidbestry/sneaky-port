@@ -5,3 +5,32 @@
 /client-data/
 /server-data/
 *.exe
+
+# Local pairing exports and edited profiles; reusable examples remain tracked.
+/client-public.json
+/server-public.json
+/readiness.yaml
+/profiles-local/
+
+# Credentials and private keys, including keys generated outside the default data folders.
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*-key
+
+# Local measurement exports and packet captures can contain endpoint/identity details.
+/reports/
+/exports/
+/captures/
+*.pcap
+*.pcapng

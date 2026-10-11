@@ -39,7 +39,7 @@ All workload/timeout/budget settings are explicit; there is no automatically sel
    $env:CGO_ENABLED = "0"
    go build -o .\build\sneaky-port-linux-amd64 ./cmd/sneaky-port
    Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED
-   .\build\sneaky-port.exe client-init -data-dir .\client-data -client-id rashid | Set-Content -Encoding utf8 client-public.json
+   .\build\sneaky-port.exe client-init -data-dir .\client-data -client-id example-client | Set-Content -Encoding utf8 client-public.json
    ```
 
 2. **Transfer through a trusted channel**: copy the Linux binary, [readiness-policy.json](examples/readiness-policy.json) and `client-public.json` into your working directory on the owned Linux server. Review the policy's explicit bindings, ports, timeouts and resource ceilings; its numbers are examples. The server must be reachable on TCP 22220 for SSH and on the selected data port/protocol.
@@ -74,7 +74,9 @@ All workload/timeout/budget settings are explicit; there is no automatically sel
 
 Initialization creates each private key locally and refuses existing identities/key destinations. Add `-key EXISTING_PRIVATE_KEY` to `client-init` or `server-init` to reference an existing compatible key unchanged; encrypted keys prompt in an interactive terminal without echo. Public imports accept UTF-8 with an optional BOM. The app directories are restricted; keep private keys on their originating endpoints.
 
-`server-export -data-dir ./server-data` reprints the public bundle. `server-disable -data-dir ./server-data -client-id rashid` revokes access, including authenticated connections on the next policy authorization poll. To set expiry or re-enable, explicitly edit the public enrollment's `enabled` / optional RFC3339 `expires_at` and run `server-enroll` again. Replacing imported server trust requires trusted re-import with `client-import ... -replace`. Updates serialize with an exclusive store lock and synced same-directory file replacement; a stale lock is left for explicit operator inspection, never stolen automatically. Power-loss durability and nonlocal filesystem behavior are unvalidated.
+Keep local pairing exports and edited profiles out of Git. The root `client-public.json`, `server-public.json`, `readiness.yaml`, default data folders, `profiles-local/`, root report/export/capture folders, `.env` files and common private-key filenames are ignored by [.gitignore](.gitignore). Public keys are safe to transfer through the trusted setup channel, but pairing files and reports can reveal identities, addresses and ports. Review files before publishing, including exports saved under other names; ignore rules do not remove files from existing commits.
+
+`server-export -data-dir ./server-data` reprints the public bundle. `server-disable -data-dir ./server-data -client-id example-client` revokes access, including authenticated connections on the next policy authorization poll. To set expiry or re-enable, explicitly edit the public enrollment's `enabled` / optional RFC3339 `expires_at` and run `server-enroll` again. Replacing imported server trust requires trusted re-import with `client-import ... -replace`. Updates serialize with an exclusive store lock and synced same-directory file replacement; a stale lock is left for explicit operator inspection, never stolen automatically. Power-loss durability and nonlocal filesystem behavior are unvalidated.
 
 ## Run a finite measurement
 
