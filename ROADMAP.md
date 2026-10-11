@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-8 are complete within their stated scopes. **Next: task 9 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-10 are complete within their stated scopes. **Next: task 11 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -58,23 +58,26 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 ## 8. Implement independent UDP sender/receiver workers (completed)
 
-**Complete for one-window UDP component implementation and fixtures.** F02/F07, T06/T15. Independent local schedules, reads and real FIFO writes, bounded events/identities/outstanding admission, reverse receipts and joined cancellation exist. Windows IPv4/IPv6 and Ubuntu/CentOS WSL fixtures, full Go checks, 20 worker race repetitions/full race suite and four target package builds pass. Full phase/ledger integration, TCP and CLI lifecycle remain tasks 9-11. [Evidence](WORK_LOG.md#2026-10-11-independent-udp-workers), [code flow](FLOWCHART.md#independent-udp-workers).
+**Complete for one-window UDP component implementation and fixtures.** F02/F07, T06/T15. Independent local schedules, reads and real FIFO writes, bounded events/identities/outstanding admission, reverse receipts and joined cancellation exist. Windows IPv4/IPv6 and Ubuntu/CentOS WSL fixtures, full Go checks, 20 worker race repetitions/full race suite and four target package builds pass. Task 9 below now supplies phase/ledger integration; TCP and CLI lifecycle remain tasks 10-11. [Evidence](WORK_LOG.md#2026-10-11-independent-udp-workers), [code flow](FLOWCHART.md#independent-udp-workers).
 
-## 9. Integrate phase timing and measurement accounting
+<a id="9-integrate-phase-timing-and-measurement-accounting"></a>
 
-**State: next; not started.**
+## 9. Integrate phase timing and measurement accounting (completed)
 
-Scope: connect the component events/tickets and existing ledger to warmup/main phases, burst/quiet windows, original identities, deadlines and cutoffs. Extend the one-window UDP connection through the agreed multi-phase contract; enforce run-wide outstanding/evidence budgets and preserve local skips, partial writes and interrupted windows.
+**Complete for internal UDP phase/accounting integration and recorded fixtures.** F02/F07, T14/T15/T18. Frozen warmup/main/burst/quiet timelines, run-wide sequences/deadline expiry, reached-slot/admission/write/ticket ledgers, byte-bounded local records, strict cutoffs and RTT/variation/spike/stall analysis exist. Deterministic and Windows/Ubuntu/CentOS IPv4/IPv6 loopback fixtures, ordinary/race Go checks and four builds pass. [Evidence](WORK_LOG.md#2026-10-11-udp-phase-accounting), [code flow](FLOWCHART.md#udp-phase-accounting).
 
-Done when timing/accounting fixtures reconcile all reached slots, admissions/attempts/completions, receiver data and receipts; deadline/cutoff, RTT/variation and spike/stall cases pass. Complete applicable Go checks, comments, flowchart and status/evidence updates, then report task 10 as next. TCP and finite CLI lifecycle remain separate tasks.
+## 10. Connect TCP to the shared workers (completed)
+
+**Complete for internal TCP integration and recorded fixtures.** F02/F07, T06/T14/T15/T18. UDP/TCP now share phase schedules, bounded FIFO workers and accounting. TCP retains complete-frame arrivals, four-byte prefix/partial-byte evidence, queued cancellation and application receipt stalls; underlying packet loss stays unknown. Windows/Ubuntu/CentOS IPv4/IPv6 loopback and injected local blockage/truncation fixtures, ordinary/full race checks, 20 worker/engine race repetitions and four builds pass. [Evidence](WORK_LOG.md#2026-10-11-tcp-integration), [code flow](FLOWCHART.md#udptcp-phase-accounting).
+
+**Next: task 11, finite run lifecycle.** Start/control negotiation, phase marking, grace and finite CLI execution remain unconnected. The caller supplies authenticated transports, local anchors and observation stop; per-phase DSCP changes still reject explicitly. Durable reports/replay and authenticated remote reconciliation remain tasks 12-14. Native ARM64, calibrated one-way, independent impairment and live acceptance stay pending.
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**. Existing primitives are reused; these rows describe integration outcomes rather than new feature acceptance. Tasks 9-11 finish assembling the finite measurement engine in separate checkpoints.
+Every row is a separate task, currently **not started**; task 11 is next. Existing primitives are reused; these rows describe integration outcomes rather than new feature acceptance. Task 11 finishes assembling the finite measurement engine.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 10 | Connect TCP to the shared workers | Blocked/partial writes preserve independent scheduling, complete-frame arrivals and honest stream-stall/unknown packet-loss outcomes |
 | 11 | Connect finite run start/stop lifecycle | Frozen-plan start, phase-specific markings, grace, cancellation/control loss and lease cleanup pass; expose the finite CLI run workflow |
 | 12 | Persist bounded local raw evidence and summaries | Completed and interrupted runs retain exact events/cutoffs within file budgets; finalization does not expose secrets |
 | 13 | Replay and export local reports | Recomputed summaries match raw records; JSON/JSONL/CSV preserve units, decimal precision, unknowns and partial status |

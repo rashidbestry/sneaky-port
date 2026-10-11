@@ -8,9 +8,9 @@ Connection quality means timely delivery, low p95/p99 latency, low jitter, and f
 
 The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
 
-**Current status: foundations, authenticated UDP/TCP readiness and independent UDP worker components implemented; measurement workflow pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: foundations, authenticated UDP/TCP readiness and internal phase-aware UDP/TCP accounting implemented; CLI measurement workflow pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, scheduling/ledger primitives, bounded FIFO queues, local preflight, restricted pairing, key-only embedded SSH, UDP/TCP bind/readiness/leases and one-window UDP schedules/readers/writers with reverse receipts. Full phase/accounting and CLI run integration, live calibration, persisted reports/API/dashboard and acceptance evidence remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [UDP worker evidence](WORK_LOG.md#2026-10-11-independent-udp-workers).
+Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing, key-only SSH readiness/leases and shared UDP/TCP warmup/main/burst/quiet accounting with reverse receipts, deadlines/cutoffs and RTT/variation/spike/stall analysis. TCP includes complete-frame arrivals, prefix/partial-byte evidence and stream stalls; finite CLI execution, phase marking, live calibration, durable reports/API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
 
 ## Run the foundation tools
 

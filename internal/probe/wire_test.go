@@ -3,6 +3,7 @@ package probe
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -64,7 +65,9 @@ func TestTCPFraming(t *testing.T) {
 		t.Fatal("TCP roundtrip")
 	}
 	for n := 0; n < len(copy); n++ {
-		if _, err := ReadTCP(bytes.NewReader(copy[:n])); err == nil {
+		got, err := ReadTCP(bytes.NewReader(copy[:n]))
+		var partial *TCPReadError
+		if got != nil || !errors.As(err, &partial) || partial.Bytes != n {
 			t.Fatalf("accepted partial %d", n)
 		}
 	}

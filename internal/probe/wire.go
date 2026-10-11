@@ -138,19 +138,38 @@ func (f Frame) validate() error {
 	return nil
 }
 
-// ReadTCP rejects oversized lengths before allocation; partial frames are errors.
+// TCPReadError retains consumed stream bytes, including prefix, without a complete arrival.
+type TCPReadError struct {
+	Bytes int
+	Err   error
+}
+
+// Error describes the underlying framing/read failure without exposing partial content.
+func (e *TCPReadError) Error() string { return e.Err.Error() }
+
+// Unwrap preserves EOF/timeout/cancellation classification by callers.
+func (e *TCPReadError) Unwrap() error { return e.Err }
+
+// ReadBytes reports consumed prefix/body bytes; they do not prove logical delivery.
+func (e *TCPReadError) ReadBytes() int { return e.Bytes }
+
+// ReadTCP rejects oversized lengths before allocation; partial frames expose only byte evidence.
 func ReadTCP(r io.Reader) ([]byte, error) {
 	var prefix [4]byte
-	if _, err := io.ReadFull(r, prefix[:]); err != nil {
-		return nil, err
+	read, err := io.ReadFull(r, prefix[:])
+	if err != nil {
+		return nil, &TCPReadError{read, err}
 	}
 	n := binary.BigEndian.Uint32(prefix[:])
 	if n < Overhead || n > TCPMax {
-		return nil, errors.New("invalid TCP frame length")
+		return nil, &TCPReadError{4, errors.New("invalid TCP frame length")}
 	}
 	b := make([]byte, int(n))
-	_, err := io.ReadFull(r, b)
-	return b, err
+	read, err = io.ReadFull(r, b)
+	if err != nil {
+		return nil, &TCPReadError{4 + read, err}
+	}
+	return b, nil
 }
 
 // WriteTCP reports actual bytes including the prefix; callers terminate on partial writes.
