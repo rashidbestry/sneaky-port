@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,6 +74,8 @@ type Server struct {
 	active   string
 	closed   bool
 	wg       sync.WaitGroup
+	store    *control.Store
+	savedMu  sync.Mutex
 }
 
 // Listen validates and snapshots the configured plan before opening only a literal loopback address.
@@ -115,6 +118,22 @@ func Listen(address string, p profile.Plan, runner Runner) (*Server, error) {
 	return s, nil
 }
 
+// ListenWithStore connects saved public configuration/evidence without changing run ownership.
+// The launch profile is a transient fallback; only PUT explicitly persists a profile.
+func ListenWithStore(address string, p profile.Plan, store *control.Store, runner Runner) (*Server, error) {
+	if store == nil {
+		return nil, errors.New("application store required")
+	}
+	if _, err := store.Profile(p.ID); err != nil && !os.IsNotExist(err) {
+		return nil, errors.New("saved launch profile failed validation")
+	}
+	s, err := Listen(address, p, runner)
+	if err == nil {
+		s.store = store
+	}
+	return s, err
+}
+
 // randomID uses cryptographic entropy for session tokens and control handles, never URL secrets.
 func randomID(n int) (string, error) {
 	b := make([]byte, n)
@@ -128,8 +147,15 @@ func (s *Server) URL() string { return "http://" + s.host }
 // Token exposes bootstrap credentials only to the local launcher, never through HTTP.
 func (s *Server) Token() string { return s.token }
 
-// Revision exposes the immutable launch-time profile hash required by explicit start requests.
-func (s *Server) Revision() string { return s.revision }
+// Revision exposes the selected launch ID's current saved hash, or its transient fallback hash.
+// Callers still send that revision explicitly; a later save may make a new start stale.
+func (s *Server) Revision() string {
+	_, revision, err := s.selectedProfile(s.plan.ID)
+	if err != nil {
+		return ""
+	}
+	return revision
+}
 
 // Serve runs the owned listener and cancels/join runs on context or listener failure.
 // Shutdown must have an explicit finite budget; expiration is reported rather than hidden.
@@ -229,12 +255,15 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		reject(w, 400, "", "invalid_request", "request_id", "safe X-Request-ID required")
 		return
 	}
-	if r.URL.EscapedPath() != r.URL.Path || r.URL.RawPath != "" || r.URL.RawQuery != "" && r.URL.Path != "/api/v1/adapters" {
+	if r.URL.EscapedPath() != r.URL.Path || r.URL.RawPath != "" || r.URL.RawQuery != "" && !queryRoute(r.URL.Path) {
 		reject(w, 400, id, "invalid_request", "url", "encoded paths and unexpected queries rejected")
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/api/v1/adapters" {
 		s.adapters(w, r, id)
+		return
+	}
+	if s.saved(w, r, id) {
 		return
 	}
 	if r.Method == http.MethodPost && r.URL.Path == "/api/v1/runs" {
@@ -330,7 +359,7 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 		return
 	}
 	var m mutation
-	if err = control.DecodeObject(b, &m); err != nil || m.Version != 1 || m.RequestID != id || target == "" && (m.ProfileID != s.plan.ID || m.Revision != s.revision) || target != "" && (m.ProfileID != "" || m.Revision != "") {
+	if err = control.DecodeObject(b, &m); err != nil || m.Version != 1 || m.RequestID != id || target == "" && (!profile.SafeID(m.ProfileID) || m.Revision == "") || target != "" && (m.ProfileID != "" || m.Revision != "") {
 		reject(w, 400, id, "invalid_request", "body", "version, identity and frozen profile revision must match")
 		return
 	}
@@ -354,6 +383,11 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 	}
 	var state *runState
 	if target == "" {
+		p, revision, err := s.selectedProfile(m.ProfileID)
+		if err != nil || revision != m.Revision {
+			reject(w, 409, id, "conflict", "profile_revision", "selected profile revision unavailable or stale")
+			return
+		}
 		if s.active != "" {
 			reject(w, 409, id, "conflict", "run", "one finite run already executing")
 			return
@@ -368,10 +402,10 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 			return
 		}
 		ctx, cancel := context.WithCancel(s.ctx)
-		state = &runState{Status{ID: run, ProfileID: s.plan.ID, Revision: s.revision, State: "executing"}, cancel}
+		state = &runState{status: Status{ID: run, ProfileID: p.ID, Revision: revision, State: "executing"}, cancel: cancel}
 		s.runs[run], s.active = state, run
 		s.wg.Add(1)
-		go s.execute(ctx, state)
+		go s.execute(ctx, state, p)
 	} else {
 		var ok bool
 		state, ok = s.runs[target]
@@ -390,10 +424,10 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 
 // execute owns a private frozen plan and publishes only actual final lifecycle/identity/completeness.
 // Request cancellation/disconnect never cancels a run; explicit cancel or process shutdown does.
-func (s *Server) execute(ctx context.Context, state *runState) {
+func (s *Server) execute(ctx context.Context, state *runState, frozen profile.Plan) {
 	defer s.wg.Done()
 	defer state.cancel()
-	b, _ := json.Marshal(s.plan)
+	b, _ := json.Marshal(frozen)
 	p, _ := profile.Decode(bytes.NewReader(b))
 	result, err := s.runner(ctx, p)
 	s.mu.Lock()

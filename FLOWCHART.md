@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected local run controls are implemented. Production clock bounds, configuration/report API and dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API are implemented. Production clock bounds, dashboard/live views, comparisons and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -34,7 +34,7 @@ Entry points: [main.go](cmd/sneaky-port/main.go) (`main`, `run`, `writeJSON`), [
 
 ```mermaid
 flowchart TD
-    A[clientAPI: explicit store key and frozen profile] --> B[Listen: validate literal loopback and snapshot/hash plan]
+    A[clientAPI: explicit store and launch profile; existing key or explicit later generation] --> B[ListenWithStore: validate saved ID and literal loopback; snapshot/hash fallback]
     B --> C[Generate process token; return private local bootstrap JSON]
     C --> D[Serve owned IPv4 or IPv6 HTTP listener]
     D --> E{Loopback peer and exact Host/Origin; valid bearer and request ID?}
@@ -43,20 +43,44 @@ flowchart TD
     F -->|no| X
     F -->|adapters| G[Page compile-time descriptors]
     F -->|status| H[Small immutable lifecycle snapshot]
-    F -->|start/cancel| I[Strict JSON and matching frozen profile revision]
+    F -->|saved configuration/reports| Q[One bounded saved operation; shared validators]
+    F -->|start/cancel| I[Strict JSON with explicit identity and profile revision inputs]
     I --> J{Already accepted request ID?}
     J -->|same command| K[Original acknowledgment; no new operation]
     J -->|different command| X
-    J -->|new| L{History capacity and lifecycle admission?}
+    J -->|new| L{Current profile revision, history capacity and lifecycle admission?}
     L -->|no| X
-    L -->|start| M[Owned run context and private plan; execute control.Run]
+    L -->|start| M[Select saved ID or launch fallback; match revision; private plan; execute control.Run]
     L -->|cancel| N[Cancel only the named active context]
     M --> O[Actual final identity/completeness; release reservation]
     N --> O
     D --> P[Process shutdown: stop admissions and HTTP; cancel and bounded join]
 ```
 
-Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. Configuration/pairing/report API and UI paths remain unimplemented; [operator contract](README.md#protected-local-run-api) records exact bounds.
+Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; dashboard/live views and comparison remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
+
+## Saved configuration and report API
+
+```mermaid
+flowchart TD
+    A[Protected saved route; safe IDs; one disk/replay admission] --> B{Operation}
+    B -->|catalog/read| C[Bounded sorted ID page; validated profile/public pairing/enrollment]
+    B -->|profile validation| D[Shared profile.Decode; normalized fields/hash; no write]
+    B -->|profile save| D
+    D -->|explicit PUT| E[Store lock; expected canonical revision; private synced atomic replacement]
+    B -->|pairing import| F[Bundle.Validate; explicit trust replacement; owned store write]
+    B -->|client key generation| G[InitClient if absent; restrictive managed key; public enrollment only]
+    B -->|report read/export| H[SavedReport; bounded ReplayReport; reconstruct raw accounting]
+    B -->|report import| I[Fixed filename/base64 bytes; private exclusive staging]
+    I --> J[ReplayReport; checksums/schema/cutoffs; validate every supplied file]
+    J -->|valid new ID| K[Publish new directory; preserve source and existing reports]
+    J -->|invalid| L[Reject; remove only owned staging]
+    H --> M[Structured replay or capped JSON/JSONL/CSV attachment]
+    E --> N[Future start selects saved revision; active snapshot stays private]
+    A --> O[Shutdown closes admission and joins storage plus finite runs]
+```
+
+Sources: [routes](internal/localapi/saved.go) (`saved`, `catalog`, `savedBody`, `profileWrite`, `pairingImport`, `keyCreate`, `reportImport`, `reportExport`, `diskReply`), [store](internal/control/saved.go) (`ownedDir`, `SavedIDs`, `Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [trust/key store](internal/control/store.go) (`ImportPairing`, `Pairing`, `InitClient`), [replay](internal/control/replay.go) (`ReplayReport`), [exports](internal/control/export.go) (`ExportReport`), [store fixtures](internal/control/saved_test.go), [HTTP fixtures](internal/localapi/saved_test.go), [real HTTP/SSH report fixtures](cmd/sneaky-port/finite_test.go). Saved bodies cap at 1 MiB including base64 overhead; catalog inspection at 256 entries; replay reads at 8 MiB; export at 16 MiB. Busy saved requests reject with 503. Offline integrity cannot authenticate imported evidence or verify clock bounds; cached reconciliation is excluded. No import resumes traffic or remotely enrolls a client. Remaining UI/comparison paths are tasks 19-21.
 
 ## Persistent trust and endpoint readiness
 
@@ -355,7 +379,7 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Saved configuration/report API, dashboard/SVG, matched comparisons and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved configuration/report API is implemented; dashboard/SVG, matched comparisons and full acceptance remain pending.
 
 ## Authenticated server evidence transfer and reconciliation
 

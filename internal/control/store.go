@@ -500,6 +500,9 @@ func (s *Store) ImportPairing(id string, b Bundle, replace bool) error {
 		return err
 	}
 	defer s.unlock(lock)
+	if _, err = s.ownedDir("pairings", false); err != nil {
+		return err
+	}
 	path := filepath.Join(s.Root, "pairings", id+".json")
 	var previous Bundle
 	if err = readObject(path, &previous); err == nil && !replace {
@@ -515,6 +518,9 @@ func (s *Store) Pairing(id string) (Bundle, error) {
 	var out Bundle
 	if !profile.SafeID(id) {
 		return out, errors.New("invalid pairing ID")
+	}
+	if _, err := s.ownedDir("pairings", false); err != nil {
+		return out, err
 	}
 	if err := readObject(filepath.Join(s.Root, "pairings", id+".json"), &out); err != nil {
 		return out, err

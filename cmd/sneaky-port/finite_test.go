@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/profile"
 	"sneaky-port/internal/testutil"
 )
 
@@ -213,6 +214,21 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	}
 	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}
 	defer client.CloseIdleConnections()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := profile.Decode(file)
+	file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.ID = "api-saved"
+	profileBody, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": "save", "profile_revision": "", "profile": p})
+	saved := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "PUT", "/api/v1/profiles/api-saved", "save", string(profileBody))
+	bootstrap.ProfileID, bootstrap.Revision = p.ID, saved["profile_revision"].(string)
+	apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/profiles/api-saved", "read-profile", "")
+	apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/client-keys/client/public", "public", "")
 	for _, interrupted := range []bool{false, true} {
 		requestID := "complete"
 		if interrupted {
@@ -252,6 +268,7 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 			if err != nil || report.Verification != "matched" {
 				t.Fatal("API run evidence failed offline replay", err)
 			}
+			exerciseReportAPI(t, client, bootstrap.URL, bootstrap.Token, store, id+"-client", report)
 		}
 		// A retry after terminal publication must return the original start handle without a new run.
 		retry := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs", requestID, string(body))
@@ -259,6 +276,54 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 			t.Fatal("terminal start retry duplicated run")
 		}
 	}
+}
+
+// exerciseReportAPI verifies real HTTP replay/export and fixed-file import with transferred server evidence.
+// Imported files provide offline consistency, not fresh authentication or production clock bounds.
+func exerciseReportAPI(t *testing.T, client *http.Client, base, token string, store *control.Store, id string, original *control.ReplayedReport) {
+	t.Helper()
+	apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports?limit=1", "reports", "")
+	got := apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports/"+id, "report", "")
+	if got["saved_summary_verification"] != "matched" {
+		t.Fatal("HTTP replay verification lost")
+	}
+	for _, format := range []string{"json", "jsonl", "csv"} {
+		r, err := http.NewRequest("GET", base+"/api/v1/reports/"+id+"/export?format="+format, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Header.Set("Authorization", "Bearer "+token)
+		r.Header.Set("X-Request-ID", "export")
+		response, err := client.Do(r)
+		if err != nil {
+			t.Fatal("report export HTTP failed", err)
+		}
+		b, err := io.ReadAll(response.Body)
+		response.Body.Close()
+		var expected bytes.Buffer
+		if err != nil || control.ExportReport(&expected, original, format) != nil || response.StatusCode != 200 || !bytes.Equal(b, expected.Bytes()) {
+			t.Fatal("report export diverged", format, err)
+		}
+	}
+	files := map[string][]byte{}
+	for _, name := range []string{"manifest.json", "events.jsonl", "summary.json", "server-transfer.json", "remote-server/manifest.json", "remote-server/events.jsonl", "remote-server/summary.json"} {
+		b, err := os.ReadFile(filepath.Join(store.Root, "reports", id, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = b
+	}
+	body, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": "import-report", "report_id": "imported", "files": files})
+	imported := apiCLIRequest(t, client, base, token, "POST", "/api/v1/reports/import", "import-report", string(body))
+	wanted, _ := json.Marshal(original)
+	actual, _ := json.Marshal(imported)
+	var expected map[string]any
+	json.Unmarshal(wanted, &expected)
+	canonical, _ := json.Marshal(expected)
+	if !bytes.Equal(actual, canonical) {
+		t.Fatal("import changed recomputed report")
+	}
+	apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports/imported", "read-import", "")
 }
 
 // apiCLIRequest exercises actual authenticated HTTP while keeping bootstrap credentials out of diagnostics.
@@ -285,4 +350,61 @@ func apiCLIRequest(t *testing.T, client *http.Client, base, token, method, path,
 		t.Fatal("API request failed", response.StatusCode, err)
 	}
 	return envelope.Result
+}
+
+// TestFreshClientAPI permits explicit key initialization from a new protected API without creating it at launch.
+func TestFreshClientAPI(t *testing.T) {
+	root := t.TempDir()
+	p := testutil.Plan()
+	b, _ := json.Marshal(p)
+	path := filepath.Join(root, "profile.json")
+	if err := os.WriteFile(path, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	storeRoot := filepath.Join(root, "client")
+	ctx, cancel := context.WithCancel(context.Background())
+	reader, writer := io.Pipe()
+	done := make(chan error, 1)
+	go func() { // Bootstrap is read before sending protected requests; keep token output out of diagnostics.
+		err := run(ctx, []string{"client-api", "-data-dir", storeRoot, "-profile", path}, writer)
+		writer.CloseWithError(err)
+		done <- err
+	}()
+	t.Cleanup(func() { // Join API storage/HTTP ownership before the temporary fixture directory is removed.
+		cancel()
+		reader.Close()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Error(err)
+			}
+		case <-time.After(3 * time.Second):
+			t.Error("fresh API cleanup timeout")
+		}
+	})
+	var bootstrap struct {
+		URL   string `json:"api_url"`
+		Token string `json:"session_token"`
+	}
+	if err := json.NewDecoder(reader).Decode(&bootstrap); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(storeRoot, "client.json")); !os.IsNotExist(err) {
+		t.Fatal("launch implicitly generated key")
+	}
+	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	defer client.CloseIdleConnections()
+	apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/client-keys", "create", `{"schema_version":1,"request_id":"create","client_id":"fresh"}`)
+	apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/client-keys/fresh/public", "public", "")
+	store, err := control.OpenStore(storeRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := store.Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = control.LoadKey(id.KeyRef, nil); err != nil {
+		t.Fatal("generated key unusable", err)
+	}
 }

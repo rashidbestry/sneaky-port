@@ -164,9 +164,10 @@ func TestGuardsProtectEveryRoute(t *testing.T) {
 func TestJSONAndRouteBounds(t *testing.T) {
 	s := fixtureAPI(t, stoppedRunner)
 	good := startBody(s, "start")
-	for _, body := range []string{"{}", "null", good + "{}", strings.Replace(good, `"schema_version":1`, `"schema_version":2`, 1), strings.Replace(good, `"schema_version":1`, `"schema_version":1,"schema_version":1`, 1), strings.Replace(good, `"schema_version":1`, `"path":"secret","schema_version":1`, 1), strings.Replace(good, s.Revision(), "stale", 1)} {
+	for _, body := range []string{"{}", "null", good + "{}", strings.Replace(good, `"schema_version":1`, `"schema_version":2`, 1), strings.Replace(good, `"schema_version":1`, `"schema_version":1,"schema_version":1`, 1), strings.Replace(good, `"schema_version":1`, `"path":"secret","schema_version":1`, 1)} {
 		invoke(t, s, request(s, "POST", "/api/v1/runs", "start", body), 400)
 	}
+	invoke(t, s, request(s, "POST", "/api/v1/runs", "start", strings.Replace(good, s.Revision(), "stale", 1)), 409)
 	invoke(t, s, request(s, "POST", "/api/v1/runs", "start", strings.Repeat("x", bodyMax+1)), 413)
 	r := request(s, "POST", "/api/v1/runs", "start", good)
 	r.Header.Set("Content-Type", "text/plain")

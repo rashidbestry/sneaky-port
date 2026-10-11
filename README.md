@@ -10,7 +10,7 @@ The protocol architecture must be extensible: later releases should add probe ad
 
 **Current status: finite authenticated UDP/TCP runs, bounded evidence/replay/export, remote reconciliation, one-way estimates and protected local run controls implemented; dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` adds protected local adapter/start/cancel/status routes. Saved configuration/report API operations, independently verified production clock bounds, dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
+Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Independently verified production clock bounds, dashboard, comparisons and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
 
 ## Run the foundation tools
 
@@ -117,24 +117,33 @@ Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_re
 
 ## Protected local run API
 
-Launch with an existing initialized client store and an explicit profile:
+Launch with an explicit application-owned client store and profile:
 
 ```powershell
 .\build\sneaky-port.exe client-api -data-dir .\client-data -profile .\examples\readiness-udp.yaml
 ```
 
-The example profile needs your explicit server/workload settings. Startup JSON returns `api_url`, a fresh `session_token`, `profile_id` and `profile_revision` (the frozen plan hash). Keep the token local. Each request needs `Authorization: Bearer <session_token>` and a safe `X-Request-ID` (1-64 letters, digits, `_` or `-`). Browser requests must use the exact returned origin; no CORS access or token-in-URL bootstrap is provided. `-listen` accepts a literal loopback IP only, defaulting to `127.0.0.1:0`; `[::1]:0` supports IPv6. Ctrl+C cancels and joins owned work within `-shutdown-timeout` (default 10s), reporting expiration explicitly.
+The example profile needs your explicit server/workload settings. Startup JSON returns `api_url`, a fresh `session_token`, `profile_id` and `profile_revision` (canonical selected plan hash). A saved profile with that ID takes precedence; otherwise the launch file is a transient fallback. Startup does not save profiles or generate keys. Keep the token local. Each request needs `Authorization: Bearer <session_token>` and a safe `X-Request-ID` (1-64 letters, digits, `_` or `-`). Browser requests must use the exact returned origin; no CORS access or token-in-URL bootstrap is provided. `-listen` accepts a literal loopback IP only, defaulting to `127.0.0.1:0`; `[::1]:0` supports IPv6. Ctrl+C cancels and joins owned work within `-shutdown-timeout` (default 10s), reporting expiration explicitly.
 
 | Route | Request / result |
 | --- | --- |
 | `GET /api/v1/adapters?cursor=0&limit=16` | Registry descriptions, at most 16 items; `next_cursor` is empty at the end |
-| `POST /api/v1/runs` | JSON `{ "schema_version": 1, "request_id": "start-1", "profile_id": "<startup ID>", "profile_revision": "<startup hash>" }`; returns `control_run_id` |
+| `POST /api/v1/runs` | JSON `{ "schema_version": 1, "request_id": "start-1", "profile_id": "<selected ID>", "profile_revision": "<selected hash>" }`; freezes that validated revision and returns `control_run_id` |
 | `GET /api/v1/runs/<control_run_id>` | Bounded lifecycle/identity/completeness status |
 | `POST /api/v1/runs/<control_run_id>/cancel` | JSON `{ "schema_version": 1, "request_id": "cancel-1" }`; cancels that handle only |
+| `GET /api/v1/profiles`, `/pairings`, `/reports` | `cursor`/`limit` pages (maximum 16); profile/report items are saved IDs, pairing items include public bundles |
+| `POST /api/v1/profiles/validate` | Body adds `profile` (complete normalized object) and `profile_revision: ""`; returns normalized profile/hash without saving |
+| `GET /api/v1/profiles/<id>`, `PUT /api/v1/profiles/<id>` | Read saved profile/hash; PUT uses the validation body with the current hash, or `""` for create only. Stale edits return 409 |
+| `POST /api/v1/pairings/import`, `GET /api/v1/pairings/<id>` | Import body adds `pairing_id`, public `bundle` and explicit `replace` boolean; existing trust requires `replace: true` |
+| `POST /api/v1/client-keys`, `GET /api/v1/client-keys/<id>/public` | Create body adds `client_id`; generates the single managed client identity only when absent. Read exports enrollment public key only, for trusted server enrollment |
+| `GET /api/v1/reports/<id>`, `GET /api/v1/reports/<id>/export?format=json\|jsonl\|csv` | Recompute saved evidence; export an attachment in one explicitly selected format |
+| `POST /api/v1/reports/import` | Body adds `report_id` and `files` mapping fixed filenames to base64 bytes; validates/replays before publishing a new report; existing reports cannot be replaced |
 
 Body/header request IDs must agree. Repeating an accepted mutation ID returns its original acknowledgment; reusing it for another operation conflicts. One run executes at a time, independent of HTTP connection/request cancellation. `executing` covers setup/data/finalization; `cancelling` lasts until cleanup returns. Measurement ID/readiness and local completeness become known at finalization; unknown booleans remain `null`, and no live phase/counters are fabricated. Failure reasons direct you to local evidence without exposing file/key paths. Existing replay/export commands remain available.
 
-Mutation bodies are capped at 4 KiB; the process retains at most 32 run statuses and 128 accepted commands. Exhaustion rejects new work and preserves old retries; restarting creates a new token/history. These are engineering limits, not workload recommendations. The launch-time plan remains frozen even if its source file changes. Saved-profile revisions, pairing/report operations and live dashboard views remain later tasks. [API flow](FLOWCHART.md#protected-local-run-api), [task evidence](WORK_LOG.md#2026-10-11-protected-local-run-api).
+Start/cancel bodies are capped at 4 KiB; saved-operation bodies at 1 MiB including base64 overhead. Every mutation body carries `schema_version: 1` and matching `request_id`. The process retains at most 32 run statuses and 128 accepted start/cancel commands without evicting retries. Saved catalogs inspect at most 256 directory entries; report replay charges at most 8 MiB of file reads (including remote verification/replay), and serialized export is capped at 16 MiB. One saved operation executes at a time; busy requests return 503. Larger reports remain inspectable through the CLI with its explicit byte budget. These are engineering limits, not workload recommendations.
+
+Report imports accept `manifest.json`, `events.jsonl`, optional referenced `summary.json` and `server-transfer.json`, and the complete transferred `remote-server/{manifest.json,events.jsonl,summary.json}` group. Import uses existing checksum/schema/accounting validators; cached reconciliation is excluded and recomputed. Offline integrity does not authenticate imported evidence. Imports never connect to a server, enroll keys remotely or resume runs. Explicit profile saves affect future starts; active plans and retry acknowledgments stay frozen. Saved-operation request IDs provide correlation; automatic retry deduplication applies to start/cancel only. Dashboard/live views and report comparison remain tasks 19-21. [API flow](FLOWCHART.md#protected-local-run-api), [saved operations](FLOWCHART.md#saved-configuration-and-report-api).
 
 ## Project documents
 

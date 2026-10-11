@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/localapi"
 	"sneaky-port/internal/profile"
@@ -41,16 +43,29 @@ func clientAPI(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	var signer ssh.Signer
 	id, err := store.Client()
-	if err != nil {
+	if err == nil {
+		signer, err = loadSigner(id.KeyRef)
+		if err != nil {
+			return err
+		}
+	} else if !os.IsNotExist(err) {
 		return err
 	}
-	signer, err := loadSigner(id.KeyRef)
-	if err != nil {
-		return err
-	}
-	api, err := localapi.Listen(*listen, p, func(runCtx context.Context, frozen profile.Plan) (control.RunResult, error) { // Reuse SSH trust/reservation, independent timing, persistence and reconciliation.
-		return control.Run(runCtx, store, signer, frozen)
+	api, err := localapi.ListenWithStore(*listen, p, store, func(runCtx context.Context, frozen profile.Plan) (control.RunResult, error) { // Reuse SSH trust/reservation, independent timing, persistence and reconciliation.
+		key := signer
+		if key == nil {
+			identity, e := store.Client()
+			if e != nil {
+				return control.RunResult{}, e
+			}
+			key, e = control.LoadKey(identity.KeyRef, nil)
+			if e != nil {
+				return control.RunResult{}, e
+			}
+		}
+		return control.Run(runCtx, store, key, frozen)
 	})
 	if err != nil {
 		return err
