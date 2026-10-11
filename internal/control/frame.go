@@ -7,6 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"reflect"
+	"strings"
+	"time"
+	"unicode/utf8"
 )
 
 const FrameMax = 1 << 20
@@ -36,12 +40,7 @@ func Read(r io.Reader) (Envelope, error) {
 	if _, err := io.ReadFull(r, b); err != nil {
 		return out, err
 	}
-	if err := uniqueJSON(b); err != nil {
-		return out, err
-	}
-	d := json.NewDecoder(bytes.NewReader(b))
-	d.DisallowUnknownFields()
-	if err := d.Decode(&out); err != nil {
+	if err := DecodeObject(b, &out); err != nil {
 		return out, err
 	}
 	if out.Version != 1 || out.Type == "" || out.RequestID == "" || len(out.Body) == 0 {
@@ -92,7 +91,13 @@ func uniqueJSON(b []byte) error {
 }
 
 // jsonValue recursively checks object-key uniqueness within a bounded document.
-func jsonValue(d *json.Decoder) error {
+func jsonValue(d *json.Decoder) error { return jsonDepth(d, 0) }
+
+// jsonDepth caps nesting before walking an untrusted bounded JSON document.
+func jsonDepth(d *json.Decoder, depth int) error {
+	if depth > 64 {
+		return errors.New("JSON nesting exceeds 64")
+	}
 	t, err := d.Token()
 	if err != nil {
 		return err
@@ -114,13 +119,13 @@ func jsonValue(d *json.Decoder) error {
 				return errors.New("duplicate or invalid control JSON key")
 			}
 			keys[s] = true
-			if err := jsonValue(d); err != nil {
+			if err := jsonDepth(d, depth+1); err != nil {
 				return err
 			}
 		}
 	case '[':
 		for d.More() {
-			if err := jsonValue(d); err != nil {
+			if err := jsonDepth(d, depth+1); err != nil {
 				return err
 			}
 		}
@@ -129,4 +134,90 @@ func jsonValue(d *json.Decoder) error {
 	}
 	_, err = d.Token()
 	return err
+}
+
+// DecodeObject rejects omitted required fields, nulls, duplicates and unknown fields; public imports may carry a UTF-8 BOM.
+func DecodeObject(b []byte, out any) error {
+	b = bytes.TrimPrefix(b, []byte{0xef, 0xbb, 0xbf})
+	if len(b) == 0 || len(b) > FrameMax || !utf8.Valid(b) {
+		return errors.New("invalid bounded UTF-8 JSON")
+	}
+	if err := uniqueJSON(b); err != nil {
+		return err
+	}
+	v := reflect.ValueOf(out)
+	if v.Kind() != reflect.Pointer || v.IsNil() {
+		return errors.New("JSON destination must be a nonnil pointer")
+	}
+	if err := requiredFields(b, v.Elem().Type()); err != nil {
+		return err
+	}
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.DisallowUnknownFields()
+	return d.Decode(out)
+}
+
+// requiredFields checks explicit struct fields recursively while leaving opaque protocol payloads to their own decoder.
+func requiredFields(b []byte, typ reflect.Type) error {
+	if typ.Kind() == reflect.Pointer && bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
+		return nil
+	}
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ == reflect.TypeFor[json.RawMessage]() || typ == reflect.TypeFor[time.Time]() {
+		return nil
+	}
+	if bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
+		return errors.New("null JSON fields are unsupported")
+	}
+	switch typ.Kind() {
+	case reflect.Struct:
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(b, &fields); err != nil {
+			return err
+		}
+		known := map[string]bool{}
+		for i := 0; i < typ.NumField(); i++ {
+			f := typ.Field(i)
+			if !f.IsExported() {
+				continue
+			}
+			tag := strings.Split(f.Tag.Get("json"), ",")
+			name := tag[0]
+			if name == "-" {
+				continue
+			}
+			if name == "" {
+				name = f.Name
+			}
+			known[name] = true
+			value, ok := fields[name]
+			if !ok {
+				if len(tag) > 1 && tag[1] == "omitempty" {
+					continue
+				}
+				return errors.New("required JSON field missing: " + name)
+			}
+			if err := requiredFields(value, f.Type); err != nil {
+				return err
+			}
+		}
+		for name := range fields {
+			if !known[name] {
+				return errors.New("unknown JSON field: " + name)
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		var items []json.RawMessage
+		if err := json.Unmarshal(b, &items); err != nil {
+			return err
+		}
+		for _, item := range items {
+			if err := requiredFields(item, typ.Elem()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

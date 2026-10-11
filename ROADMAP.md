@@ -40,7 +40,7 @@ First foundations: pinned components/licenses, strict profiles/hash, wire codec,
 
 Next:
 
-1. Connect application-owned SSH/pairing stores, authenticated bind/readiness, control leases and independent bounded run engine.
+1. Connect the independent bounded measurement engine to the implemented SSH/pairing/bind/readiness/lease path. [Readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness); cross-platform CLI/native/live validation remains outstanding.
 2. Connect maintained calibration, raw evidence/report persistence/replay/export, protected loopback API and embedded dashboard/comparisons.
 3. Run applicable deterministic, build, loopback, native priority/calibration, impairment, reference and live-path gates. Establish experimental timing bands before comparisons; retain missing evidence as outstanding.
 4. Update actual implementation/check evidence in `WORK_LOG.md` and partial F01/F02/F05-F09/S07-S10 status in `PROPOSALS.md`.

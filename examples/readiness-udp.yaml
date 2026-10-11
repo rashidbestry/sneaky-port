@@ -1,0 +1,65 @@
+# Editable readiness example, not recommended FPS settings. No workload is sent by client-ready.
+schema_version: 1
+profile_id: readiness-udp
+pairing_ref: lab-server
+adapter_id: udp
+adapter_contract_version: 1
+address_family: ipv4
+server_address: 127.0.0.1 # Replace with your Linux server's reachable IPv4 address.
+destination_port: 32000 # Must be permitted by the server policy and reachable over UDP.
+source_port: auto # Or an explicit free local port as a quoted decimal string.
+adapter_options: {} # TCP instead requires {tcp_no_delay: true} and adapter_id: tcp.
+warmup_ns: "0"
+phases:
+  - phase_id: main
+    duration_ns: "1000000000"
+    client:
+      mode: steady
+      rate_numerator: "60"
+      rate_denominator: "1"
+      content_bytes: 32
+      content_pattern_base64: QUJD
+      active_ns: "0"
+      gap_ns: "0"
+      dscp: 0 # Unmarked baseline; applied/observed state remains explicit.
+    server:
+      mode: steady
+      rate_numerator: "60"
+      rate_denominator: "1"
+      content_bytes: 32
+      content_pattern_base64: QUJD
+      active_ns: "0"
+      gap_ns: "0"
+      dscp: 0
+grace_ns: "100000000"
+receipt_deadline_ns: "100000000"
+limits:
+  queue_messages: 64
+  queue_bytes: "1048576"
+  receipt_reserve: 8
+  outstanding_data: 1024
+  ledger_messages: 10000
+  event_bytes: "4194304"
+  file_bytes: "8388608"
+  max_schedule_lag_ns: "10000000"
+  write_timeout_ns: "5000000000"
+  setup_timeout_ns: "5000000000"
+  shutdown_timeout_ns: "5000000000"
+  heartbeat_interval_ns: "1000000000"
+  lease_ns: "10000000000"
+  control_requests: 128
+calibration: # Explicit placeholders; readiness performs no clock sampling or one-way measurement.
+  samples: 2
+  window: 4
+  cadence_ns: "1000000000"
+  expiry_ns: "10000000000"
+  max_error_ns: "1000000"
+  timestamp_error_ns: "0"
+  model_error_ns: "0"
+  drift_ppb: "0"
+  bound_source: Unverified readiness example; no calibrated clock evidence
+preflight_duration_ns: "0"
+preflight_interval_ns: "0"
+spike_threshold_ns: "10000000"
+comparison_axes: []
+matched_metadata: {}

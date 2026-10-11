@@ -8,6 +8,8 @@ sneaky-port measures FPS connection quality between Windows 11 clients and one L
 
 ## Task workflow
 
+- Optimize context and tokens: use targeted searches/reads and concise updates, batch independent checks, and reuse verified results. Expand context only when needed; never skip required work or validation to save tokens.
+
 - Read [WORK_LOG.md](WORK_LOG.md)'s current index and recent/relevant history; inspect Git status and affected files. Verify existing behavior from code before duplicating or fixing it; log claims can be stale.
 - Consult relevant sections of [DESIGN.md](DESIGN.md) (requirements), [CHOICES.md](CHOICES.md) (technical answers), [PROPOSALS.md](PROPOSALS.md) (feature status), and [ROADMAP.md](ROADMAP.md) (next actions). Latest user instructions win; plans/recommendations do not imply acceptance or execution authorization.
 - After meaningful changes, update affected documents/statuses and the work-log index; append dated evidence with what/why, paths, actual state, checks/results and gaps. Use known Europe/Istanbul timestamps; never invent results. Preserve stable F/S/T identifiers, decision provenance and historical log entries.

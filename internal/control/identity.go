@@ -87,8 +87,8 @@ func LoadKey(path string, passphrase []byte) (ssh.Signer, error) {
 
 // PinnedHost rejects every identity other than the explicitly imported public server key.
 func PinnedHost(authorizedKey, fingerprint string) (ssh.HostKeyCallback, error) {
-	key, _, _, rest, err := ssh.ParseAuthorizedKey([]byte(authorizedKey))
-	if err != nil || len(strings.TrimSpace(string(rest))) != 0 {
+	key, err := ParsePublic(authorizedKey)
+	if err != nil {
 		return nil, errors.New("invalid single server public key")
 	}
 	if ssh.FingerprintSHA256(key) != fingerprint {
@@ -107,14 +107,14 @@ type Enrollment struct {
 	ClientID  string     `json:"client_id"`
 	PublicKey string     `json:"public_key"`
 	Enabled   bool       `json:"enabled"`
-	ExpiresAt *time.Time `json:"expires_at"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 }
 
 // Authorize checks current application records; system SSH authorization is not consulted.
 func Authorize(records []Enrollment, key ssh.PublicKey, now time.Time) (string, error) {
 	for _, r := range records {
-		candidate, _, _, rest, err := ssh.ParseAuthorizedKey([]byte(r.PublicKey))
-		if err != nil || len(strings.TrimSpace(string(rest))) != 0 {
+		candidate, err := ParsePublic(r.PublicKey)
+		if err != nil {
 			return "", fmt.Errorf("invalid enrollment record %s", r.ClientID)
 		}
 		if string(candidate.Marshal()) == string(key.Marshal()) {

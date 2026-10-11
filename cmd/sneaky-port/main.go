@@ -1,4 +1,4 @@
-// sneaky-port currently exposes validated foundation tools; endpoint orchestration is pending.
+// sneaky-port exposes foundation tools and authenticated endpoint readiness; measurement orchestration is pending.
 package main
 
 import (
@@ -33,11 +33,13 @@ func main() {
 // run dispatches only implemented operations; no measurement result is fabricated.
 func run(ctx context.Context, args []string, out io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: sneaky-port adapters | validate -profile FILE | preflight -duration-ns N -interval-ns N | keygen -output NEW_FILE\nUDP/TCP endpoint orchestration and dashboard are not yet implemented")
+		return errors.New("usage: sneaky-port adapters | validate | preflight | keygen | server-init | client-init | server-enroll | server-disable | server-export | client-import | server | client-ready\nUse COMMAND -h for flags. client-ready verifies readiness only; measurement and dashboard remain pending")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(out)
 	switch args[0] {
+	case "server-init", "client-init", "server-enroll", "server-disable", "server-export", "client-import", "server", "client-ready":
+		return coordination(ctx, args, out)
 	case "adapters":
 		if len(args) != 1 {
 			return errors.New("adapters takes no arguments")

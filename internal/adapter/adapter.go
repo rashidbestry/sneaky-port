@@ -30,6 +30,7 @@ type Descriptor struct {
 // Transport owns one established session and its physical outer-marking state.
 type Transport interface {
 	Read() ([]byte, error)
+	SetReadDeadline(time.Time) error
 	Write([]byte, time.Duration) (int, error)
 	Mark(int) (platform.Marking, error)
 	Local() string
@@ -40,6 +41,7 @@ type Transport interface {
 // Prepared owns the server listener until an authenticated binding selects a peer.
 type Prepared interface {
 	Accept(context.Context) (Transport, error)
+	Reject(Transport) error
 	Address() string
 	Close() error
 }
@@ -223,6 +225,9 @@ type socket struct {
 	mark   *platform.Marker
 }
 
+// SetReadDeadline bounds authentication reads without substituting a peer or transport.
+func (s *socket) SetReadDeadline(t time.Time) error { return s.conn.SetReadDeadline(t) }
+
 // Read returns complete raw datagrams/frames; wrong UDP tuples are discarded, not migrated.
 func (s *socket) Read() ([]byte, error) {
 	if s.first != nil {
@@ -336,6 +341,9 @@ func (p *tcpPrepared) Address() string { return p.listener.Addr().String() }
 // Close releases this listener, leaving unrelated services untouched.
 func (p *tcpPrepared) Close() error { return p.listener.Close() }
 
+// Reject releases only the unauthenticated TCP candidate, preserving the owned listener.
+func (p *tcpPrepared) Reject(t Transport) error { return t.Close() }
+
 type udpPrepared struct{ conn *net.UDPConn }
 
 // Accept returns a candidate tuple and first datagram; authentication precedes readiness.
@@ -362,3 +370,6 @@ func (p *udpPrepared) Address() string { return p.conn.LocalAddr().String() }
 
 // Close releases the owned UDP listener and any session reading from it.
 func (p *udpPrepared) Close() error { return p.conn.Close() }
+
+// Reject discards a candidate without closing the shared UDP listener or selecting its tuple.
+func (p *udpPrepared) Reject(t Transport) error { return p.conn.SetReadDeadline(time.Time{}) }
