@@ -4,7 +4,7 @@
 
 sneaky-port measures FPS connection quality between Windows 11 clients and one Linux server. The gaming proxy is a separate project.
 
-**Implementation is on hold.** Authorization covers documentation and cleanup only: no application code, runtime helpers, manifests, runnable configuration, dependency installs, services or network experiments. A later explicit implementation request authorizes its stated scope without redundant permission.
+**First-slice implementation authorized, 2026-10-11.** The user requested starting roadmap step 5: implement and validate the agreed UDP/TCP slice in `DESIGN.md`. Other carriers and later features retain their existing scope/status. Preserve user-owned services and settings.
 
 ## Task workflow
 
@@ -19,6 +19,7 @@ sneaky-port measures FPS connection quality between Windows 11 clients and one L
 - Include direct/resolver-mediated DNS and port controls; DNS prioritization is an ISP-specific hypothesis. Independent directional priority applies to actual outer traffic, with requested/applied/observed evidence. No product shaping, queue management or automatic routing.
 - Preserve independent scheduling, local monotonic timing, honest loss/late/stream-stall accounting and evidence-based comparisons. One-way delay needs valid clock calibration and uncertainty; eventual stream delivery does not prove zero network loss. Report unsupported capabilities without silent substitutions.
 - Preserve unrelated files/settings; leave changes uncommitted unless requested. Check documentation links, whitespace and scope. Later code uses applicable `DESIGN.md` acceptance gates; distinguish build, loopback, native platform, impairment and live-network evidence.
+- Comment every function, including test/helper functions, explaining its purpose and any important timing/accounting limits. Maintain `FLOWCHART.md` against actual code with source links; distinguish implemented paths from remaining work.
 
 ## Keep documentation concise
 

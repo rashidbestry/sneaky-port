@@ -2,11 +2,11 @@
 
 Use this file for technical questions, options, recommendations, and confirmed decisions. [DESIGN.md](DESIGN.md) contains product requirements, [PROPOSALS.md](PROPOSALS.md) tracks future features, and [WORK_LOG.md](WORK_LOG.md) records completed work and decision history.
 
-A recommendation is not user acceptance, and a confirmed technology choice is not permission to implement. Preserve stable T identifiers. Implementation remains on hold.
+A recommendation is not user acceptance, and a confirmed technology choice alone is not implementation permission. Preserve stable T identifiers. User explicitly authorized the first slice on 2026-10-11; [foundation pins/checks](THIRD_PARTY_NOTICES.md) and [actual progress](WORK_LOG.md#2026-10-11-first-implementation-foundations) supersede earlier historical hold statements.
 
 ## Technical decisions
 
-Updated: 2026-10-11. Choosing technologies does not authorize implementation. T01-T04 and T06-T09 are confirmed; T12's roles/architectures/broad distribution scope and T13's frontend stack are confirmed. Version limits and remaining details are open; no integrations are validated.
+Updated: 2026-10-11. T01-T04/T06-T09 and T12/T13's role/architecture/frontend scope are confirmed. The later implementation instruction authorizes the first slice; foundation UDP/TCP tests pass, while complete integration/platform acceptance remains pending.
 
 | ID | Area | Choice / recommendation | State |
 | --- | --- | --- | --- |
@@ -16,11 +16,11 @@ Updated: 2026-10-11. Choosing technologies does not authorize implementation. T0
 | T04 | Dashboard implementation | Embedded plain HTML/CSS/JavaScript assets, locally bundled with no runtime CDN dependency | Confirmed by user, 2026-10-11; first-slice native SVG layout selected under T13 |
 | T05 | Protocol integrations | First-slice UDP/TCP uses Go standard networking; future TLS/QUIC/WireGuard/Hysteria2/DNS candidates remain as reviewed below | UDP/TCP design selected under completion instruction, 2026-10-11; future candidates/pins/platform feasibility unvalidated |
 | T06 | Internal boundaries | One shared measurement engine; separate protocol adapters, platform port/priority support, and dashboard/API modules; UI does not drive probe scheduling | Confirmed by user, 2026-10-11 |
-| T07 | Configuration | Versioned YAML profiles with shared validation/explicit save; YAML-org v4 parser and first-slice schema below | Format confirmed by user; parser/schema design selected under completion instruction, 2026-10-11; release pin/build validation pending |
+| T07 | Configuration | Versioned YAML profiles with shared validation/explicit save; YAML-org v4 parser and first-slice schema below | Confirmed format/design; parser pinned and strict foundation validator tested; saved-profile/dashboard integration pending |
 | T08 | Results | Per-run JSONL raw observations plus JSON summary/settings; precise CSV export, explicit cutoff/completeness and bounded file lifecycle | Formats confirmed by user; first-slice schema/storage policy selected under completion instruction, 2026-10-11; unimplemented |
 | T09 | Trust and pairing | Generated client-local keys and public pairing/enrollment; application-owned identity/authorization stores with explicit revocation; future user-provided TLS certificates retained | High-level workflow/client-local keys confirmed by user; first-slice storage/revocation design selected under completion instruction, 2026-10-11; future TLS lifecycle open |
 | T10 | Experiment execution | One measured run per endpoint at a time; sequential repeated/alternating matched comparisons with explicit varied axes | Selected for first slice under completion instruction, 2026-10-11; automatic screening remains proposed S01 |
-| T11 | Priority implementation | Owned Linux IP_TOS/IPV6_TCLASS and Windows qWave marking backends; capability/privilege results, ECN preservation and outer evidence separate | Backend design selected for UDP/TCP under completion instruction, 2026-10-11; native behavior/observations unvalidated, other-adapter choices open |
+| T11 | Priority implementation | Owned Linux IP_TOS/IPV6_TCLASS and Windows qWave marking backends; capability/privilege results, ECN preservation and outer evidence separate | Partial backends; Linux socket readback/ECN fixture passed, Windows qWave/native outer observations pending; other adapters open |
 
 Go's [embed package](https://pkg.go.dev/embed) supports bundling dashboard files. Recommend a localhost-only HTTP API for actions and an event stream for live summaries; keep UI updates bounded so rendering cannot drive probe scheduling. Protect local state-changing requests with session/origin controls. First-slice API routes, bounded update policy and native SVG layout are settled below; plain HTML/CSS/JavaScript remains confirmed, without a chart dependency or frontend build requirement.
 
@@ -34,7 +34,7 @@ For T05, the current preferred candidates are:
 
 For T11, [Windows QOSSetFlow](https://learn.microsoft.com/en-us/windows/win32/api/qos2/nf-qos2-qossetflow) and its [DSCP operation](https://learn.microsoft.com/en-us/windows/win32/api/qos2/ne-qos2-qos_set_flow) are candidate mechanisms, not proven support across every adapter. Inspect actual socket ownership, OS permissions, and DSCP/ECN behavior before finalizing the backend. Preserve explicit unavailable/unknown outcomes and the existing requirement for independent directions.
 
-Do not install dependencies or create manifests during this design stage. Pin compatible versions and review integration/license requirements when selection and implementation are authorized; the source inspection above is not a build or runtime test.
+The earlier source inspection was design evidence only. The subsequently authorized foundation pins/license notices and build/fixture results are in [WORK_LOG.md](WORK_LOG.md#2026-10-11-first-implementation-foundations); they do not validate future protocol integrations.
 
 ## Foundation discussion
 
@@ -84,7 +84,7 @@ T12 and T13 have partial answers recorded below; other answers and numerical def
 | T17 | What priority presets and sender/receiver observation capabilities should be exposed on each platform? | Numeric DSCP 0-63, capability-gated marking and explicitly located external observation evidence selected for slice under completion instruction, 2026-10-11; presets/other adapters/runtime support open |
 | T18 | What FPS decision criteria, confidence rules, and minimum evidence should qualify a recommendation? | Confirmed presentation retained; descriptive matched comparisons, named variation/spike/stall rules and no automatic winner selected for slice under completion instruction, 2026-10-11; future recommendation thresholds/S06 remain open |
 | T19 | How should suitable functionality from existing tools be adapted: design reference, embedded code/library, bundled managed component or validation-only utility? | User confirmed IRTT/iperf2/Crusader as design references and external validation only, 2026-10-11; no embedding/bundling; exact future validation builds open |
-| T20 | Which independent reference tools and isolated scenarios can validate equivalent measurements, and with what boundaries/tolerances? | Prose matrix documented and S07/S10 future scope accepted, 2026-10-11; compatible builds, numerical tolerance calibration and execution authorization pending |
+| T20 | Which independent reference tools and isolated scenarios can validate equivalent measurements, and with what boundaries/tolerances? | S07/S10 matrix accepted and first slice authorized; reference builds/fixtures and numerical tolerance calibration remain pending |
 
 ## Measurement contract discussion
 
@@ -289,7 +289,7 @@ Recommend retaining raw local scheduling/arrival evidence and existing RTT varia
 
 ## First implementation slice discussion
 
-Started/completed as planning: 2026-10-11, roadmap action 4. **Scope and necessary first-slice policies settled; implementation remains on hold.** The discussion batches below retain their historical recommendations/answers. Current status is in [final decisions](#first-slice-final-decisions); no earlier pending recommendation overrides a later recorded selection. [Initial progress](WORK_LOG.md#2026-10-11-first-slice-discussion-started), [scope answers](WORK_LOG.md#2026-10-11-first-slice-scope-and-ssh-control-confirmed), [completion evidence](WORK_LOG.md#2026-10-11-first-slice-planning-completed).
+Completed as planning: 2026-10-11, action 4. Scope/policies settled before the subsequent action 5 authorization. Discussion batches retain historical recommendations/answers; [final decisions](#first-slice-final-decisions) supersede earlier pending options. [Initial discussion](WORK_LOG.md#2026-10-11-first-slice-discussion-started), [scope answers](WORK_LOG.md#2026-10-11-first-slice-scope-and-ssh-control-confirmed), [planning completion](WORK_LOG.md#2026-10-11-first-slice-planning-completed).
 
 ### Proposed deliverable
 
@@ -395,7 +395,7 @@ Settled: 2026-10-11. User explicitly answered **compile-time registration** and 
 
 All workload/rate/port/deadline/resource/lease/calibration-quality values required by the profile must be supplied and validated explicitly. The 1 MiB frame/document caps, 92-byte header/124-byte overhead and four-per-second dashboard limit are engineering contract choices, not FPS optimum defaults or experimentally validated capacities. No experimental millisecond tolerance, oscillator accuracy, benchmark build or Linux release minimum is invented.
 
-The contract's acceptance table completes task 4's **documented success criteria**, not those runtime checks. Deterministic wire/schema/count/bit-value fixtures, loopback, native platform/priority, calibrated clock/impairment, independent references and live path evidence are separate gates. F09 cannot be declared implemented/validated merely because estimated one-way values exist. Code, dependency installation, services and experiments remain on hold pending an explicit implementation instruction. Roadmap action 5 retains that gate and the later setup/evidence work; action 4 is complete as planning.
+The acceptance table completes task 4's **documented success criteria**, not runtime acceptance. Wire/schema/count fixtures, loopback, native priority/calibration, impairment, independent references and live paths remain separate gates. F09 cannot be completed merely because estimates exist. User subsequently authorized action 5; foundations are partial and later gates remain pending. [Current execution state](ROADMAP.md#5-implement-and-validate-the-agreed-first-slice), [pins/licenses](THIRD_PARTY_NOTICES.md).
 
 ## Maintaining choices
 

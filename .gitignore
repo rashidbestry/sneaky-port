@@ -1,1 +1,10 @@
 
+
+# Application-owned build/download/test artifacts; source and documentation stay visible.
+/.cache/
+/build/
+/test-output/
+*.exe
+*.md
+FLOWCHART.md
+THIRD_PARTY_NOTICES.md

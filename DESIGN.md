@@ -29,7 +29,7 @@ Confirmed on 2026-10-11 (T03, T04, T06-T09, T12/T13): one executable per OS/CPU 
 
 Use one shared measurement engine with separate authentic protocol adapters, platform port/priority support, and dashboard/API modules. Keep scheduling and delivery accounting consistent across modes; dashboard rendering or updates must not drive probe scheduling. This module separation does not itself adopt the optional separate coordination-path proposal S03.
 
-Planning direction confirmed on 2026-10-11: selectively learn from existing measurement/tunnel tools and improve suitable functionality while preserving this contract. User subsequently confirmed IRTT/iperf2/Crusader as design references and external validation only, retaining our shared Go engine. [Reference candidates](PROPOSALS.md#reference-tool-candidates) and [reuse choices](CHOICES.md#reference-tool-reuse-and-validation) track components and review needs. No copied code, embedded/bundled reference tool, dependency version or execution was selected; implementation remains on hold.
+Planning direction confirmed on 2026-10-11: learn selectively from measurement/tunnel tools while preserving this contract. IRTT/iperf2/Crusader remain design references/external validation only. [Candidates](PROPOSALS.md#reference-tool-candidates) and [reuse choices](CHOICES.md#reference-tool-reuse-and-validation) retain provenance; no reference tool is copied/bundled. The later first-slice authorization and pinned foundation dependencies are recorded in [WORK_LOG.md](WORK_LOG.md#2026-10-11-first-implementation-foundations).
 
 Future scope accepted on 2026-10-11: S07 independent external cross-checks, S08 optional timing preflight/diagnostics, S09 distribution and phase comparison views, S10 external contention validation catalogue and S11 explicitly started/stopped continuous responsiveness monitoring. Their [tracked definitions and decisions](PROPOSALS.md#reference-review-dispositions) preserve bounded resources, honest denominators/unknowns, local timing and user control. Preflight does not automatically change OS settings; charts do not drive scheduling; external fixtures do not add product shaping; monitoring does not switch routes or silently run in the background. Exact mechanics remain open; initial slice inclusion is recorded in [first-slice scope](#first-implementation-slice-scope). Acceptance is not implementation authorization. S01-S06 remain proposals.
 
@@ -184,13 +184,13 @@ Selected pairing mechanics: generate the client's private SSH key on that client
 
 Selected queue-saturation policy: preserve independent planned slots, record a locally skipped message when it cannot be admitted to the bounded queue, and continue without catch-up bursts. Do not interpret this local skip as network loss or silently omit it from the scheduled-slot denominator. Partial TCP writes retain explicit evidence and require preserving framing or terminating the affected segment; resource/write/receipt limits are explicit validated inputs under the contract below. User confirmed compile-time registration on 2026-10-11.
 
-Action 4 planning is complete: prior scope answers and the latest compile-time registration answer are confirmed, and the remaining engineering policies/success criteria are settled in the contract below under the instruction to complete the task. [Final choices](CHOICES.md#first-slice-final-decisions) distinguish user answers from those design selections. Implementation authorization remains separate. User-provided TLS certificates remain a confirmed future workflow for TLS-capable endpoints; SSH uses its own identity/authentication mechanisms. No code or runtime validation exists.
+Action 4 planning is complete: prior scope answers and the latest compile-time registration answer are confirmed, and the remaining engineering policies/success criteria are settled in the contract below. [Final choices](CHOICES.md#first-slice-final-decisions) distinguish user answers from engineering selections. User authorized action 5 on 2026-10-11; [foundation code/checks](WORK_LOG.md#2026-10-11-first-implementation-foundations) are partial, with complete runtime acceptance pending. User-provided TLS certificates remain a future TLS-capable workflow; SSH uses its own identities.
 
 ### First-slice implementation contract
 
 Settled: 2026-10-11. User explicitly selected compile-time registration and instructed completion of action 4. The engineering policies below finish the planning contract under that instruction; they are design selections, not individually quoted user answers or validated implementations. They govern this finite UDP/TCP slice where older conceptual text leaves a mechanism proposed/open. Other carriers retain their requirements and unresolved integration choices. [Decision record](CHOICES.md#first-slice-final-decisions), [planning/check evidence](WORK_LOG.md#2026-10-11-first-slice-planning-completed).
 
-Completion means a reviewable design and acceptance handoff. Code, dependency installation, runnable profiles, services and experiments require a subsequent explicit implementation instruction. Empirical timing tolerances, dependency release pins and supported Linux minima must be established during that authorized work before related claims; documentation cannot establish them.
+Planning completion meant a reviewable design/acceptance handoff. The subsequent implementation instruction now authorizes the first slice. Dependency pins are recorded in [notices](THIRD_PARTY_NOTICES.md); empirical timing tolerances and supported Linux minima still need evidence. The contract remains the target, not a claim that all paths below exist; [FLOWCHART.md](FLOWCHART.md) describes actual code.
 
 #### Components and adapter boundaries
 
@@ -327,7 +327,7 @@ Run profiles sequentially; compare selected repeated/alternating matched trials 
 | Independent validation | Existing S07/S10 matrix for equivalent UDP/TCP overlaps and idle/external-upload/download/both-load trials; exact reference builds, workload/boundaries, calibrated predeclared experimental bands and gaps recorded separately |
 | Platform/live claims | Four target builds and native Windows 11 ARM64/x86-64 clients/Linux ARM64/x86-64 servers; record exact CentOS/Ubuntu/Fedora/Arch or other intended distribution/kernel cases; compilation, loopback, impairment and live ISP results remain separate, with unsupported/unavailable targets visible |
 
-All gates above are unperformed. Deterministic content/count/bit-value checks are exact; timing assertions allow declared quantization/fixture uncertainty and experimental bands established before comparison. Exact dependency/toolchain/reference pins, native test machines/images, Linux release minima and experimental tolerance numbers are an authorized-implementation evidence checklist, not unsupported design promises. Missing environments do not allow a full support or completed-runtime gate claim. Other protocols/DNS, continuous monitoring, TLS credential workflows, runtime plugin loading and proposed additions stay outside this slice without losing accepted future scope.
+All full gates above remain incomplete. [Foundation evidence](WORK_LOG.md#2026-10-11-first-implementation-foundations) covers selected deterministic fixtures, owned loopback sockets, Linux socket readback and four builds; it does not fulfill the full workflow/resource/calibration/outer-observation/native-platform gates. Deterministic content/count/bit-value checks are exact; later timing comparisons require predeclared empirical bands. Linux minima, reference pins and ARM64/native/live evidence remain open. Other protocols/DNS, continuous monitoring, TLS credential workflows, runtime plugins and proposed additions stay outside this slice without losing accepted future scope.
 
 ## Measurement contract draft
 
@@ -482,7 +482,7 @@ Distinguish documented intent, compilation, loopback validation, controlled impa
 
 ## Technical choices
 
-Confirmed on 2026-10-11: **Go**, a **local browser dashboard**, and the [application foundation](#application-foundation). Technical questions, recommendations, research notes, and decision states are maintained in [CHOICES.md](CHOICES.md). Remaining choices are open; implementation remains on hold.
+Confirmed on 2026-10-11: **Go**, a **local browser dashboard**, and the [application foundation](#application-foundation). Technical answers/research remain in [CHOICES.md](CHOICES.md). First-slice implementation is authorized and partial; later choices remain open.
 
 ## Primary references
 

@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Completed steps below are documentation milestones only; no application or runtime validation exists. Implementation remains on hold. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Steps 1-4 are completed documentation milestones. Step 5 is authorized and in progress; foundations exist, complete runtime workflow/acceptance remain pending. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 ## 1. Settle the immediate foundation choices (completed)
 
@@ -34,12 +34,14 @@ Updated: 2026-10-11. Completed steps below are documentation milestones only; no
 
 ## 5. Implement and validate the agreed first slice
 
-**State: awaiting explicit implementation authorization; not started.**
+**State: authorized by user, 2026-10-11; in progress, incomplete.**
 
-After authorization:
+First foundations: pinned components/licenses, strict profiles/hash, wire codec, real UDP/TCP sockets, registry, rational slots, accounting, clock/SSH primitives and local preflight. Every function is commented and [FLOWCHART.md](FLOWCHART.md) maps actual code. Four builds and foundation Windows/WSL tests pass; this does not complete the first slice. [Evidence and gaps](WORK_LOG.md#2026-10-11-first-implementation-foundations).
 
-1. Inspect available platforms; select/pin compatible toolchain/components with license checks against the settled contract.
-2. Implement the slice with shared extensible adapters and truthful capability/timing/accounting outcomes.
+Next:
+
+1. Connect application-owned SSH/pairing stores, authenticated bind/readiness, control leases and independent bounded run engine.
+2. Connect maintained calibration, raw evidence/report persistence/replay/export, protected loopback API and embedded dashboard/comparisons.
 3. Run applicable deterministic, build, loopback, native priority/calibration, impairment, reference and live-path gates. Establish experimental timing bands before comparisons; retain missing evidence as outstanding.
 4. Update actual implementation/check evidence in `WORK_LOG.md` and partial F01/F02/F05-F09/S07-S10 status in `PROPOSALS.md`.
 
