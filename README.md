@@ -6,6 +6,8 @@ It will compare real TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS data pat
 
 Connection quality means timely delivery, low p95/p99 latency, low jitter, and few spikes or stalls under sustained game-like traffic. Preferential treatment of DNS is a hypothesis to measure, not an assumed advantage.
 
+The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
+
 **Current status: design only. No application has been implemented.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
 ## Project documents

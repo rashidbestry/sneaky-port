@@ -12,6 +12,7 @@ Find which protocol, DNS mode, ports, and packet priority settings give the best
 | Server count | One owned measurement server per comparison |
 | Traffic | Real TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS experiments |
 | Protocol setup | The tool manages its own protocol endpoints, credentials, sessions, and cleanup |
+| Protocol extensibility | Add new probe protocols in later releases through a common adapter contract, without broadly rewriting the measurement engine, dashboard, configuration, or reporting |
 | DNS | Explore port controls, direct valid DNS, and resolver-mediated data tunnels, including DNS transport variants |
 | Ports | Configurable destination/listening ports, optional fixed client source ports, selected-port comparisons |
 | QoS | Independent packet priority markings for client-to-server and server-to-client traffic |
@@ -27,6 +28,8 @@ The intended workflow does not require separately installed and manually configu
 Confirmed on 2026-10-11 (T03, T04, T06-T09, T12/T13): one executable per OS/CPU with client/server modes, with supported deployments limited to Windows 11 clients and Linux servers on ARM64/x86-64. Target broad major Linux distributions, including CentOS, Ubuntu, Fedora, Arch, and others; exact version/support boundaries need integration review. The client hosts a local browser dashboard using embedded plain HTML/CSS/JavaScript and locally bundled assets with no runtime CDN dependency. Packaging and intended targets are design decisions, not verified integration or runtime support.
 
 Use one shared measurement engine with separate authentic protocol adapters, platform port/priority support, and dashboard/API modules. Keep scheduling and delivery accounting consistent across modes; dashboard rendering or updates must not drive probe scheduling. This module separation does not itself adopt the optional separate coordination-path proposal S03.
+
+Planning direction confirmed on 2026-10-11: selectively learn from existing measurement/tunnel tools and improve suitable functionality while preserving this contract. [Reference candidates](PROPOSALS.md#reference-tool-candidates) and [reuse choices](CHOICES.md#reference-tool-reuse-and-validation) track potential components and review needs. This does not select copied code, dependencies, external runtime tools or optional S07-S11 behavior; implementation remains on hold.
 
 Save versioned YAML profiles. File loading and dashboard edits use the same validation model, and dashboard edits require an explicit save. Exact schema, parser, defaults, and storage paths remain open; this is a format decision, not runnable configuration.
 
@@ -49,6 +52,18 @@ Support tool-generated pairing setup and user-provided TLS certificates. Pairing
 | DNS | Valid DNS carrying test data, with direct/recursive transport and downlink strategies identified |
 
 Plain UDP sent to a WireGuard/Hysteria2 port is only a UDP test. Generic QUIC is not Hysteria2. Using port 443 does not make arbitrary traffic HTTPS. Failed or unsupported modes remain visible; never silently bypass the tunnel, downgrade a protocol, or substitute another echo endpoint.
+
+## Protocol extensibility
+
+Confirmed on 2026-10-11: the protocol range must be easy to extend across releases. The current required protocols are initial coverage, not a closed list. This is an architecture requirement (F08), not a request to add particular protocols now.
+
+- Keep scheduling, timing, delivery accounting, comparison rules, and common report fields in the shared engine. A new adapter maps authentic protocol exchanges to that contract rather than creating another measurement engine or changing metric definitions.
+- Define an adapter contract for protocol identity/version, managed endpoint/session lifecycle, probe and receipt framing, capabilities, validated protocol-specific options, and cancellation/cleanup. Exact Go interfaces and registration mechanics remain open under T21.
+- Make protocol selection, dashboard controls, profile validation, and result metadata use registered adapter descriptions and capabilities. Routine additions should need an adapter, its option descriptions, registration, and relevant checks; avoid repeated protocol-name switches throughout common modules.
+- Declare real limitations: supported directions, workload modes, payload limits, ports, trust requirements, and outer-priority/observation support. Preserve requested versus effective behavior and explicit unsupported outcomes. A carrier that cannot express part of the shared contract must report that limitation rather than simulate support.
+- Preserve stable adapter identifiers and versioned configuration/results. New adapters must not change the meaning of existing profiles or reports; previously saved results must remain readable or have an explicit migration path.
+
+Treat extensibility as a first-slice design constraint. Later authorized acceptance should demonstrate that a small additional adapter can be registered and used through the shared workflow without a broad core/UI/report rewrite, while existing adapters retain their accounting and behavior. Actual new-carrier support still requires authentic protocol operation and applicable validation. This requirement does not mandate runtime plugins or hot loading; that mechanism is undecided.
 
 ## DNS experiments
 
@@ -92,6 +107,12 @@ For tunneled/encapsulated modes, apply the setting to the actual outer IP traffi
 | Measured effect | Repeated matched comparison of actual delivery quality |
 
 Preservation does not prove routers granted priority; rewriting does not reveal where it occurred. Neither endpoint controls ISP queues or independent recursive-resolver outbound markings. Do not silently apply global network/QoS policies to make a test work.
+
+## Integration review status
+
+Roadmap action 3 completed as a documentation/source-review milestone on 2026-10-11. [Integration constraints](CHOICES.md#integration-constraints-review) record candidate managed APIs, outer socket ownership, port controls, directional DSCP/observation limits, DNS delegation/framing/polling, Linux toolchain/userspace boundaries, and checks required after implementation authorization. No dependency, priority backend, DNS framing default, Linux release minimum, or implementation slice was selected; no integration/platform capability is validated. Existing F01-F07 coverage and the implementation hold remain intact.
+
+The source review distinguishes WireGuard's Linux routing mark from DSCP, identifies Windows arbitrary-DSCP privileges, and separates recursive DNS access and authoritative hops. These findings constrain later capability reporting. Detailed source evidence and unresolved alternatives belong in `CHOICES.md`; product requirements above and acceptance checks below remain authoritative.
 
 ## Timing and scheduling correctness
 
@@ -256,6 +277,7 @@ The following are acceptance checks for later authorized implementation, not com
 | Area | Required evidence |
 | --- | --- |
 | Authentic adapters | Real session-bound exchanges for each mode; actual WireGuard/Hysteria2 operation; QUIC stream/datagram and tunnel UDP/TCP distinctions |
+| Extensibility | Add/register a small additional adapter through the shared workflow; check capability/options discovery, profile/result compatibility, lifecycle cleanup, common accounting, and unchanged existing-adapter behavior |
 | Basic timing | Loopback overhead floor plus real-adapter tests; wall-clock adjustments; valid processing correction; no invented cross-host delay |
 | Scheduling/accounting | Stalled streams with independently planned sends; delayed arrivals after deadline/end; duplicates, reordering, malformed/foreign/replayed data; incomplete evidence and summary recomputation |
 | Controlled impairment | Known delay, jitter, periodic spikes, random/burst loss, duplication, reordering, directional impairment, rate limits, restrictive MTU, and brief interruptions |

@@ -20,6 +20,7 @@ An existing feature may still need a fix or an explicitly requested change. Do n
 ## Essential constraints
 
 - Preserve authentic tool-managed TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS coverage. Manual setup of separate tunnel/proxy services is not the intended product workflow.
+- Preserve protocol extensibility: new adapters should reuse shared measurement, configuration, dashboard, and reporting contracts; avoid a fixed protocol list scattered through common modules.
 - Include direct and resolver-mediated DNS data paths plus port controls. Treat DNS priority as an ISP-specific hypothesis, not a guarantee.
 - Packet priority is independently configurable in both directions; apply it to actual outer traffic and distinguish requested, applied, and observed settings. No product shaping, bandwidth control, queue management, or automatic route switching here.
 - Preserve independent probe scheduling, monotonic local timing, honest loss/late-delivery accounting, and evidence-based FPS comparisons. Do not invent one-way delay or infer zero network loss from eventual stream delivery.
