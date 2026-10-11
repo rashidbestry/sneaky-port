@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundation, authenticated readiness and bounded queue code**. Scheduled network measurement remains pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness, bounded queues and one-window UDP workers**. Full phase/accounting and CLI measurement integration remain pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -85,7 +85,7 @@ flowchart TD
     M --> N[Earlier due slots skipped; no catch-up burst]
 ```
 
-Sources: [profile.go](internal/profile/profile.go) (`Decode`, `requiredFields`, `yamlValue`, `Plan.Validate`), [canonical.go](internal/profile/canonical.go) (`Canonical`), [schedule.go](internal/schedule/schedule.go) (`Count`, `Offset`, `Due`, `Wait`), [preflight.go](internal/measure/preflight.go) (`Preflight`). The schedule functions and ledger are separate tested primitives; a network engine has not connected them yet. Half-open phases exclude the end, and quiet/burst gaps schedule no data.
+Sources: [profile.go](internal/profile/profile.go) (`Decode`, `requiredFields`, `yamlValue`, `Plan.Validate`), [canonical.go](internal/profile/canonical.go) (`Canonical`), [schedule.go](internal/schedule/schedule.go) (`Count`, `Offset`, `Due`, `Wait`), [preflight.go](internal/measure/preflight.go) (`Preflight`). The UDP component below connects the schedule to I/O for one explicit window; full phase/ledger integration remains pending. Half-open phases exclude the end, and quiet/burst gaps schedule no data.
 
 ## Bounded writer queues
 
@@ -110,7 +110,45 @@ flowchart TD
 
 Sources: [queue.go](internal/writer/queue.go) (`New`, `Submit`, `Snapshot`, `run`, `stopLocked`, `popLocked`, `finishLocked`, `Close`, `Wait`), [fixtures](internal/writer/queue_test.go). Invalid/stopped submissions fail without tickets. Receipts share FIFO order and total caps; data cannot consume reserved message or 124-byte receipt capacity. Active work stays charged until the callback returns. One buffered result per accepted frame avoids blocking on report consumers; consumers own later result retention.
 
-Callbacks own attempt timestamps, encoding, transport byte boundaries and cancellation of their owned I/O. They must return on cancellation/timeouts; arbitrary blocking code cannot be forcibly interrupted, and a bounded `Wait` exposes that violation. The queue performs no retry/drain, schedule accounting, transport writes or network-loss inference by itself. Current fixtures use callbacks only; UDP worker integration is [task 8](ROADMAP.md#8-implement-independent-udp-senderreceiver-workers).
+Callbacks own attempt timestamps, encoding, transport byte boundaries and cancellation of their owned I/O. They must return on cancellation/timeouts; arbitrary blocking code cannot be forcibly interrupted, and a bounded `Wait` exposes that violation. The queue performs no retry/drain, schedule accounting, transport writes or network-loss inference by itself. Callback fixtures and the following UDP integration are separate evidence.
+
+## Independent UDP workers
+
+```mermaid
+flowchart TD
+    A[NewUDP: validate explicit local and peer window and budgets] --> B[Own authenticated UDP transport and directional keys]
+    B --> C[Scheduler: Wait on absolute local anchor]
+    B --> D[Reader: timestamp complete datagram before Decode]
+    B --> E[One shared FIFO writer]
+    C --> F[Due: account overdue range and latest eligible slot]
+    F --> G[Emit skipped range without catch-up]
+    F --> H[admit: outstanding and queue caps]
+    H --> I[Emit admission and completion ticket]
+    I --> E
+    E --> J[write: attempt timestamp then encode and authenticate]
+    J --> K[Record socket-call boundary and bounded write completion]
+    D --> L[Check session, direction, epoch, schedule, content and echoed attempt]
+    L -->|invalid or duplicate| M[Bounded event; no new receipt]
+    L -->|eligible receipt| N[Record arrival and release outstanding admission]
+    L -->|eligible data| O[Record arrival and construct original-identity receipt]
+    O --> H
+    G --> P[Nonblocking bounded event channel]
+    I --> P
+    K --> P
+    M --> P
+    N --> P
+    O --> P
+    P -->|capacity exhausted| Q[Retain terminal error and cancel]
+    K -->|partial write, error or timeout| Q
+    R[Parent cancellation or Close] --> S[shutdown: close queue and owned socket]
+    Q --> S
+    S --> T[Join scheduler, reader and writer; close events]
+    T --> U[Wait returns joined outcome within caller bound]
+```
+
+Sources: [udp.go](internal/worker/udp.go) (`NewUDP`, `validateSchedule`, `schedule`, `admit`, `write`, `receive`, `check`, `emit`, `shutdown`, `Wait`), [UDP fixtures](internal/worker/udp_test.go), [limit/correlation fixtures](internal/worker/udp_limits_test.go). Both endpoints run separate local schedules; neither reads, receipts nor a stalled writer advance their clocks. Data and reverse receipts share one queue/key per physical sender. Duplicate data produces no second receipt; duplicate receipts release outstanding capacity only once. Event content is omitted after frozen-pattern validation, while byte counts and all local timestamp boundaries remain explicit. A skipped-range event retains the first identity/count for later ledger expansion. Admission records precede their attempt events, but arrival may precede write completion.
+
+This component requires an already bound/authenticated UDP transport and caller-applied markings. It handles one explicit window and finite in-memory event/identity/outstanding caps; outstanding expiry, complete phase/cutoff/ledger accounting, persisted evidence budgets, start/control/CLI lifecycle and TCP workers remain pending. Generation finishing is separate from cleanup: `Scheduled` closes without ending receipt observation; only cancellation/`Close` terminates it, and `Wait` joins all workers. These are Windows/WSL loopback fixtures plus injected local stalls/failures, not native ARM64, calibrated one-way, controlled network impairment or live-path acceptance. [Evidence](WORK_LOG.md#2026-10-11-independent-udp-workers), [next task](ROADMAP.md#9-integrate-phase-timing-and-measurement-accounting).
 
 ## Real sockets and authenticated frames
 
@@ -135,7 +173,7 @@ sequenceDiagram
     T->>S: Close owned session and listener
 ```
 
-Sources: [adapter.go](internal/adapter/adapter.go) (`Register`, `Describe`, `Prepare`, `Dial`, `Accept`, `Reject`, `SetReadDeadline`, `Read`, `Write`, `Close`), [wire.go](internal/probe/wire.go) (`Encode`, `Decode`, `ReadTCP`, `WriteTCP`), [adapter tests](internal/adapter/adapter_test.go). UDP sends whole datagrams; TCP adds a four-byte length prefix. Decode checks the exact 92-byte header/124-byte authentication overhead, flags, content length and plan/adapter tag. Partial TCP frames never become arrivals. Production readiness uses the bind/challenge path above; scheduled data/receipts remain unconnected.
+Sources: [adapter.go](internal/adapter/adapter.go) (`Register`, `Describe`, `Prepare`, `Dial`, `Accept`, `Reject`, `SetReadDeadline`, `Read`, `Write`, `Close`), [wire.go](internal/probe/wire.go) (`Encode`, `Decode`, `ReadTCP`, `WriteTCP`), [adapter tests](internal/adapter/adapter_test.go). UDP sends whole datagrams; TCP adds a four-byte length prefix. Decode checks the exact 92-byte header/124-byte authentication overhead, flags, content length and plan/adapter tag. Partial TCP frames never become arrivals. Production readiness uses the bind/challenge path above; UDP scheduled component traffic is described separately, while TCP worker/run integration remains pending.
 
 `socket.Mark` delegates to [Linux](internal/platform/marking_linux.go) or [Windows qWave](internal/platform/marking_windows.go). Requested, API-applied and independently observed marking are distinct; nonzero application failures return errors. No packet-capture/ECN acceptance gate has passed.
 
@@ -183,4 +221,4 @@ Sources: [identity.go](internal/control/identity.go), [key Windows](internal/con
 
 ## Remaining connections
 
-The independent network engine must connect the queue/schedule primitives to UDP/TCP and the start exchange. Maintained clock sampling, calibration/report SSH channels, raw report persistence/replay/export, profile stores, protected loopback API, dashboard/SVG views and matched-run comparisons remain pending. See the [acceptance contract](DESIGN.md#first-slice-implementation-contract) and [task 8](ROADMAP.md#8-implement-independent-udp-senderreceiver-workers).
+The next engine connection is [task 9](ROADMAP.md#9-integrate-phase-timing-and-measurement-accounting): full phase timing and accounting around the UDP component. TCP workers and start/control/finite CLI lifecycle follow separately. Maintained clock sampling, calibration/report SSH channels, raw report persistence/replay/export, profile stores, protected loopback API, dashboard/SVG views and matched-run comparisons remain pending under the [acceptance contract](DESIGN.md#first-slice-implementation-contract).

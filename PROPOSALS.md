@@ -6,21 +6,21 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-First-slice foundations, authenticated UDP/TCP readiness and bounded queue components now exist, with measurement workflow/acceptance pending. [Readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [code flow](FLOWCHART.md).
+First-slice foundations, authenticated UDP/TCP readiness, bounded queues and one-window UDP workers now exist, with full measurement workflow/acceptance pending. [Readiness evidence](ARCHIVE.md#2026-10-11-ssh-pairing-and-readiness), [UDP evidence](WORK_LOG.md#2026-10-11-independent-udp-workers), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-7 are complete within scope, UDP worker task 8 is next, and no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-8 are complete within scope, phase/accounting task 9 is next, and no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
 | F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: persistent pairing, key-only embedded SSH, bounded readiness/lease/revocation and four builds; full measurement workflow, native ARM64/Linux minima pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
-| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: authentic UDP/TCP sockets/framing/bind/readiness and shared bounded queues pass Windows/WSL fixtures; independent measurement engine pending; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
+| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, bounded queues and independent one-window UDP workers pass Windows/WSL fixtures; full engine/TCP worker integration pending; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
 | F05 | Server/destination ports, optional source ports, selected-port comparisons | Partial: explicit socket controls, server port policy and effective readiness bindings; matched-run comparisons/live NAT evidence pending | [Ports](DESIGN.md#port-selection) |
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; directional engine, outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
-| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial strict schema/hash, rational scheduling, bounded FIFO/receipt reserves and local ledger/cutoff/percentile fixtures; network engine/storage/comparison/stall paths pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
+| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial schema/hash, schedule/ledger primitives, bounded FIFO and one-window UDP timing/admission/receipt events; phase/accounting/storage/comparison/stall integration pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory and test-only option extension; engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
 | F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: persistent trust, SSH plan agreement/authenticated readiness and leases, synthetic clock envelopes; start/calibration/report channels, live sampler and verified clock bounds pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 | F10 | Capability-driven dashboard traffic tweaks, including supported fragmentation and header/framing/payload size controls | Accepted; existing payload foundation only; richer controls, schema/mechanisms and dashboard pending ([evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement)) | [Traffic controls](DESIGN.md#protocol-specific-traffic-controls) |
@@ -31,7 +31,7 @@ Keep implementation details, validation coverage, and completed changes in the w
 
 Current scope/decisions remain in [DESIGN.md](DESIGN.md#first-slice-implementation-contract) and [CHOICES.md](CHOICES.md#first-slice-final-decisions). UDP/TCP portions of F01/F02/F05-F09, basic S08/S09 and S07/S10 gates are selected; S11/other carriers/DNS remain later. Foundation checks are partial; no full runtime gate is complete.
 
-Detailed options/provenance belong in `CHOICES.md`; [WORK_LOG.md](WORK_LOG.md#2026-10-11-first-implementation-foundations) retains actual implementation/evidence. [ROADMAP.md](ROADMAP.md) keeps next actions. Do not promote partial features to complete without their acceptance evidence.
+Detailed options/provenance belong in `CHOICES.md`; [WORK_LOG.md](ARCHIVE.md#2026-10-11-first-implementation-foundations) retains actual implementation/evidence. [ROADMAP.md](ROADMAP.md) keeps next actions. Do not promote partial features to complete without their acceptance evidence.
 
 ## Suggestions and accepted additions
 
@@ -39,12 +39,12 @@ S01-S06 remain proposed, with stable IDs. S07-S11 were accepted together on 2026
 
 ### Reference review dispositions
 
-Reviewed/answered: 2026-10-11, action 3b. User confirmed IRTT/iperf2/Crusader as design/external-validation references and accepted S07-S11. [Dispositions](CHOICES.md#selective-source-review-and-dispositions), [acceptance matrix](DESIGN.md#reference-comparison-acceptance-matrix), [historical review](WORK_LOG.md#2026-10-11-selective-reference-review-completed). Current partial implementation is indexed above.
+Reviewed/answered: 2026-10-11, action 3b. User confirmed IRTT/iperf2/Crusader as design/external-validation references and accepted S07-S11. [Dispositions](ARCHIVE.md#selective-source-review-and-dispositions), [acceptance matrix](DESIGN.md#reference-comparison-acceptance-matrix), [historical review](ARCHIVE.md#2026-10-11-selective-reference-review-completed). Current partial implementation is indexed above.
 
 | ID | Recommendation for the first-slice discussion | Decision / implementation state |
 | --- | --- | --- |
 | S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Accepted future scope by user, 2026-10-11; first-slice checks specified, not implemented or executed |
-| S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: local CLI preflight implemented; dashboard/in-run diagnostics and clock-quality evidence pending |
+| S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: CLI preflight and UDP lag/queue/write/arrival events exist; dashboard/in-run diagnostic interpretation and clock-quality evidence pending |
 | S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Accepted future scope by user, 2026-10-11; basic slice contract settled, not implemented |
 | S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Accepted future scope by user, 2026-10-11; checks specified, no fixtures executed |
 | S11 | Explicit continuous monitoring retained for a later slice; retention/windows/reconnect/eligibility remain future choices. | Accepted future scope by user, 2026-10-11; outside first slice, not implemented |
@@ -116,7 +116,7 @@ Before adoption: choose explainable confidence labels or uncertainty measures. K
 
 ## Reference-tool candidates
 
-Recorded: 2026-10-11 during action 3a. This initial inventory captures useful ideas, not a completed source audit or proven integration. The later [action 3b decisions](#reference-review-dispositions) and [source review](CHOICES.md#selective-source-review-and-dispositions) provide current dispositions. Prefer improvements that preserve our shared measurement contract across authentic adapters. Existing requirements below remain F01-F07; they are not claims of implementation. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+Recorded: 2026-10-11 during action 3a. This initial inventory captures useful ideas, not a completed source audit or proven integration. The later [action 3b decisions](#reference-review-dispositions) and [source review](ARCHIVE.md#selective-source-review-and-dispositions) provide current dispositions. Prefer improvements that preserve our shared measurement contract across authentic adapters. Existing requirements below remain F01-F07; they are not claims of implementation. [Planning evidence](ARCHIVE.md#2026-10-11-reference-tool-planning-recorded).
 
 | Reference | Components to evaluate | Existing scope and improvement to investigate |
 | --- | --- | --- |
@@ -128,21 +128,21 @@ Recorded: 2026-10-11 during action 3a. This initial inventory captures useful id
 | [sockperf](https://github.com/mellanox/sockperf) | TCP/UDP latency-under-load and distribution measurements | F02/F07: potential S07 cross-check, with timing boundaries and platform limitations documented. |
 | [dnstt](https://www.bamsoftware.com/software/dnstt/), [iodine](https://github.com/yarrick/iodine) | DNS framing, encoding, resolver limits, fragmentation, polling and sustained tunnel behavior | F04/F07, T16: inspect algorithms and constraints; neither supplies our complete measurement contract. Distinguish reliable TCP tunneling from datagram delivery, record polling/retry overhead, and prevent raw-UDP fallback from being labeled DNS. |
 | [bufferbloat-lab](https://github.com/filip-lebiecki/bufferbloat-lab) | Isolated bottleneck fixtures, matched queue comparisons and live router telemetry | F07 and S10: validation/reference material only; CAKE tuning, shaping, SSH router control and queue management are outside this product's scope. |
-| [StarTrinity Network Tester](https://startrinity.com/VoIP/NetworkTester/NetworkTester.aspx), [CST custom-server guide](https://startrinity.com/InternetQuality/CST/UseCases/MonitoringWithCustomServer.aspx), [SIP Tester tutorial](https://startrinity.com/VoIP/SipTester/SipTesterTutorial.aspx) | Bidirectional UDP size/rate controls, jitter distributions/history, simultaneous upload/download monitoring, quality thresholds, worker-delay diagnostics | F02/F07, S08/S09/S11: documentation/design references; external cross-check candidate only after source/build/license/measurement review. Proposed S12 adds classified degradation episodes. SIP/RTP/MOS, vendor servers, Center/MySQL and global QoS changes are not adopted. [Review evidence](WORK_LOG.md#2026-10-11-startrinity-reference-review-recorded). |
+| [StarTrinity Network Tester](https://startrinity.com/VoIP/NetworkTester/NetworkTester.aspx), [CST custom-server guide](https://startrinity.com/InternetQuality/CST/UseCases/MonitoringWithCustomServer.aspx), [SIP Tester tutorial](https://startrinity.com/VoIP/SipTester/SipTesterTutorial.aspx) | Bidirectional UDP size/rate controls, jitter distributions/history, simultaneous upload/download monitoring, quality thresholds, worker-delay diagnostics | F02/F07, S08/S09/S11: documentation/design references; external cross-check candidate only after source/build/license/measurement review. Proposed S12 adds classified degradation episodes. SIP/RTP/MOS, vendor servers, Center/MySQL and global QoS changes are not adopted. [Review evidence](ARCHIVE.md#2026-10-11-startrinity-reference-review-recorded). |
 
 ### S07: Independent reference-tool cross-checks
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
 
 Define a repeatable validation comparison against IRTT, iperf2, sockperf, Crusader or Flent where their measurements overlap ours. Retain tool/version, settings, raw evidence, endpoint/path, timing boundaries and observed workload; explain discrepancies rather than assuming either tool is ground truth.
 
 Purpose: independently check shared-engine timing, delivery accounting and report calculations for F02/F07. This extends validation evidence, not the product's normal managed endpoint workflow.
 
-Before implementation: settle T20's reference matrix, compatible builds and tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. A UDP reference does not validate TLS/QUIC/WireGuard/Hysteria2/DNS behavior. External benchmark execution requires later authorization; no external CLI becomes a mandatory runtime dependency by this proposal.
+Before execution: use the settled [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix), select compatible builds and establish empirical tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. First-slice UDP/TCP cross-checks are included in authorized [task 33](ROADMAP.md#queued-validation-tasks), with evidence pending; other-carrier checks retain future scope. No external CLI becomes a mandatory runtime dependency.
 
 ### S08: Timing preflight and diagnostic report
 
-- [ ] Accepted future scope by user, 2026-10-11; partial local preflight only, full diagnostics pending. [Implementation evidence](WORK_LOG.md#2026-10-11-first-implementation-foundations).
+- [ ] Accepted future scope by user, 2026-10-11; partial local preflight only, full diagnostics pending. [Implementation evidence](ARCHIVE.md#2026-10-11-first-implementation-foundations).
 
 Offer an optional local preflight that measures timer wake-up error, scheduling lag and submission overhead, plus a diagnostic view during runs. Keep these observations separate from network RTT, receiver processing and adapter queues; identify CPU pressure and unsupported observations.
 
@@ -152,27 +152,27 @@ Remaining work: integrate the contract's explicit preflight/window limits and ad
 
 ### S09: Distribution and phase comparison views
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
 
 Add optional histograms/CDFs and matched-run overlays alongside phase timelines for completed RTT, scheduling error, deadline outcomes and delivery interruptions. Show direction, workload phase, units, sample counts, missing/late outcomes and measurement boundaries; allow inspection of the underlying records.
 
-Purpose: extend F07's existing live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Complements S02/S06 without adopting their additional metrics or confidence policy.
+Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Those UI/report paths remain pending. Complements S02/S06 without adopting their additional metrics or confidence policy.
 
-Before implementation: settle T13/T14/T18 chart layout, binning/percentile methods and bounded updates. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
+First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); dashboard/report integration remains pending. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
 
 ### S10: Controlled contention scenario catalogue
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
 
 Document reproducible validation scenarios: idle, external upload load, external download load, simultaneous load, bulk TCP beside FPS traffic, and bounded non-responsive UDP contention. Add isolated queue-policy/DSCP-classification fixtures when relevant, with actual load and topology recorded separately from the measurement profile.
 
-Purpose: make F07's existing externally busy-network validation reproducible, drawing on Flent and bufferbloat-lab. This is a validation catalogue, not in-product background-load orchestration, bandwidth control or router configuration.
+Purpose: make F07's required externally busy-network validation reproducible, drawing on Flent and bufferbloat-lab; runtime evidence remains pending. This is a validation catalogue, not in-product background-load orchestration, bandwidth control or router configuration.
 
-Before implementation: settle T20 fixture ownership, isolation, resource budgets, restoration and matched repetitions; account for load-generator CPU and path bypass. Local CAKE class observations do not prove ISP prioritization. Router queue telemetry is optional local evidence, not an inferred measurement of inaccessible ISP queues or per-game-packet delay. Execution and temporary network changes require later authorization.
+Before execution: record T20 fixture ownership, isolation, resource budgets, restoration and matched repetitions; account for load-generator CPU and path bypass. First-slice external-contention gates are included in the authorized validation scope, with evidence pending. Preserve user-owned services/settings; temporary changes outside owned isolated fixtures need separate authorization. Local CAKE class observations do not prove ISP prioritization. Router queue telemetry is optional local evidence, not an inferred measurement of inaccessible ISP queues or per-game-packet delay.
 
 ### S11: Continuous responsiveness monitoring
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
 
 Offer an explicitly started/stopped low-rate session with bounded rolling windows for RTT, variation, deadline outcomes and delivery gaps, inspired by Crusader and IRTT. Keep it separate from finite matched comparison runs and export window identity/settings when retained.
 
@@ -182,7 +182,7 @@ Before implementation: settle T14 resource/retention limits, window denominators
 
 ### S12: Classified degradation episodes and observed availability
 
-- [ ] Not implemented; proposed for later consideration, 2026-10-11. [Review evidence](WORK_LOG.md#2026-10-11-startrinity-reference-review-recorded).
+- [ ] Not implemented; proposed for later consideration, 2026-10-11. [Review evidence](ARCHIVE.md#2026-10-11-startrinity-reference-review-recorded).
 
 Extend accepted S11 monitoring with configurable, versioned criteria for no-arrival gaps, deadline misses, reconciled loss and latency/variation degradation. Record episode start/end, duration, direction, triggering evidence and recovery; display counts, longest episode and the fraction of eligible observed time meeting the chosen criteria. Keep no-arrival episodes separate from degraded-but-delivering periods and expose unknown/unobserved time.
 
