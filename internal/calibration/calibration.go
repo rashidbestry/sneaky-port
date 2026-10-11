@@ -48,7 +48,8 @@ func Build(samples []Sample, p Policy) (*Model, error) {
 	}
 	lower := new(big.Rat).Sub(big.NewRat(1, 1), new(big.Rat).SetFrac(new(big.Int).SetUint64(p.DriftPPB), big.NewInt(1e9)))
 	upper := new(big.Rat).Add(big.NewRat(1, 1), new(big.Rat).SetFrac(new(big.Int).SetUint64(p.DriftPPB), big.NewInt(1e9)))
-	errBound := new(big.Rat).Add(new(big.Rat).Mul(integer(p.TimestampError), big.NewRat(2, 1)), integer(p.ModelError))
+	// Client capture error is scaled by the largest feasible rate; server error is already server-local.
+	errBound := new(big.Rat).Add(new(big.Rat).Mul(integer(p.TimestampError), new(big.Rat).Add(big.NewRat(1, 1), upper)), integer(p.ModelError))
 	s := samples[0]
 	aMin := new(big.Rat).Sub(new(big.Rat).Sub(integer(uint64(s.T3)), new(big.Rat).Mul(upper, integer(uint64(s.T4)))), errBound)
 	aMax := new(big.Rat).Add(new(big.Rat).Sub(integer(uint64(s.T2)), new(big.Rat).Mul(lower, integer(uint64(s.T1)))), errBound)
@@ -110,10 +111,13 @@ func interpolate(a, b, t *big.Rat) *big.Rat {
 
 // Interval preserves signed nanosecond bounds; unavailable values remain null.
 type Interval struct {
-	Status                              string `json:"status"`
-	Reason                              string `json:"reason"`
-	Lower, Upper, Midpoint, Uncertainty *string
-	CalibrationIDs                      []string `json:"calibration_ids"`
+	Status         string   `json:"status"`
+	Reason         string   `json:"reason"`
+	Lower          *string  `json:"lower_ns"`
+	Upper          *string  `json:"upper_ns"`
+	Midpoint       *string  `json:"midpoint_ns"`
+	Uncertainty    *string  `json:"uncertainty_ns"`
+	CalibrationIDs []string `json:"calibration_ids"`
 }
 
 // Delay evaluates directional delay over every feasible mapping, never a symmetry shortcut.
@@ -124,6 +128,13 @@ func (m *Model) Delay(client, server, now uint64, clientEpoch, serverEpoch uint3
 	}
 	var lo, hi *big.Rat
 	for _, p := range m.vertices {
+		// Both actual captures must fit the declared mapping lifetime under every feasible clock.
+		remoteClient := new(big.Rat).Quo(new(big.Rat).Sub(integer(server), p.a), p.b)
+		validEnd := new(big.Rat).Add(integer(m.last), integer(m.policy.Expiry))
+		if remoteClient.Cmp(integer(m.first)) < 0 || remoteClient.Cmp(validEnd) > 0 {
+			out.Reason = "remote capture outside clock validity envelope"
+			return out
+		}
 		var value *big.Rat
 		if upstream {
 			value = new(big.Rat).Sub(integer(server), new(big.Rat).Add(p.a, new(big.Rat).Mul(p.b, integer(client))))
@@ -139,14 +150,17 @@ func (m *Model) Delay(client, server, now uint64, clientEpoch, serverEpoch uint3
 		}
 	}
 	// Propagate endpoint capture and declared between-sample model uncertainty in each direction.
-	errorBound := new(big.Rat).Add(new(big.Rat).Mul(integer(m.policy.TimestampError), big.NewRat(2, 1)), integer(m.policy.ModelError))
-	if !upstream {
-		minB := m.vertices[0].b
-		for _, p := range m.vertices {
-			if p.b.Cmp(minB) < 0 {
-				minB = p.b
-			}
+	minB, maxB := m.vertices[0].b, m.vertices[0].b
+	for _, p := range m.vertices {
+		if p.b.Cmp(minB) < 0 {
+			minB = p.b
 		}
+		if p.b.Cmp(maxB) > 0 {
+			maxB = p.b
+		}
+	}
+	errorBound := new(big.Rat).Add(new(big.Rat).Mul(integer(m.policy.TimestampError), new(big.Rat).Add(big.NewRat(1, 1), maxB)), integer(m.policy.ModelError))
+	if !upstream {
 		errorBound.Quo(errorBound, minB)
 	}
 	lo.Sub(lo, errorBound)

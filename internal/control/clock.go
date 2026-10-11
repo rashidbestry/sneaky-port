@@ -526,7 +526,7 @@ func (w *clockWindow) snapshot(now profile.Decimal) *ClockSnapshot {
 		out.Reason = "clock samples expired"
 	} else if out.RecentValid >= w.policy.Samples {
 		out.Status = "samples_available"
-		out.Reason = "raw constraints only; clock model and one-way results not integrated"
+		out.Reason = "raw constraints available; matched endpoint evidence gates separate one-way derivation"
 	}
 	return &out
 }

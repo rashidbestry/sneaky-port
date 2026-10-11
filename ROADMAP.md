@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-15 are complete within their stated scopes. **Next: task 16 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-16 are complete within their stated scopes. **Next: task 17 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -96,15 +96,18 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for live sampling and recorded fixtures.** F09, T22/T23. One authenticated in-run SSH channel captures four timestamps in the data epochs, serialization/send-call costs, invalid exchanges, skipped cadence slots and application-byte counters. Bounded windows, expiry and separate raw-file reserves preserve replay/export without deriving one-way results. Windows/Ubuntu/CentOS IPv4/IPv6 UDP/TCP and fault fixtures, Windows race checks and four builds pass. [Evidence](WORK_LOG.md#2026-10-11-live-ssh-clock-sampling), [code flow](FLOWCHART.md#live-ssh-clock-sampling), [timing policy](DESIGN.md#calibration-and-one-way-evidence-policy).
 
-**Next: task 16 only, uncertainty-gated one-way integration.** Production clock-quality bounds and full slice acceptance remain unvalidated.
+## 16. Integrate uncertainty-gated one-way results (completed)
+
+**Complete for post-reconciliation directional integration and recorded fixtures.** F09, T22/T23. Matched attempts/complete receiver arrivals use immutable causal clock-window revisions and full feasible offset/drift/error envelopes. Signed intervals, sample/model/raw-file IDs, age, clock-local units, exact directional populations and bounded detail omissions survive replay/export. Known offset/drift/asymmetry, inconsistent/foreign/expired/recovering clocks, both capture lifetimes, signed/large-integer and exceed-policy gates pass; real SSH/UDP/TCP IPv4/IPv6 reports retain estimates. Production bounds stay unverified, with estimates/unavailable results; independent/native/clock-change/live calibration remains task 28. [Evidence](WORK_LOG.md#2026-10-11-uncertainty-gated-one-way-integration), [code flow](FLOWCHART.md#uncertainty-gated-one-way-results).
+
+**Next: task 17 only, protect the local run-control API.** Full slice acceptance remains incomplete.
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**; task 16 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
+Every row is a separate task, currently **not started**; task 17 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 16 | Integrate uncertainty-gated one-way results | Known offset/drift/asymmetry/expiry fixtures pass; unverified production bounds remain estimated or unavailable |
 | 17 | Protect the local run-control API | Loopback binding, session token and Host/Origin guards protect adapter/status/start/cancel routes |
 | 18 | Connect saved profile/pairing/report API operations | Validated IDs, explicit saves and bounded imports share existing validators; active frozen plans stay unchanged |
 | 19 | Build dashboard setup and run controls | Pairing/profile editing and explicit save/start/cancel/status work through the protected API |

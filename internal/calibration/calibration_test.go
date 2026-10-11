@@ -67,3 +67,37 @@ func TestEstimateAndInconsistent(t *testing.T) {
 		t.Fatal("inconsistent retained sample ignored")
 	}
 }
+
+// TestDelayCaptureBounds verifies rate-scaled timestamp error, signed intervals and both capture lifetimes.
+// A single exact synthetic mapping isolates propagation from uncertainty in the fitted envelope.
+func TestDelayCaptureBounds(t *testing.T) {
+	m := &Model{vertices: []point{{big.NewRat(500, 1), big.NewRat(2, 1)}}, first: 1, last: 1000, clientEpoch: 1, serverEpoch: 2, IDs: []string{"known"}, policy: Policy{TimestampError: 10, ModelError: 5, Expiry: 1000, MaxError: 100, Source: "exact fixture", Verified: true}}
+	up := m.Delay(1100, 2700, 1100, 1, 2, true)
+	down := m.Delay(1100, 2700, 1100, 1, 2, false)
+	if up.Status != "calibrated" || *up.Lower != "-35" || *up.Upper != "35" || *down.Lower != "-18" || *down.Upper != "18" || *down.Uncertainty != "18" {
+		t.Fatalf("rate-scaled error or signed interval lost: %+v %+v", up, down)
+	}
+	negative := m.Delay(1100, 2000, 1100, 1, 2, true)
+	if negative.Status != "unavailable" || negative.Midpoint != nil || negative.Reason != "wholly negative delay envelope" {
+		t.Fatal("impossible negative value exposed", negative)
+	}
+	if remote := m.Delay(1100, 5100, 1100, 1, 2, true); remote.Status != "unavailable" || remote.Midpoint != nil || remote.Reason != "remote capture outside clock validity envelope" {
+		t.Fatal("remote capture outlived clock envelope", remote)
+	}
+	if boundary := m.Delay(1900, 4300, 2000, 1, 2, true); boundary.Status != "calibrated" {
+		t.Fatal("exact expiry boundary rejected", boundary)
+	}
+	if expired := m.Delay(1900, 4300, 2001, 1, 2, true); expired.Status != "unavailable" || expired.Lower != nil {
+		t.Fatal("strict expiry failed", expired)
+	}
+}
+
+// TestDelayExactLargeOffsets preserves nanoseconds beyond browser precision without float conversion.
+func TestDelayExactLargeOffsets(t *testing.T) {
+	const base uint64 = 9007199254740993
+	m := &Model{vertices: []point{{big.NewRat(500, 1), big.NewRat(1, 1)}}, first: base, last: base + 1000, clientEpoch: 1, serverEpoch: 1, IDs: []string{"large"}, policy: Policy{Expiry: 1000, MaxError: 1, Source: "exact fixture", Verified: true}}
+	got := m.Delay(base+1100, base+1610, base+1100, 1, 1, true)
+	if got.Status != "calibrated" || *got.Lower != "10" || *got.Upper != "10" || *got.Uncertainty != "0" {
+		t.Fatal("large-offset precision lost", got)
+	}
+}

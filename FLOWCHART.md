@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation and live SSH clock captures are implemented; one-way integration/dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures and uncertainty-gated one-way estimates are implemented. Production clock-bound validation/API/dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -326,7 +326,7 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures now replay independently of measurement accounting. [Task 16](ROADMAP.md#queued-implementation-tasks) owns clock-model/one-way integration; API/dashboard/SVG, matched comparisons and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). API/dashboard/SVG, matched comparisons and full acceptance remain pending.
 
 ## Authenticated server evidence transfer and reconciliation
 
@@ -347,7 +347,7 @@ flowchart TD
     K -->|no| X
     K -->|yes| L[Match receiver identity, original attempt, direction and epoch]
     L --> M[Shared ledger derives warmup, main and phase delivery]
-    M --> N[Preserve unknown packet loss, one-way delay and ambiguous writes]
+    M --> N[Preserve unknown packet loss and ambiguous writes; separately derive one-way intervals]
     N --> O[Publish separate transfer receipt and derived reconciliation]
     O --> P[Offline replay rechecks transferred bytes and rederives exports]
 ```
@@ -377,9 +377,39 @@ flowchart TD
     A --> N[Data/control keep independent schedules and RTT]
     N --> O[Finite completion or cancellation joins sampler before finalization]
     O --> P[Stop server calibration before post-stop report channel]
-    P --> Q[Replay and export exact raw captures; one-way remains unavailable]
+    P --> Q[Replay exact raw captures; matched endpoint records feed one-way derivation]
 ```
 
 Sources: [clock.go](internal/control/clock.go) (`clockGate`, `startClock`, `run`, `clockRead`, `clockWrite`, `appendClock`, `clockWindow`), [lifecycle](internal/control/run.go) (`executeRun`, `drainJoinBudget`), [routing](internal/control/transfer.go) (`routeReportChannels`), [persistence](internal/control/evidence.go) (`Finalize`), [replay](internal/control/replay.go), [fixtures](internal/control/clock_test.go). Captures use the actual endpoint data epochs; t3 submission includes separately measured serialization/send costs, and t4 excludes follow-up arrival. Recent invalid samples remain visible and can displace older valid samples. Readiness-only sessions never sample.
 
-Requests, 4 KiB frames/raw captures, recent attempts and event/file/queue bytes have explicit bounds. Calibration rejection, invalidity, expiry or response timeout does not cancel working data/control. If the shared SSH transport blocks channel accept/close/write past shutdown, the owned connection closes as control failure. The sole uncancellable SSH channel-open wait belongs to that connection and ends at teardown. Captures provide constraints only; affine models, revisions, uncertainty-gated one-way results and production clock-quality validation remain [task 16](ROADMAP.md#queued-implementation-tasks) and later acceptance work.
+Requests, 4 KiB frames/raw captures, recent attempts and event/file/queue bytes have explicit bounds. Calibration rejection, invalidity, expiry or response timeout does not cancel working data/control. If the shared SSH transport blocks channel accept/close/write past shutdown, the owned connection closes as control failure. The sole uncancellable SSH channel-open wait belongs to that connection and ends at teardown. Captures provide constraints to the separate derivation below; production clock-quality validation remains task 28.
+
+## Uncertainty-gated one-way results
+
+```mermaid
+flowchart TD
+    A[Replay authenticated transferred endpoint evidence] --> B[Reuse complete directional reconciliation gates]
+    A --> C[Read exact client raw clock captures]
+    B --> D[Match original attempts and receiver arrivals at independent cutoffs]
+    D --> E[Order by client send upstream or client arrival downstream]
+    C --> F[Advance only captures finished by that client time]
+    E --> F
+    F --> G[Freeze each bounded recent window, including invalid evictions]
+    G --> H{Enough valid unexpired samples with consistent epochs?}
+    H -->|no| X[Unavailable timing with null interval and reason]
+    H -->|yes| I[Intersect all constraints with explicit offset drift and error policy]
+    I --> J{Feasible envelope and both captures inside validity?}
+    J -->|no| X
+    J -->|yes| K[Propagate rate-scaled timestamp and model errors to signed interval]
+    K --> L{Wholly negative envelope?}
+    L -->|yes| X
+    L -->|no| M{Independent verified bounds and uncertainty within policy?}
+    M -->|yes: synthetic justified fixtures only today| N[Calibrated interval]
+    M -->|no: production today| O[Estimate; excluded from directional timeliness claims]
+    X --> P[Count all states; retain model and result details within byte cap]
+    N --> P
+    O --> P
+    P --> Q[CLI reconciliation and deterministic JSON JSONL CSV exports]
+```
+
+Sources: [one_way.go](internal/control/one_way.go) (`productionOneWay`, `deriveOneWay`, `oneWayQueries`, `retainOneWay`), [calibration.go](internal/calibration/calibration.go) (`Build`, `Delay`), [reconciliation](internal/control/reconcile.go) (`reconcileReports`), [replay](internal/control/replay.go), [exports](internal/control/export.go), [synthetic fixtures](internal/control/one_way_test.go), [real SSH/UDP/TCP fixtures](internal/control/clock_test.go). Revisions are reconstructed from raw captures, with hashes/sample IDs, signed bounds, age and clock-local units; future samples never upgrade earlier results. Missing receiver captures stay null. Exact populations include omitted details under min(event budget, 256 KiB). Endpoint-only RTT/delivery and raw files remain unchanged. Production verification cannot be enabled by profile/source text; independent clock-bound, native clock-change/impairment/live acceptance remains pending.

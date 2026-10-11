@@ -199,9 +199,12 @@ func TestLiveClockRuns(t *testing.T) {
 			if replay.Clock == nil || !reflect.DeepEqual(replay.Clock, result.Clock) || replay.Verification != "matched" {
 				t.Fatal("replay changed captures")
 			}
+			if result.Reconciliation == nil || result.Reconciliation.OneWay == nil || !reflect.DeepEqual(result.Reconciliation.OneWay, replay.Reconciliation.OneWay) || result.Reconciliation.OneWay.Calibrated != 0 || result.Reconciliation.OneWay.Estimated == 0 {
+				t.Fatal("live one-way estimates/replay missing or unverified bounds promoted")
+			}
 			for _, format := range []string{"json", "jsonl", "csv"} {
 				var b bytes.Buffer
-				if err = ExportReport(&b, replay, format); err != nil || !bytes.Contains(b.Bytes(), []byte("calibration_id")) || !bytes.Contains(b.Bytes(), []byte("t1_ns")) {
+				if err = ExportReport(&b, replay, format); err != nil || !bytes.Contains(b.Bytes(), []byte("calibration_id")) || !bytes.Contains(b.Bytes(), []byte("t1_ns")) || !bytes.Contains(b.Bytes(), []byte("lower_ns")) || !bytes.Contains(b.Bytes(), []byte("one_way")) {
 					t.Fatal("clock export", format, err)
 				}
 			}

@@ -10,7 +10,7 @@ Foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-15 are complete within scope. Task 16 owns one-way integration; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-16 are complete within scope. Production clock-bound/API/UI and full acceptance remain pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; writer-owned physical-phase transitions implemented; outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
 | F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; bounded local files/replay/exports and authenticated remote reconciliation implemented; comparisons pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory and test-only option extension; engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
-| F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: trust/readiness/leases, finite lifecycle, authenticated reconciliation and live SSH clock captures implemented; synthetic envelopes tested. Model/one-way integration, independently verified bounds and clock-change/native/live acceptance pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
+| F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: trust/readiness/leases, finite lifecycle, authenticated reconciliation, live SSH captures and causal one-way intervals/replay/export implemented. Synthetic envelope gates pass; independently verified production bounds and clock-change/native/live acceptance pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 | F10 | Capability-driven dashboard traffic tweaks, including supported fragmentation and header/framing/payload size controls | Accepted; existing payload foundation only; richer controls, schema/mechanisms and dashboard pending ([evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement)) | [Traffic controls](DESIGN.md#protocol-specific-traffic-controls) |
 
 Keep implementation details, validation coverage, and completed changes in the work log. When progress begins, annotate this index with its actual state and a reference to the relevant work-log entry. Partial delivery of an item does not complete all its protocol/platform variants.
@@ -117,6 +117,8 @@ Present quality metrics and evidence confidence separately. Confidence should ac
 Purpose: prevent an apparently excellent connection from winning on weak or incomplete evidence, while avoiding classification of a measurement limitation as a network problem.
 
 Before adoption: choose explainable confidence labels or uncertainty measures. Keep actual poor-delivery outcomes distinct from lack of evidence. Unknown marking observations limit claims about marking preservation; they do not automatically invalidate independently sound delivery measurements.
+
+Task 16 milestone suggestion (still proposed): one-way results now retain uncertainty, expiry, missing/inconsistent-clock reasons and explicit detail omissions alongside unchanged local RTT/delivery. These inputs can support descriptive evidence labels such as “clock bounds unverified” or “missing receiver records,” without a combined score or automatic winner. User requested an explanation on 2026-10-11; acceptance remains open. Before later implementation, decide which labels apply per metric, how repeated-run evidence is described, and verify that poor timely-delivery results remain visible beside measurement limitations.
 
 ## Reference-tool candidates
 

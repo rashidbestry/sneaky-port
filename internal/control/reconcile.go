@@ -14,19 +14,20 @@ import (
 )
 
 // Reconciliation derives directional application delivery from compatible endpoint identities.
-// Independent host cutoffs are retained; no one-way times or underlying packet-loss estimates are inferred.
+// Independent cutoffs and unknown packet loss remain; OneWay separately applies explicit clock gates.
 type Reconciliation struct {
-	Version         int       `json:"schema_version"`
-	RunID           string    `json:"run_id"`
-	SessionID       string    `json:"session_id"`
-	PlanHash        string    `json:"plan_hash"`
-	Status          string    `json:"status"`
-	Reason          string    `json:"reason"`
-	ClientRawSHA256 string    `json:"client_raw_sha256"`
-	ServerRawSHA256 string    `json:"server_raw_sha256"`
-	Client          *LocalRun `json:"client_origin"`
-	Server          *LocalRun `json:"server_origin"`
-	Warnings        []string  `json:"warnings"`
+	Version         int           `json:"schema_version"`
+	RunID           string        `json:"run_id"`
+	SessionID       string        `json:"session_id"`
+	PlanHash        string        `json:"plan_hash"`
+	Status          string        `json:"status"`
+	Reason          string        `json:"reason"`
+	ClientRawSHA256 string        `json:"client_raw_sha256"`
+	ServerRawSHA256 string        `json:"server_raw_sha256"`
+	Client          *LocalRun     `json:"client_origin"`
+	Server          *LocalRun     `json:"server_origin"`
+	Warnings        []string      `json:"warnings"`
+	OneWay          *OneWayReport `json:"one_way"`
 }
 
 // marshalReport preserves exact decimal fields and bounded public JSON without serializing internal ledgers.
@@ -43,6 +44,9 @@ func marshalReport(v any) ([]byte, error) {
 func reconcileReports(client, server *ReplayedReport) *Reconciliation {
 	m, s := client.Manifest, server.Manifest
 	r := &Reconciliation{Version: 1, RunID: m.RunID, SessionID: m.SessionID, PlanHash: m.PlanHash, Status: "unknown", Reason: "missing, partial or incompatible endpoint evidence", ClientRawSHA256: client.Summary.SHA256, ServerRawSHA256: server.Summary.SHA256, Client: localSnapshot(client.Evidence), Server: localSnapshot(server.Evidence), Warnings: []string{}}
+	defer func() { // Derive separately after directional compatibility settles; never alter local RTT/delivery.
+		r.OneWay = productionOneWay(client, server, r)
+	}()
 	a, b := client.Evidence, server.Evidence
 	if m.Endpoint != "client" || s.Endpoint != "server" || m.RunID != s.RunID || m.SessionID != s.SessionID || m.PlanHash != s.PlanHash || !reflect.DeepEqual(m.Plan, s.Plan) || !reflect.DeepEqual(m.Settings, s.Settings) || a.Run != b.Run || a.Session != b.Session || a.PlanHash != b.PlanHash || a.Direction != 1 || b.Direction != 2 || a.Epoch != b.PeerEpoch || a.PeerEpoch != b.Epoch || a.Epoch != 1 {
 		r.Reason = "endpoint identity, plan, settings or epoch mismatch"
