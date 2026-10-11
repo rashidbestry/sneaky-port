@@ -67,6 +67,17 @@ Confirmed on 2026-10-11: the protocol range must be easy to extend across releas
 
 Treat extensibility as a first-slice design constraint. Later authorized acceptance should demonstrate that a small additional adapter can be registered and used through the shared workflow without a broad core/UI/report rewrite, while existing adapters retain their accounting and behavior. Actual new-carrier support still requires authentic protocol operation and applicable validation. This requirement does not mandate runtime plugins or hot loading; compile-time registration is selected for the first slice.
 
+## Protocol-specific traffic controls
+
+Confirmed on 2026-10-11 (F10): selecting a protocol in the dashboard must expose its supported traffic tweaks, usable with the configurable directional steady/burst phases. Extend the adapter descriptions rather than hardcoding controls for each protocol in the shared UI. Payload size/content, ports, rate/timing and priority remain existing requirements.
+
+- Describe each option's type, units, bounds, layer, supported directions/modes, dependencies and privilege/platform requirements. Share validation between profiles, dashboard and endpoints; unsupported combinations remain explicit.
+- Provide supported fragmentation/splitting controls, such as logical fragment size/count and pacing. Keep application fragmentation/reassembly, stream write/segment behavior and IP fragmentation separate; selecting one must not claim the others occurred. Bound fragment queues/reassembly and retain logical-message deadlines, duplicates, incomplete delivery and separate fragment/wire overhead.
+- Expose supported header/framing/padding size controls with clear byte accounting: test content, required measurement/authentication fields, adapter framing, transport/network overhead and actual observed packet size. Protocol-mandated fields cannot be arbitrarily resized or removed while still claiming authentic operation.
+- Save selected tweaks in the frozen run plan, agree on role-specific settings before start, and retain requested/effective/observed outcomes and layer in reports. Dashboard edits affect later runs, not active snapshots.
+
+Current version-1 probes have a fixed 92-byte header plus authentication; richer options must preserve those requirements or introduce an explicit compatible schema/version change. The payload foundation is implemented, but this broader tweak catalogue, fragmentation/header controls and dashboard are not. T25 tracks exact mechanisms. Implement additions as separately validated adapter/layer tasks; do not imply every knob is possible for every carrier or platform.
+
 ## DNS experiments
 
 | Case | What to compare |

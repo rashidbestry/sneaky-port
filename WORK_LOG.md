@@ -18,6 +18,7 @@ Use this file to track backward: completed changes, validation, and current impl
 | Implemented application features | Foundation CLI, pairing/key-only SSH/UDP-TCP readiness/leases and internal bounded FIFO workers; measurement engine remains pending | [Operator commands](README.md#pair-endpoints-and-check-readiness), [readiness evidence](#2026-10-11-ssh-pairing-and-readiness), [queue evidence](#2026-10-11-bounded-writer-queues) | 2026-10-11 |
 | Protocol extensibility | Registry/descriptor/factory plus test-only option extension pass; common engine/UI/report path pending | [adapter.go](internal/adapter/adapter.go), [tests](internal/adapter/adapter_test.go) | 2026-10-11 |
 | Control and one-way timing | SSH identity/plan/readiness/stop/revocation and leases tested; synthetic clock envelopes exist; start/live calibration/report channels remain pending | [Readiness flow](FLOWCHART.md#persistent-trust-and-endpoint-readiness), [target timing policy](DESIGN.md#calibration-and-one-way-evidence-policy) | 2026-10-11 |
+| Protocol traffic controls | F10 accepted; payload foundation exists; richer header/fragment controls and dashboard pending; T25 mechanics open | [Requirements](DESIGN.md#protocol-specific-traffic-controls) | 2026-10-11 |
 
 ## Recording rules
 
@@ -332,3 +333,12 @@ Recorded: 2026-10-11 11:55:01 UTC+03:00 (Europe/Istanbul).
 - User supplied successful terminal output from the current Windows x86-64 checkout after installing MSYS2 UCRT64 GCC 16.2.0 (Rev4) and setting session-local PATH, CC=gcc, CGO_ENABLED=1 and workspace caches. `go test -race ./internal/writer -count=20` passed (3.250 s); `go test -race ./...` passed every tested package with no race report. Platform/testutil packages have no test files. This is user-provided execution evidence, not an assistant rerun.
 - Closes the previously recorded missing-compiler gap for Windows race instrumentation. Earlier failed/unrun attempts remain historical evidence; passing tests cover exercised paths, not all possible races or Linux/ARM64/native-network acceptance. No code change was needed. Updated ROADMAP's current task 7 statement and this index; task 8 remains next and no adjacent implementation started. Changes remain uncommitted.
 - Documentation checks passed: nine Markdown files, 205 local links/anchors, stable F/S/T identifiers, task coverage/status and whitespace; git diff --check passed with normalization warnings only.
+
+### 2026-10-11 Protocol traffic tweak requirement
+
+- Recorded at 12:05 UTC+03:00 (Europe/Istanbul).
+
+- User requested protocol selection with related traffic tweaks, including fragmentation and header/payload sizes. Added F10 and T25 requirements/choices and linked dashboard task 19; current task 8 and implementation scope/status otherwise unchanged. Files: `DESIGN.md`, `CHOICES.md`, `PROPOSALS.md`, `ROADMAP.md`, this index/log.
+- Verified current code: `internal/probe/wire.go` has a fixed 92-byte authenticated probe header; `internal/profile/profile.go` supports content size/pattern, and `internal/adapter/adapter.go` validates limited options. Rich fragmentation/header controls and UI do not exist. Required framing/authentication remains intact; exact adapter/layer/version changes are open.
+- Required capability-driven controls and shared validation; distinguished logical fragmentation, stream segmentation and IP fragmentation, and content versus header/framing/outer bytes. Plans retain role-specific agreed settings and requested/effective/observed evidence; fragment/reassembly accounting stays bounded and preserves logical outcomes. S04 automatic sweeps remain proposed.
+- State: requirements update only; no application code changed or new carrier/packet experiment implemented. Saved locally, uncommitted. Checks: nine Markdown files passed 211 local-link/heading-anchor and whitespace checks; F10/T25 identifiers and `git diff --check` passed (LF-to-CRLF warnings only). No runtime tests needed for this documentation change.

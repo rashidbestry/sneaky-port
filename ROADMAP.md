@@ -103,4 +103,6 @@ All are **pending evidence**. Use [acceptance gates](DESIGN.md#validation-before
 | 34 | Matched live-path case | Repeated matched trials retain environment, offered workload and uncertainty; incompatible/incomplete results remain inconclusive |
 | 35 | Review first-slice acceptance evidence | Every applicable contract gate is linked to evidence; unresolved required cases keep the full slice incomplete |
 
+F10's [protocol traffic controls](DESIGN.md#protocol-specific-traffic-controls) inform dashboard task 19. Split richer tweak implementation into named adapter/layer outcomes before starting it; T25's schema/fragmentation/header decisions remain open. This requirement update does not complete UI work, broaden current task 8, or change the existing version-1 wire format.
+
 Later carriers, DNS and monitoring keep their existing future status in [PROPOSALS.md](PROPOSALS.md). No release date or acceptance result is inferred from this breakdown.

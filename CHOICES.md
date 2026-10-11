@@ -397,6 +397,16 @@ All workload/rate/port/deadline/resource/lease/calibration-quality values requir
 
 The acceptance table completes task 4's **documented success criteria**, not runtime acceptance. Wire/schema/count fixtures, loopback, native priority/calibration, impairment, independent references and live paths remain separate gates. F09 cannot be completed merely because estimates exist. User subsequently authorized the original action 5; foundations, SSH/readiness and bounded queues are partial delivery, with engine/calibration/report/UI gates pending. Its execution is now split into bounded [roadmap tasks](ROADMAP.md#first-slice-task-index). [Readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [pins/licenses](THIRD_PARTY_NOTICES.md).
 
+## Protocol traffic-tweak choices
+
+Confirmed on 2026-10-11: the dashboard should offer protocol-related traffic tweaks, including supported fragmentation and header/payload size controls (F10). [Requirements](DESIGN.md#protocol-specific-traffic-controls), [evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement).
+
+| ID | Question | State |
+| --- | --- | --- |
+| T25 | Which typed adapter controls, fragmentation/reassembly layer, header/framing/padding options, version changes and effective-setting evidence should each mode support? | Dashboard/tweak requirement confirmed by user, 2026-10-11; exact per-adapter mechanisms, option limits and schema changes open |
+
+Preserve current required identity/authentication and the fixed version-1 framing until a compatible extension is selected. Controls must advertise actual capabilities; application fragments, stream segmentation and IP fragments are distinct experiments. Do not adopt automatic tweak sweeps by implication (S04 remains proposed).
+
 ## Maintaining choices
 
 - Keep stable T identifiers, options/recommendations, dependencies, explicit state and dated answer provenance. Silence or recommendations do not mean acceptance; choices do not authorize implementation.
