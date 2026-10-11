@@ -94,9 +94,9 @@ type Phase struct {
 
 // Limits bounds queues, ledgers, persistence, I/O and control leases explicitly.
 type Limits struct {
-	QueueMessages     int     `json:"queue_messages"`
-	QueueBytes        Decimal `json:"queue_bytes"`
-	ReceiptReserve    int     `json:"receipt_reserve"`
+	QueueMessages     int     `json:"queue_messages"`  // Waiting plus active frames, including receipts.
+	QueueBytes        Decimal `json:"queue_bytes"`     // Common authenticated bytes; excludes TCP prefix/outer overhead.
+	ReceiptReserve    int     `json:"receipt_reserve"` // Data cannot consume these slots or N * 124 receipt bytes.
 	Outstanding       int     `json:"outstanding_data"`
 	LedgerMessages    int     `json:"ledger_messages"`
 	EventBytes        Decimal `json:"event_bytes"`

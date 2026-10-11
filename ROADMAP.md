@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-6 are complete within their stated scopes. **Next: task 7 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-7 are complete within their stated scopes. **Next: task 8 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -48,13 +48,19 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for component implementation and recorded fixtures.** Persistent public trust, key-only embedded SSH, exact-plan UDP/TCP binding, effective settings, leases/revocation and clean stop pass Windows/WSL fixtures. This task starts no measurement; Windows-to-Linux CLI and native/platform acceptance remain tasks 23-27. [Evidence and access restriction](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [code flow](FLOWCHART.md#persistent-trust-and-endpoint-readiness).
 
-## 7. Implement bounded writer queues
+<a id="7-implement-bounded-writer-queues"></a>
+
+## 7. Implement bounded writer queues (completed)
+
+**Complete for queue component implementation and fixtures.** F02/F07, T06/T15. Shared FIFO workers, active-inclusive message/byte caps, receipt reserves, typed admission/completion reasons and bounded cancellation/join exist. Saturation, FIFO/accounting, partial-write failure and cancellation fixtures pass on Windows and Ubuntu/CentOS WSL; four target package builds pass. User-reported Windows race checks pass for 20 queue repetitions and the full suite. No CLI measurement, sampler, reporting or UI connected. [Queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [race evidence](WORK_LOG.md#2026-10-11-windows-race-instrumentation), [queue policy](DESIGN.md#phase-scheduling-and-resource-policy), [code flow](FLOWCHART.md#bounded-writer-queues).
+
+## 8. Implement independent UDP sender/receiver workers
 
 **State: next; not started.** F02/F07, T06/T15.
 
-Scope: FIFO admission with message/byte caps and reserved receipt capacity, typed admission/failure outcomes, and cancellation of owned queue workers. Connect no CLI measurement command, clock sampler, report store or UI in this task.
+Scope: connect real UDP reads/writes to the existing queue and local schedules independently in both physical directions. Reuse profile, codec, adapter and scheduling primitives; leave phase/ledger integration, TCP and CLI run lifecycle to tasks 9-11.
 
-Done when focused fixtures prove data saturation preserves receipt capacity, receipts still respect total caps, FIFO/byte accounting is correct and cancellation unblocks workers. Complete applicable Go checks, function comments, flowchart and work-log/status updates, then report task 8 as next. [Canonical queue policy](DESIGN.md#phase-scheduling-and-resource-policy).
+Done when focused UDP fixtures show both local schedules advance independently of reads/receipts and stalled writers; scheduler-lag/admission skips create no catch-up traffic, valid receipts share the reverse-direction queue, and cancellation releases owned workers/sockets. Complete applicable Go checks, function comments, flowchart and work-log/status updates, then report task 9 as next.
 
 ## Queued implementation tasks
 
@@ -62,7 +68,6 @@ Every row is a separate task, currently **not started**. Existing primitives are
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 8 | Independent UDP sender/receiver workers | Both directions send on local schedules while reads/receipts proceed independently; lag/admission skips produce no catch-up traffic |
 | 9 | Integrate phase timing and measurement accounting | Warmup/main, burst/quiet windows, identities, deadlines, cutoffs, RTT/variation and spike/stall fixtures reconcile with ledger records |
 | 10 | Connect TCP to the shared workers | Blocked/partial writes preserve independent scheduling, complete-frame arrivals and honest stream-stall/unknown packet-loss outcomes |
 | 11 | Connect finite run start/stop lifecycle | Frozen-plan start, phase-specific markings, grace, cancellation/control loss and lease cleanup pass; expose the finite CLI run workflow |

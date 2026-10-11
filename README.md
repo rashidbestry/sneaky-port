@@ -10,7 +10,7 @@ The protocol architecture must be extensible: later releases should add probe ad
 
 **Current status: foundations and authenticated UDP/TCP readiness implemented; measurement workflow pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, scheduling/ledger primitives, local preflight, restricted persistent pairing, key-only embedded SSH, authenticated UDP/TCP bind/readiness and heartbeat leases. The network measurement engine, live calibration, persisted reports/API/dashboard and full acceptance evidence remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness).
+Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, scheduling/ledger primitives, bounded FIFO queues with receipt reserves, local preflight, restricted persistent pairing, key-only embedded SSH, authenticated UDP/TCP bind/readiness and heartbeat leases. The network measurement engine, live calibration, persisted reports/API/dashboard and full acceptance evidence remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues).
 
 ## Run the foundation tools
 

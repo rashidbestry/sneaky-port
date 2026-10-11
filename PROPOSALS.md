@@ -6,21 +6,21 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-First-slice foundations and authenticated UDP/TCP readiness now exist, with measurement workflow/acceptance pending. [Readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [code flow](FLOWCHART.md).
+First-slice foundations, authenticated UDP/TCP readiness and bounded queue components now exist, with measurement workflow/acceptance pending. [Readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; foundation/readiness milestones are complete within scope, queue task 7 is next, and no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-7 are complete within scope, UDP worker task 8 is next, and no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
 | F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: persistent pairing, key-only embedded SSH, bounded readiness/lease/revocation and four builds; full measurement workflow, native ARM64/Linux minima pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
-| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: authentic UDP/TCP sockets/framing/bind/readiness pass Windows/WSL fixtures; independent measurement engine pending; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
+| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: authentic UDP/TCP sockets/framing/bind/readiness and shared bounded queues pass Windows/WSL fixtures; independent measurement engine pending; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
 | F05 | Server/destination ports, optional source ports, selected-port comparisons | Partial: explicit socket controls, server port policy and effective readiness bindings; matched-run comparisons/live NAT evidence pending | [Ports](DESIGN.md#port-selection) |
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; directional engine, outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
-| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial strict schema/hash, rational scheduling, local ledger/cutoff/percentile fixtures; network engine/storage/comparison/stall paths pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
+| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial strict schema/hash, rational scheduling, bounded FIFO/receipt reserves and local ledger/cutoff/percentile fixtures; network engine/storage/comparison/stall paths pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory and test-only option extension; engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
 | F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: persistent trust, SSH plan agreement/authenticated readiness and leases, synthetic clock envelopes; start/calibration/report channels, live sampler and verified clock bounds pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 

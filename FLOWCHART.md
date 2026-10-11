@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundation and authenticated readiness code**. Scheduled network measurement remains pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundation, authenticated readiness and bounded queue code**. Scheduled network measurement remains pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -87,6 +87,31 @@ flowchart TD
 
 Sources: [profile.go](internal/profile/profile.go) (`Decode`, `requiredFields`, `yamlValue`, `Plan.Validate`), [canonical.go](internal/profile/canonical.go) (`Canonical`), [schedule.go](internal/schedule/schedule.go) (`Count`, `Offset`, `Due`, `Wait`), [preflight.go](internal/measure/preflight.go) (`Preflight`). The schedule functions and ledger are separate tested primitives; a network engine has not connected them yet. Half-open phases exclude the end, and quiet/burst gaps schedule no data.
 
+## Bounded writer queues
+
+```mermaid
+flowchart TD
+    A[New: validate explicit queue bounds] --> B[One owned FIFO worker]
+    C[Submit: validate data or empty receipt] --> D{Total caps and data reserve allow admission?}
+    D -->|no data capacity| E[skipped_local with message or byte reason]
+    D -->|no receipt capacity| F[failed_local with message or byte reason]
+    D -->|yes| G[Copy content and charge waiting plus active budgets]
+    G --> H[Pop oldest work without freeing budget]
+    B --> H
+    H --> I[Write callback with cancellation and per-frame timeout]
+    I -->|complete| J[Release budget and publish one result]
+    J --> H
+    I -->|error or timeout| K[Stop admission and cancel queued work without attempts]
+    L[Parent cancellation or Close] --> K
+    K --> M[Cancel active callback; retain returned byte evidence]
+    M --> N[Release remaining budget and exit worker]
+    N --> O[Wait joins within caller shutdown budget]
+```
+
+Sources: [queue.go](internal/writer/queue.go) (`New`, `Submit`, `Snapshot`, `run`, `stopLocked`, `popLocked`, `finishLocked`, `Close`, `Wait`), [fixtures](internal/writer/queue_test.go). Invalid/stopped submissions fail without tickets. Receipts share FIFO order and total caps; data cannot consume reserved message or 124-byte receipt capacity. Active work stays charged until the callback returns. One buffered result per accepted frame avoids blocking on report consumers; consumers own later result retention.
+
+Callbacks own attempt timestamps, encoding, transport byte boundaries and cancellation of their owned I/O. They must return on cancellation/timeouts; arbitrary blocking code cannot be forcibly interrupted, and a bounded `Wait` exposes that violation. The queue performs no retry/drain, schedule accounting, transport writes or network-loss inference by itself. Current fixtures use callbacks only; UDP worker integration is [task 8](ROADMAP.md#8-implement-independent-udp-senderreceiver-workers).
+
 ## Real sockets and authenticated frames
 
 The following exchange is exercised by loopback tests, not exposed as a full application run.
@@ -158,4 +183,4 @@ Sources: [identity.go](internal/control/identity.go), [key Windows](internal/con
 
 ## Remaining connections
 
-The independent network engine/queues/start exchange, maintained clock sampling, calibration/report SSH channels, raw report persistence/replay/export, profile stores, protected loopback API, dashboard/SVG views and matched-run comparisons remain to be connected and validated. See the [acceptance contract](DESIGN.md#first-slice-implementation-contract) and [readiness evidence](WORK_LOG.md#2026-10-11-ssh-pairing-and-readiness).
+The independent network engine must connect the queue/schedule primitives to UDP/TCP and the start exchange. Maintained clock sampling, calibration/report SSH channels, raw report persistence/replay/export, profile stores, protected loopback API, dashboard/SVG views and matched-run comparisons remain pending. See the [acceptance contract](DESIGN.md#first-slice-implementation-contract) and [task 8](ROADMAP.md#8-implement-independent-udp-senderreceiver-workers).
