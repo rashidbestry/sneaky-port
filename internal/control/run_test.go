@@ -46,8 +46,17 @@ func TestFiniteAuthenticatedRuns(t *testing.T) {
 				if result.Local.Summary.Received != nil || result.Local.Summary.TransportPacketLoss != nil || !strings.HasPrefix(result.Local.Summary.ReceiverStatus, "unknown") {
 					t.Fatal("lifecycle acknowledgment invented reconciled delivery")
 				}
-				if len(result.Local.Markings) != 2 || result.Local.Markings[0].Lifecycle != 1 || result.Local.Markings[1].Lifecycle != 2 || result.Local.Markings[0].Marking.Observed != nil {
+				if result.Remote == nil || result.Remote.Status != "verified" || result.Reconciliation == nil || result.Reconciliation.Status != "reconciled" || result.Reconciliation.Client.Summary.TransportPacketLoss != nil {
+					t.Fatal("authenticated remote transfer/reconciliation missing or packet loss invented")
+				}
+				// Under race/load, the first physical write can occur after warmup; only actual phase applications are recorded.
+				if len(result.Local.Markings) < 1 || len(result.Local.Markings) > 2 || result.Local.Markings[len(result.Local.Markings)-1].Lifecycle != 2 {
 					t.Fatal("physical phase API evidence missing from public snapshot")
+				}
+				for _, mark := range result.Local.Markings {
+					if mark.Marking.Observed != nil || mark.Phase != 0 || mark.Lifecycle < 1 || mark.Lifecycle > 2 {
+						t.Fatal("invalid physical phase API evidence")
+					}
 				}
 				public, _ := json.Marshal(result)
 				for _, secret := range []string{"client_key", "server_key", "challenge", "PRIVATE KEY"} {
@@ -197,6 +206,8 @@ func TestRunHeartbeatSurfacesServerFailure(t *testing.T) {
 	if err != nil || response.Type != "finished" || DecodeObject(response.Body, &finished) != nil || finished.Status != "partial" {
 		t.Fatal("partial server termination missing:", err)
 	}
+	// This manual fixture declines report transfer; SSH close ends bounded ownership.
+	c.Close()
 	assertReadyAfterDrain(t, r)
 }
 

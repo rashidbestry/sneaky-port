@@ -127,11 +127,40 @@ func TestFiniteCLI(t *testing.T) {
 	out.Reset()
 	canceled, stop := context.WithCancel(context.Background())
 	defer stop()
-	timer := time.AfterFunc(100*time.Millisecond, stop)
-	defer timer.Stop()
+	triggerDone := make(chan struct{})
+	go func() { // Cancel only after new raw records prove measurement began; race instrumentation can delay SSH/storage setup.
+		defer close(triggerDone)
+		ticker := time.NewTicker(5 * time.Millisecond)
+		defer ticker.Stop()
+		deadline := time.NewTimer(5 * time.Second)
+		defer deadline.Stop()
+		for {
+			select {
+			case <-canceled.Done():
+				return
+			case <-deadline.C:
+				stop()
+				return
+			case <-ticker.C:
+				dirs, _ := os.ReadDir(filepath.Join(clientStore.Root, "reports"))
+				for _, dir := range dirs {
+					if !dir.IsDir() || dir.Name() == filepath.Base(result.ReportPath) {
+						continue
+					}
+					info, err := os.Stat(filepath.Join(clientStore.Root, "reports", dir.Name(), "events.jsonl"))
+					if err == nil && info.Size() > 0 {
+						stop()
+						return
+					}
+				}
+			}
+		}
+	}()
 	if err = run(canceled, args, &out); err == nil {
 		t.Fatal("interrupted CLI exit succeeded")
 	}
+	stop()
+	<-triggerDone
 	if err = json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatal(err)
 	}

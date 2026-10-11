@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting**. Bounded local persistence and replay/export are implemented; remote reconciliation and dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting**. Bounded local persistence, replay/export and authenticated server transfer/reconciliation are implemented; dashboard and live calibration remain pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -15,6 +15,8 @@ flowchart TD
     B --> Q[server: Linux embedded SSH endpoint]
     B --> R[client-ready: verify and stop without measuring]
     B --> V[client-run: finite authenticated UDP/TCP measurement]
+    B --> W[report-replay: validate local and transferred evidence]
+    B --> X[report-export: exact JSON, JSONL or CSV]
     B --> G[Unknown or unfinished command: error]
     C --> H[writeJSON: public results]
     D --> I[Decode: strict shared profile validation]
@@ -61,7 +63,7 @@ flowchart TD
     W -->|control EOF or lease expiry or cancellation| Z
 ```
 
-Sources: [store.go](internal/control/store.go) (`OpenStore`, `InitServer`, `InitClient`, `Enroll`, `Disable`, `ImportPairing`, `writeAtomic`), [session.go](internal/control/session.go) (`NewServer`, `Serve`, `connection`, `control`, `Ready`, `acceptBind`, `checkBind`, `markPlan`, `checkEffective`, `watchAuthorization`). `Ready` checks the imported host pin before accepting session secrets. Unsupported shell/exec/forwarding/calibration/report channels are refused. Invalid UDP first tuples receive no acknowledgement and cannot pin the listener; partial TCP frames cannot authenticate. IDs/challenges/keys are fresh per preparation, and the public result contains no MAC keys.
+Sources: [store.go](internal/control/store.go) (`OpenStore`, `InitServer`, `InitClient`, `Enroll`, `Disable`, `ImportPairing`, `writeAtomic`), [session.go](internal/control/session.go) (`NewServer`, `Serve`, `connection`, `control`, `Ready`, `acceptBind`, `checkBind`, `markPlan`, `checkEffective`, `watchAuthorization`). `Ready` checks the imported host pin before accepting session secrets. Shell/exec/forwarding/calibration and premature/extra report channels are refused; one report channel is admitted after finite stop. Invalid UDP first tuples receive no acknowledgement and cannot pin the listener; partial TCP frames cannot authenticate. IDs/challenges/keys are fresh per preparation, and the public result contains no MAC keys.
 
 Both roles retain actual local/remote bindings; NAT observations need not equal the client's local tuple. Marking API success leaves packet-observed values unknown. Readiness holds only a lease, counts client application-control bytes through stop, and performs no scheduler/ledger/calibration run. Readiness-only cleanup produces no measurement samples. [Tests](internal/control/session_test.go), [store tests](internal/control/store_test.go), [setup commands](README.md#pair-endpoints-and-check-readiness).
 
@@ -83,13 +85,14 @@ flowchart TD
     I --> L
     L --> M[Server retains socket until stop or control cleanup]
     M --> N[Client stop receives server lifecycle status]
-    N --> O[Public local snapshot; remote delivery stays unknown]
-    O --> P[Close owned transport and release reservations]
+    N --> O[Preserve endpoint-only local snapshot]
+    O --> R[Separate authenticated report channel and reconciliation]
+    R --> P[Close owned transport and release reservations]
 ```
 
 Sources: [run.go](internal/control/run.go) (`Run`, `executeRun`, `durationSum`), [session.go](internal/control/session.go) (`clientSession`, `control`), [finite.go](internal/engine/finite.go) (`NewFinite`, `phaseMarker`, `finish`, `Cancel`, `Wait`), [worker](internal/worker/endpoint.go) (`StopGeneration`, `write`, `receive`), [socket](internal/adapter/adapter.go) (`Interrupt`, `Mark`, `Close`). [Control fixtures](internal/control/run_test.go), [phase/cutoff fixtures](internal/engine/finite_test.go), [Linux marking fixtures](internal/control/run_linux_test.go), [CLI fixture](cmd/sneaky-port/finite_test.go).
 
-Anchors/epochs are local to each run, with no shared-clock claim. Marking follows the current physical phase for queued data and receipts; original identities still determine measurement attribution. Quiet phases update on the next outgoing frame, and grace retains the last setting. Frames spanning boundaries and API success do not prove packet markings. A stopped generation cutoff is separate from observation/drain; late timer callbacks or read errors at/after the elapsed cutoff cannot relabel a full window as truncated. Early failures remain partial and server run heartbeats expose them. A server cutoff interrupts local I/O without early peer EOF; final socket cleanup belongs to control. The exclusive client lock is never stolen after a crash. The snapshot is also saved in task 12 local summaries; local replay/export is implemented; remote reconciliation remains task 14. [Evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle).
+Anchors/epochs are local to each run, with no shared-clock claim. Marking follows the current physical phase for queued data and receipts; original identities still determine measurement attribution. Quiet phases update on the next outgoing frame, and grace retains the last setting. Frames spanning boundaries and API success do not prove packet markings. A stopped generation cutoff is separate from observation/drain; late timer callbacks or read errors at/after the elapsed cutoff cannot relabel a full window as truncated. Early failures remain partial and server run heartbeats expose them. A server cutoff interrupts local I/O without early peer EOF; final socket cleanup belongs to control. The exclusive client lock is never stolen after a crash. The snapshot is also saved in task 12 local summaries; local replay/export and authenticated server reconciliation are implemented separately from endpoint-only snapshots. [Evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle).
 
 ## Profiles and planned slots
 
@@ -256,7 +259,7 @@ flowchart TD
     O --> P[TCP network packet loss still unknown]
 ```
 
-Source: [ledger.go](internal/measure/ledger.go). `Admit` and `Unattempted` retain local queue outcomes; `ReceiptProcessing` preserves a valid peer-local interval, with impossible RTT correction unavailable. `Summarize` selects main; `SummarizePhase` separates warmup/phase, and `SummarizePhases` partitions one snapshot without repeated full-ledger scans. Attempt/write/receipt and observed local-resolution boundaries obey strict cutoff filtering. `ReceiverEvidence` is caller-supplied: production report compatibility/authentication/reconciliation remain pending, so the engine exposes unknown remote delivery. The ledger has one owner; concurrent mutation is unsupported.
+Source: [ledger.go](internal/measure/ledger.go). `Admit` and `Unattempted` retain local queue outcomes; `ReceiptProcessing` preserves a valid peer-local interval, with impossible RTT correction unavailable. `Summarize` selects main; `SummarizePhase` separates warmup/phase, and `SummarizePhases` partitions one snapshot without repeated full-ledger scans. Attempt/write/receipt and observed local-resolution boundaries obey strict cutoff filtering. `ReceiverEvidence` is caller-supplied: the engine exposes endpoint-only unknown delivery; the authenticated control report path now validates compatibility and supplies receiver evidence for separate reconciled snapshots. The ledger has one owner; concurrent mutation is unsupported.
 
 ## Trust and clock evidence
 
@@ -296,7 +299,7 @@ flowchart TD
     L --> N[Local replay/export available; remote transfer pending]
 ```
 
-Sources: [evidence.go](internal/control/evidence.go) (`newEvidence`, `Append`, `writeLoop`, `Finalize`, `publishEvidence`), [engine collector](internal/engine/endpoint.go) (`Persistence`, `keep`, `collect`), [finite lifecycle](internal/engine/finite.go) (`NewFiniteWithEvidence`, `finish`), [client coordinator](internal/control/run.go) (`executeRun`), [server coordinator](internal/control/session.go) (`control`), [storage fixtures](internal/control/evidence_test.go), [failure integration](internal/engine/persistence_test.go). Both stores save their own evidence before measurement and finalize independently of the control connection. Raw files omit authentication objects, content and keys; decimal offsets stay host-local/uncalibrated. Manifest/settings are frozen public values. Existing run directories are not reused; failed or interrupted publication stays incomplete/partial. Actual filesystem calls cannot be forcibly cancelled portably; a storage join timeout leaves the owned disk worker responsible until its call returns. Power-loss/nonlocal-filesystem durability and authenticated receiver reconciliation remain pending.
+Sources: [evidence.go](internal/control/evidence.go) (`newEvidence`, `Append`, `writeLoop`, `Finalize`, `publishEvidence`), [engine collector](internal/engine/endpoint.go) (`Persistence`, `keep`, `collect`), [finite lifecycle](internal/engine/finite.go) (`NewFiniteWithEvidence`, `finish`), [client coordinator](internal/control/run.go) (`executeRun`), [server coordinator](internal/control/session.go) (`control`), [storage fixtures](internal/control/evidence_test.go), [failure integration](internal/engine/persistence_test.go). Both stores save their own evidence before measurement and finalize independently of the control connection. Raw files omit authentication objects, content and keys; decimal offsets stay host-local/uncalibrated. Manifest/settings are frozen public values. Existing run directories are not reused; failed or interrupted publication stays incomplete/partial. Actual filesystem calls cannot be forcibly cancelled portably; a storage join timeout leaves the owned disk worker responsible until its call returns. Power-loss/nonlocal-filesystem durability remains pending; authenticated receiver reconciliation is implemented in the separate path below.
 
 ## Local report replay and export
 
@@ -308,15 +311,45 @@ flowchart TD
     D --> E[Final cutoff or conservative prefix bound; incomplete stays partial]
     E --> F[ReplayFinish: same ledger summaries and timing analysis]
     F --> G[Compare saved summary; saved mismatch rejects report]
-    G --> H[JSON summary or typed JSONL bundle or exact long-form CSV]
+    G --> R[Optional verified transfer receipt: recheck server files and replay]
+    R --> S[Derive compatible delivery; preserve unknown evidence]
+    S --> H[JSON summary or typed JSONL bundle or exact long-form CSV]
     C -->|unfinalized or failed torn tail| I[Exclude torn line; retain partial status and tail bytes]
     I --> D
     G -->|failed storage mismatch| J[Expose partial raw derivation and mismatch]
     J --> H
 ```
 
-Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, `decodeReportObject`), [engine replay](internal/engine/replay.go) (`ReplayRecord`, `ReplayFinish`), [shared collector](internal/engine/endpoint.go) (`apply`, `Finish`), [export.go](internal/control/export.go) (`ExportReport`, `exportCSVValue`, `reportUnit`), [CLI](cmd/sneaky-port/main.go) (`run`), [report fixtures](internal/control/replay_test.go), [completion fault](internal/engine/replay_limits_test.go). No sockets, remote authentication or imported receiver reconciliation occur here. Saved completion records alone can resolve unsent tickets; unsaved completions leave unresolved local evidence. Checksums establish local consistency. Units/decimal text/nulls survive exports; missing calibration/receiver evidence remains unknown. Native ARM64, power-loss durability and live-network gates stay open.
+Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, `decodeReportObject`), [engine replay](internal/engine/replay.go) (`ReplayRecord`, `ReplayFinish`), [shared collector](internal/engine/endpoint.go) (`apply`, `Finish`), [export.go](internal/control/export.go) (`ExportReport`, `exportCSVValue`, `reportUnit`), [CLI](cmd/sneaky-port/main.go) (`run`), [report fixtures](internal/control/replay_test.go), [completion fault](internal/engine/replay_limits_test.go). No sockets or fresh remote authentication occur here; validated saved transfer evidence can now support independently rederived receiver reconciliation. Saved completion records alone can resolve unsent tickets; unsaved completions leave unresolved local evidence. Checksums establish local consistency. Units/decimal text/nulls survive exports; missing calibration/receiver evidence remains unknown. Native ARM64, power-loss durability and live-network gates stay open.
 
 ## Remaining connections
 
-The next connection is [task 14](ROADMAP.md#queued-implementation-tasks), authenticated transfer/reconciliation of server evidence. Clock sampling, calibration/report SSH channels, remote reconciliation, API/dashboard/SVG and matched comparisons remain pending under the [acceptance contract](DESIGN.md#first-slice-implementation-contract).
+The next connection is [task 15](ROADMAP.md#queued-implementation-tasks), live SSH clock sampling. Clock sampling/calibration, API/dashboard/SVG and matched comparisons remain pending under the [acceptance contract](DESIGN.md#first-slice-implementation-contract).
+
+## Authenticated server evidence transfer and reconciliation
+
+```mermaid
+flowchart TD
+    A[Finite stop joins and finalizes server evidence] --> B[One report channel on existing authenticated SSH connection]
+    B --> C[Pin three fixed regular files and hash bounded aggregate]
+    C --> D{Remaining request and per-endpoint file budgets fit?}
+    D -->|no| X[Incomplete transfer; retain local reports and unknown delivery]
+    D -->|yes| E[Offer file sizes and hashes with run, session and frozen plan]
+    E --> F[Stream contiguous numbered 32 KiB chunks]
+    F --> G[Validate identity, offset and chunk hash; save exclusive files]
+    G --> H[Acknowledge exact next offset]
+    H --> F
+    F --> I[Verify final content and file hashes; sync transferred files]
+    I --> J[Replay both endpoint raw records independently]
+    J --> K{Complete compatible plans, settings, epochs and observations?}
+    K -->|no| X
+    K -->|yes| L[Match receiver identity, original attempt, direction and epoch]
+    L --> M[Shared ledger derives warmup, main and phase delivery]
+    M --> N[Preserve unknown packet loss, one-way delay and ambiguous writes]
+    N --> O[Publish separate transfer receipt and derived reconciliation]
+    O --> P[Offline replay rechecks transferred bytes and rederives exports]
+```
+
+Sources: [transfer.go](internal/control/transfer.go) (`routeReportChannels`, `serveReportChannel`, `openReportSnapshot`, `serveReport`, `receiveServerReport`, `receiveReport`, `verifyTransferredFiles`), [reconcile.go](internal/control/reconcile.go) (`reconcileReports`, `reconcileOrigin`, `replayTransferred`), [replay.go](internal/control/replay.go), [exports](internal/control/export.go), [shared ledger](internal/measure/ledger.go) (`SummarizeSnapshot`), [fixtures](internal/control/transfer_test.go). Numbered frames/acks and final hashes bind exact ordered bytes to the existing enrolled-client/pinned-host session. Endpoint raw summaries remain unchanged; each observation cutoff belongs to its own clock. Lost receipts do not imply missing data; stream delivery never establishes zero network packet loss.
+
+The explicit per-endpoint file cap (maximum 1 GiB), remaining control-request budget and whole network-transfer setup timeout bound work. Offline input budgets include both remote hash/replay passes; they do not claim a heap cap. Interrupted/unfinalized transfer stays unknown. Saved receipts are local provenance, not transferable authentication attestations. No reconnect/resume/manual recovery, calibration, dashboard or native/live/impairment acceptance is added.

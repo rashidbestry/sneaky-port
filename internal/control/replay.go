@@ -15,23 +15,28 @@ import (
 	"strings"
 
 	"sneaky-port/internal/engine"
+	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 )
 
 // ReplayedReport retains frozen settings, exact validated envelopes and independently recomputed quantities.
 // Integrity is a local consistency check, never authentication of imported or remote evidence.
 type ReplayedReport struct {
-	Version      int               `json:"schema_version"`
-	Manifest     EvidenceManifest  `json:"manifest"`
-	Summary      EvidenceSummary   `json:"recomputed_summary"`
-	Status       string            `json:"status"`
-	Reason       string            `json:"reason"`
-	Verification string            `json:"saved_summary_verification"`
-	Events       []json.RawMessage `json:"-"`
-	TailBytes    profile.Decimal   `json:"discarded_tail_bytes"`
-	Integrity    string            `json:"raw_integrity"`
-	Units        string            `json:"units"`
-	Accounting   []string          `json:"accounting_errors"`
+	Version         int               `json:"schema_version"`
+	Manifest        EvidenceManifest  `json:"manifest"`
+	Summary         EvidenceSummary   `json:"recomputed_summary"`
+	Status          string            `json:"status"`
+	Reason          string            `json:"reason"`
+	Verification    string            `json:"saved_summary_verification"`
+	Events          []json.RawMessage `json:"-"`
+	TailBytes       profile.Decimal   `json:"discarded_tail_bytes"`
+	Integrity       string            `json:"raw_integrity"`
+	Units           string            `json:"units"`
+	Accounting      []string          `json:"accounting_errors"`
+	Evidence        engine.Result     `json:"-"`
+	Reconciliation  *Reconciliation   `json:"reconciliation,omitempty"`
+	ServerReport    *ReplayedReport   `json:"server_report,omitempty"`
+	TransferReceipt *RemoteTransfer   `json:"server_evidence_transfer,omitempty"`
 }
 
 // decodeReportObject rejects ambiguity, missing/unknown fields and null scalars while allowing saved nil collections.
@@ -85,11 +90,21 @@ func ReplayReport(dir string, maxBytes uint64) (*ReplayedReport, error) {
 	if maxBytes == 0 || maxBytes > 1<<30 {
 		return nil, errors.New("max-bytes must be explicit and between 1 and 1073741824")
 	}
+	remaining := maxBytes
+	return replayReport(dir, &remaining, true)
+}
+
+// replayReport shares the caller's aggregate byte budget with optional transferred endpoint files.
+// Remote sidecars cannot change the endpoint-only saved summary or confer offline authentication.
+func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, error) {
 	info, err := os.Lstat(dir)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("report must be a real directory")
 	}
-	remaining := maxBytes
+	remaining := *budget
+	defer func() { // Charge all inspected fixed files, including failed replay attempts, to one aggregate budget.
+		*budget = remaining
+	}()
 	b, err := reportFile(dir, "manifest.json", &remaining)
 	if err != nil {
 		return nil, err
@@ -231,6 +246,10 @@ func ReplayReport(dir string, maxBytes uint64) (*ReplayedReport, error) {
 	}
 	complete := finalized && m.Storage == "saved" && cutoff && cutoffComplete && m.Complete
 	result := c.ReplayFinish(generation, observation, complete)
+	result.Run, _ = probe.ID(m.RunID)
+	result.Session, _ = probe.ID(m.SessionID)
+	result.Epoch, result.PeerEpoch = 1, 1
+	r.Evidence = result
 	if complete != result.Complete {
 		return nil, errors.New("complete report does not cover frozen observation window")
 	}
@@ -254,6 +273,11 @@ func ReplayReport(dir string, maxBytes uint64) (*ReplayedReport, error) {
 			r.Verification = "mismatch; failed storage retained only a partial raw prefix"
 		} else {
 			r.Verification = "matched"
+		}
+	}
+	if remote && m.Endpoint == "client" {
+		if err = replayTransferred(dir, r, &remaining); err != nil {
+			return nil, err
 		}
 	}
 	return r, nil

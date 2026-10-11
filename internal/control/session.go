@@ -230,8 +230,10 @@ func (s *Server) connection(ctx context.Context, raw net.Conn) {
 		}
 		defer ch.Close()
 		go rejectRequests(ctx, reqs, policy.MaxControlRequests, cancel)
-		go rejectChannels(ctx, channels, policy.MaxControlRequests, cancel)
-		s.control(ctx, raw, ch)
+		reportReady := make(chan struct{})
+		reports := make(chan ssh.NewChannel, 1)
+		go routeReportChannels(ctx, channels, reports, reportReady, policy.MaxControlRequests, cancel)
+		s.control(ctx, raw, ch, reports, reportReady)
 	}
 }
 
@@ -307,8 +309,8 @@ func reply(ch ssh.Channel, request Envelope, kind string, body any) error {
 	return Write(ch, message(kind, request.RequestID, request.RunID, request.SessionID, body))
 }
 
-// control performs frozen-plan readiness, finite start, liveness and stop; calibration/report channels remain unsupported.
-func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
+// control performs frozen-plan readiness/start/liveness/stop and then one bounded report transfer; calibration remains unsupported.
+func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, channels <-chan ssh.NewChannel, reportReady chan struct{}) {
 	policy := s.Identity.Policy
 	seen := map[string]bool{}
 	read := func(run, session string) (Envelope, error) { // Enforce bounded, unique requests and exact lifecycle identity.
@@ -452,6 +454,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 		return
 	}
 	var measured *engine.Finite
+	var reportPath string
 	defer func() { // Join any started run before transport/listener cleanup and lease release.
 		if measured != nil {
 			measured.Cancel()
@@ -486,6 +489,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 				fail(request, storageErr)
 				return
 			}
+			reportPath = persistence.path
 			// Finite lifecycle now owns cancellation/drain; preparation must not close its socket early.
 			closePrepared()
 			anchor := time.Now()
@@ -533,7 +537,10 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 				t.Close()
 				prepared.Close()
 				raw.SetWriteDeadline(time.Now().Add(time.Duration(plan.Limits.WriteTimeout)))
-				reply(ch, request, "finished", finishAck{prep.Hash, status})
+				close(reportReady)
+				if reply(ch, request, "finished", finishAck{prep.Hash, status}) == nil {
+					serveReportChannel(ctx, raw, channels, reportPath, result, plan, plan.Limits.ControlRequests-len(seen))
+				}
 				return
 			}
 			t.Close()
@@ -894,7 +901,7 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 		// Run owns draining after control loss; this setup callback must no longer close data early.
 		closeData()
 		measured.Readiness = result
-		err = executeRun(ctx, store, raw, exchange, t, ca, sa, runID, session, p, measured)
+		err = executeRun(ctx, store, raw, exchange, sshClient, t, ca, sa, runID, session, p, measured)
 		measured.Readiness.Control = ControlTraffic{"client application control frames through run finalization; SSH overhead excluded", counter, counted.sent, counted.received}
 		return result, err
 	}

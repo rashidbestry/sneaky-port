@@ -39,6 +39,16 @@ func ExportReport(out io.Writer, r *ReplayedReport, format string) error {
 				return err
 			}
 		}
+		if r.ServerReport != nil {
+			for _, raw := range r.ServerReport.Events {
+				if err := e.Encode(struct {
+					Type  string          `json:"record_type"`
+					Event json.RawMessage `json:"event"`
+				}{"server_raw_event", raw}); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	case "csv":
 		w := csv.NewWriter(out)
@@ -55,6 +65,13 @@ func ExportReport(out io.Writer, r *ReplayedReport, format string) error {
 		for i, raw := range r.Events {
 			if err = exportCSVObject(w, r, "raw_event", strconv.Itoa(i+1), raw); err != nil {
 				return err
+			}
+		}
+		if r.ServerReport != nil {
+			for i, raw := range r.ServerReport.Events {
+				if err = exportCSVObject(w, r.ServerReport, "server_raw_event", strconv.Itoa(i+1), raw); err != nil {
+					return err
+				}
 			}
 		}
 		w.Flush()

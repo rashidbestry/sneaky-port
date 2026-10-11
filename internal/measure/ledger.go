@@ -219,6 +219,12 @@ type ReceiverEvidence struct {
 	Cutoff   uint64
 }
 
+// SummarizeSnapshot reuses live accounting for a frozen origin ledger and compatible receiver cutoff.
+// Cross-host offsets are never compared; each cutoff belongs to its own endpoint epoch.
+func SummarizeSnapshot(entries []Entry, cutoff uint64, remote *ReceiverEvidence, lifecycle uint8, phase *uint32) Summary {
+	return summarizeEntries(entries, cutoff, remote, lifecycle, phase)
+}
+
 // Summary preserves denominators and nullable network-loss/receiver evidence.
 type Summary struct {
 	Planned, Skipped, Attempted, Written, WriteFailed, OnTime, Late, Unresolved, DuplicateReceipts profile.Decimal

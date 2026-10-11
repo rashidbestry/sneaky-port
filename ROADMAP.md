@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-13 are complete within their stated scopes. **Next: task 14 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-14 are complete within their stated scopes. **Next: task 15 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -74,11 +74,11 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for finite CLI/component implementation and recorded fixtures.** F01/F02/F06/F07/F09, T09/T11/T14/T15/T17/T22. Authenticated frozen-plan start, independent local anchors, physical-phase writer markings, grace, bounded generation-stop/drain/join, lease/control-loss cleanup and exclusive client reservation connect the shared UDP/TCP engine to `client-run`. Public snapshots retain local partial/complete evidence and unknown remote delivery; server status is lifecycle evidence only. [Evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [code flow](FLOWCHART.md#finite-run-lifecycle).
 
-**Task 12 now supplies bounded local persistence.** Replay/export and remote reconciliation remain tasks 13-14. Native ARM64, cross-endpoint CLI deployment, outer captures, calibrated one-way, impairment and live acceptance remain pending.
+**Task 12 now supplies bounded local persistence.** Tasks 13-14 now supply replay/export and authenticated server reconciliation. Native ARM64, cross-endpoint CLI deployment, outer captures, calibrated one-way, impairment and live acceptance remain pending.
 
 ## 12. Persist bounded local raw evidence and summaries (completed)
 
-**Complete for local persistence and recorded fixtures.** F07/F09, T08/T14/T22. Both endpoints create exclusive restricted run files before measurement, preserve exact decimal JSONL observations through bounded storage queues/file reservations, and flush/publish endpoint-only summaries and manifests. Completed/interrupted UDP/TCP runs and storage fault/budget fixtures pass; incomplete or failed publication stays explicit. Replay/export and authenticated server reconciliation remain tasks 13-14. [Evidence](WORK_LOG.md#2026-10-11-local-evidence-persistence), [code flow](FLOWCHART.md#local-evidence-persistence).
+**Complete for local persistence and recorded fixtures.** F07/F09, T08/T14/T22. Both endpoints create exclusive restricted run files before measurement, preserve exact decimal JSONL observations through bounded storage queues/file reservations, and flush/publish endpoint-only summaries and manifests. Completed/interrupted UDP/TCP runs and storage fault/budget fixtures pass; incomplete or failed publication stays explicit. Tasks 13-14 now supply replay/export and authenticated server reconciliation. [Evidence](WORK_LOG.md#2026-10-11-local-evidence-persistence), [code flow](FLOWCHART.md#local-evidence-persistence).
 
 **Task 13 now supplies local replay/export.** Full slice/platform/impairment/live acceptance remains incomplete.
 
@@ -86,15 +86,20 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for bounded offline local replay/export and recorded fixtures.** F07/F09, T08/T14/T22. Fixed-file schema/identity/plan/hash/cutoff validation and shared accounting recompute finalized summaries exactly. JSON settings/summary, typed JSONL evidence bundles and fixed long-form CSV preserve units, exact decimal text, unknowns and partial status. Unfinalized/failed/torn-prefix evidence stays partial; checksums establish local consistency only. [Evidence](WORK_LOG.md#2026-10-11-local-report-replay-and-export), [code flow](FLOWCHART.md#local-report-replay-and-export), [commands](README.md#replay-and-export-local-reports).
 
-**Next: task 14 only, authenticated server evidence transfer/reconciliation.** Full slice/platform/impairment/live acceptance remains incomplete.
+**Task 14 below now supplies authenticated server evidence transfer/reconciliation. Next: task 15 only.** Full slice/platform/impairment/live acceptance remains incomplete.
+
+## 14. Transfer and reconcile server evidence (completed)
+
+**Complete for authenticated post-stop transfer/reconciliation and recorded fixtures.** F07/F09, T08/T14/T22. One report channel on the existing pinned SSH connection streams fixed files in numbered 32 KiB chunks with checksums, acknowledged offsets, final content hash and explicit file/request/timeout budgets. Shared replay/ledger matches original run/plan/epochs/attempts and independently declared cutoffs, preserving unknown partial/incompatible delivery and ambiguous writes. Restricted transferred files and separate derived sidecars support exact offline replay/exports without rewriting endpoint-only summaries. Windows/Ubuntu/CentOS IPv4/IPv6 fixtures, failure/tampering/accounting tests, Windows race checks and four builds pass. [Evidence](WORK_LOG.md#2026-10-11-authenticated-server-evidence-transfer-and-reconciliation), [code flow](FLOWCHART.md#authenticated-server-evidence-transfer-and-reconciliation), [operator behavior](README.md#run-a-finite-measurement).
+
+**Next: task 15 only, live SSH clock samples.** Full slice/platform/impairment/live acceptance remains incomplete.
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**; task 14 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
+Every row is a separate task, currently **not started**; task 15 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 14 | Transfer and reconcile server evidence | Bounded authenticated chunks/checksums bind to the same run/plan; missing/incompatible receiver evidence remains unknown |
 | 15 | Maintain live SSH clock samples | Four-timestamp captures, epochs, cadence/window/expiry and invalid samples are retained within budgets |
 | 16 | Integrate uncertainty-gated one-way results | Known offset/drift/asymmetry/expiry fixtures pass; unverified production bounds remain estimated or unavailable |
 | 17 | Protect the local run-control API | Loopback binding, session token and Host/Origin guards protect adapter/status/start/cancel routes |

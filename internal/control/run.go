@@ -59,14 +59,16 @@ func localSnapshot(r engine.Result) *LocalRun {
 
 // RunResult contains public lifecycle/settings, local accounting and the newly saved report path.
 type RunResult struct {
-	Version      int           `json:"schema_version"`
-	Status       string        `json:"status"`
-	Reason       string        `json:"reason,omitempty"`
-	Readiness    ReadyResult   `json:"readiness"`
-	ServerStatus string        `json:"server_lifecycle_status"`
-	Local        *LocalRun     `json:"local"`
-	Evidence     engine.Result `json:"-"` // Internal observations are persisted separately; no server reconciliation.
-	ReportPath   string        `json:"local_report_path,omitempty"`
+	Version        int             `json:"schema_version"`
+	Status         string          `json:"status"`
+	Reason         string          `json:"reason,omitempty"`
+	Readiness      ReadyResult     `json:"readiness"`
+	ServerStatus   string          `json:"server_lifecycle_status"`
+	Local          *LocalRun       `json:"local"`
+	Evidence       engine.Result   `json:"-"` // Endpoint-only raw observations; separate reconciliation never mutates them.
+	ReportPath     string          `json:"local_report_path,omitempty"`
+	Remote         *RemoteTransfer `json:"server_evidence_transfer,omitempty"`
+	Reconciliation *Reconciliation `json:"reconciliation,omitempty"`
 }
 
 // durationSum saturates composed operation budgets instead of wrapping individually valid nanoseconds.
@@ -131,7 +133,7 @@ func Run(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan) (
 
 // executeRun binds start and stop to the frozen hash and services bounded heartbeats independently of data.
 // Each endpoint starts on processing its own start exchange; the anchors are not synchronized.
-func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(string, any) (Envelope, error), t adapter.Transport, ca, sa probe.Auth, run, session [16]byte, p profile.Plan, result *RunResult) error {
+func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(string, any) (Envelope, error), sshClient *ssh.Client, t adapter.Transport, ca, sa probe.Auth, run, session [16]byte, p profile.Plan, result *RunResult) error {
 	persistence, err := newEvidence(store, p, result.Readiness, "client")
 	if err != nil {
 		return err
@@ -215,6 +217,10 @@ loop:
 		return errors.New("invalid finite stop acknowledgment")
 	}
 	result.ServerStatus = finished.Status
+	result.Remote, result.Reconciliation, err = receiveServerReport(ctx, raw, sshClient, result.ReportPath, result.Readiness, p)
+	if err != nil {
+		return errors.Join(runErr, err)
+	}
 	if runErr != nil {
 		return runErr
 	}

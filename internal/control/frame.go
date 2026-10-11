@@ -171,7 +171,7 @@ func requiredJSONFields(b []byte, typ reflect.Type, nullableCollections bool) er
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	if typ == reflect.TypeFor[json.RawMessage]() || typ == reflect.TypeFor[time.Time]() {
+	if typ == reflect.TypeFor[json.RawMessage]() || typ == reflect.TypeFor[[]byte]() || typ == reflect.TypeFor[time.Time]() {
 		return nil
 	}
 	if bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
