@@ -4,7 +4,7 @@ Recorded: 2026-10-10.
 
 Use this file to track forward: upcoming features, optional ideas, their decisions, and progress. [WORK_LOG.md](WORK_LOG.md) tracks backward: changes actually made, validation, and current implemented behavior. Product details remain in [DESIGN.md](DESIGN.md).
 
-Accepted features below reflect the already confirmed scope. Optional suggestions remain unapproved. Neither list authorizes implementation; execution is still on hold until the user requests it.
+Accepted features below reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06 and S12 remain unapproved suggestions. Neither acceptance nor a plan authorizes implementation; execution is still on hold until the user requests it.
 
 The project is still at the documentation stage. Some suggestions extend correctness rules already described in [DESIGN.md](DESIGN.md).
 
@@ -14,42 +14,42 @@ This index tracks scope, not a release schedule or implementation order. The nex
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
-| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Accepted; not started; exact Linux version limits pending T12 | [Scope](DESIGN.md#confirmed-intent-and-scope) |
-| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
+| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Accepted; first-slice lifecycle/pairing planned, implementation not started; native coverage/Linux version limits unvalidated | [Scope](DESIGN.md#confirmed-intent-and-scope) |
+| F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Accepted; UDP/TCP first-slice contract settled, implementation not started; TLS/QUIC remain future scope | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
-| F05 | Server/destination ports, optional source ports, selected-port comparisons | Accepted; not started | [Ports](DESIGN.md#port-selection) |
-| F06 | Independent directional packet priority with outer-packet evidence | Accepted; not started | [Priority](DESIGN.md#independent-packet-priority) |
-| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Accepted; implementation not started; conceptual contract documented ([evidence](WORK_LOG.md#2026-10-11-0624-utc0300-measurement-pattern-confirmed-and-contract-milestone-completed)) | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
-| F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Accepted; implementation not started; requirement documented ([evidence](WORK_LOG.md#2026-10-11-protocol-extensibility-requirement-recorded)) | [Extensibility](DESIGN.md#protocol-extensibility) |
+| F05 | Server/destination ports, optional source ports, selected-port comparisons | Accepted; UDP/TCP controls/comparison policy planned, implementation not started | [Ports](DESIGN.md#port-selection) |
+| F06 | Independent directional packet priority with outer-packet evidence | Accepted; UDP/TCP backend/capability/evidence policy planned, implementation not started or validated | [Priority](DESIGN.md#independent-packet-priority) |
+| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Accepted; first-slice schemas/scheduling/accounting/comparison contract settled, implementation not started ([evidence](WORK_LOG.md#2026-10-11-first-slice-planning-completed)) | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
+| F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Accepted; compile-time registration confirmed, boundaries/compatibility acceptance planned; implementation not started ([evidence](WORK_LOG.md#2026-10-11-first-slice-planning-completed)) | [Extensibility](DESIGN.md#protocol-extensibility) |
+| F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Accepted; embedded/key-only SSH and calibration/uncertainty/failure contract settled, implementation not started or validated ([evidence](WORK_LOG.md#2026-10-11-first-slice-planning-completed)) | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 
 Keep implementation details, validation coverage, and completed changes in the work log. When progress begins, annotate this index with its actual state and a reference to the relevant work-log entry. Partial delivery of an item does not complete all its protocol/platform variants.
 
 ## Technical choice progress
 
-Technical questions and answers are maintained in [CHOICES.md](CHOICES.md); feature progress remains here. Decisions there do not mark F01-F07 implemented or adopt S01-S06. Decision history is recorded in [WORK_LOG.md](WORK_LOG.md).
+Current first-slice scope and engineering decisions are settled in [DESIGN.md](DESIGN.md#first-slice-implementation-contract) and [CHOICES.md](CHOICES.md#first-slice-final-decisions). UDP/TCP portions of F01/F02/F05-F09, basic S08/S09 and S07/S10 validation gates are selected; S11 and other accepted carriers/DNS remain later work. All implementation and runtime checks remain unstarted.
 
-2026-10-11: foundation discussion started for T03, T04/T13, and T12; user answers are pending. T01-T02 remain the only confirmed choices. See [work-log evidence](WORK_LOG.md#2026-10-11-0548-utc0300-foundation-discussion-started). F01-F07 remain accepted/not started; S01-S06 remain proposed.
+Detailed options/provenance belong in `CHOICES.md`; dated decision history is retained in [WORK_LOG.md](WORK_LOG.md#2026-10-11-first-slice-planning-completed). [ROADMAP.md](ROADMAP.md) keeps the next actions and explicit implementation gate. Do not promote a choice or accepted feature to implemented without actual evidence.
 
-2026-10-11 update: user confirmed T03-T04 and T13's plain frontend stack. T12 now specifies Windows 11 client only, Linux server only, and ARM/x86 families on both, superseding Linux-client scope; bitness and Linux versions remain open. See [decision evidence](WORK_LOG.md#2026-10-11-0550-utc0300-first-foundation-answers-recorded). T06-T09 remain undecided; all F01-F07 remain not started and S01-S06 proposed.
+## Suggestions and accepted additions
 
-2026-10-11 further update: user clarified ARM64/x86-64 only on both OSes and confirmed shared-engine boundaries (T06) and versioned YAML profiles (T07). Results (T08), pairing (T09), and Linux version targets remain pending. See [decision evidence](WORK_LOG.md#2026-10-11-0552-utc0300-architecture-and-profile-answers-recorded). Feature implementation and optional-proposal states are unchanged.
+S01-S06 are the original suggestions and remain proposed; their stable identifiers are preserved. S07-S11 were recorded and then individually accepted together by the user for future scope on 2026-10-11. They retain their S identifiers and remain unimplemented, separate from F01-F08's implementation status. No implementation or first-slice order follows from acceptance.
 
-2026-10-11 foundation completion: T08 is confirmed as JSONL raw observations, JSON summary/settings, and CSV export. T09 is confirmed as generated pairing plus user-provided TLS certificates after clarification. T12 requires broad major Linux distributions including CentOS/Ubuntu/Fedora/Arch and others; exact versions remain open for integration review. Roadmap action 1 is complete as a documentation milestone; action 2 is next and not started. See [decision/check evidence](WORK_LOG.md#2026-10-11-0559-utc0300-foundation-decisions-completed). F01-F07 remain accepted/not started; S01-S06 remain proposed.
+### Reference review dispositions
 
-2026-10-11 measurement-contract discussion: roadmap action 2 is in discussion. T14 has a lifecycle/accounting/report/dashboard/pairing draft; T15 broad traffic configurability and T18 deadline-miss-first presentation with RTT tails/variation, ties/inconclusive and no combined score are confirmed. Burst mechanics/data-plus-receipt design and evidence rules remain open; numerical defaults are not selected. The [draft](DESIGN.md#measurement-contract-draft) includes a prose profile, synthetic accounting report, and future acceptance examples. See [initial evidence](WORK_LOG.md#2026-10-11-0614-utc0300-measurement-contract-draft-started) and [user-answer evidence](WORK_LOG.md#2026-10-11-0616-utc0300-configurable-workload-and-report-presentation-answers). F01-F07 still have no application implementation; S01-S06 remain proposed. Pairing refinements also concern F01; port/priority reporting concepts preserve F05/F06 scope without validating capability.
+Reviewed and answered: 2026-10-11, action 3b. [Source dispositions](CHOICES.md#selective-source-review-and-dispositions) and the [acceptance matrix](DESIGN.md#reference-comparison-acceptance-matrix) are documented. User confirmed design/external-validation-only use of IRTT/iperf2/Crusader and accepted all five S07-S11 for future scope, superseding the suggested deferral of S08/S09/S11. All F01-F08 and S07-S11 remain unimplemented. [Review/check evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
-2026-10-11 contract extension: user confirmed ordered traffic-phase sequences in addition to independent steady/burst controls (T15), and requested an explanation of T14's data-plus-receipt model rather than accepting it. Phase controls/reporting are documented; implementation remains not started. See [decision evidence](WORK_LOG.md#2026-10-11-0618-utc0300-traffic-phase-sequences-and-receipt-clarification). This extends F07's configurable workload contract; S01-S06 remain unapproved, including automated sweeps under S04.
+| ID | Recommendation for the first-slice discussion | Decision / implementation state |
+| --- | --- | --- |
+| S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Accepted future scope by user, 2026-10-11; first-slice checks specified, not implemented or executed |
+| S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Accepted future scope by user, 2026-10-11; basic slice contract settled, not implemented |
+| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Accepted future scope by user, 2026-10-11; basic slice contract settled, not implemented |
+| S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Accepted future scope by user, 2026-10-11; checks specified, no fixtures executed |
+| S11 | Explicit continuous monitoring retained for a later slice; retention/windows/reconnect/eligibility remain future choices. | Accepted future scope by user, 2026-10-11; outside first slice, not implemented |
+| S01-S06 | Keep existing proposals open; this review does not accept screening, new burst metrics, a separate coordination path, sweeps, proxy exports or a confidence model. | Proposed; no state change |
 
-2026-10-11 measurement-contract completion: user confirmed T14's independent bidirectional data plus correlated receipts and carrying information in the payload after explanation. T15 traffic/phase controls and T18 report presentation are already confirmed. Roadmap action 2's documentation outcome is complete; exact schemas, operational limits, numerical defaults, credential mechanics, and recommendation evidence thresholds remain open for integration/slice planning. See [completion/check evidence](WORK_LOG.md#2026-10-11-0624-utc0300-measurement-pattern-confirmed-and-contract-milestone-completed). F01-F07 remain unimplemented and S01-S06 unapproved; no implementation authorization inferred.
-
-2026-10-11 integration-review completion: roadmap action 3's source/documentation milestone is complete. T05/T11/T12/T16/T17 now have [capability expectations and gaps](CHOICES.md#integration-constraints-review): managed socket/port hooks, WireGuard DSCP integration work, Windows priority privileges/observations, recursive DNS delegation and polling, and Linux compatibility boundaries. See [review/check evidence](WORK_LOG.md#2026-10-11-integration-constraints-review-completed). This advances design research for F01-F06 and adapter-specific F07 accounting, not application implementation. F01-F07 remain not started/unimplemented, S01-S06 unapproved, exact dependencies/platform minima unselected, and implementation on hold. Action 4 is next/planned.
-
-2026-10-11 reference-tool planning: user confirmed selective learning/improvement from existing tools while explicitly keeping implementation on hold. The inventory below maps existing scope and records proposed S07-S11 additions; T19/T20 hold reuse and validation choices. Roadmap action 3a is complete as documentation, action 3b is next/planned, and action 4 still requires explicit implementation authorization. F01-F07 remain unimplemented; S01-S11 remain proposed. See [planning/check evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
-
-## Optional proposals
-
-S01-S06 are the original suggestions; their stable identifiers are preserved. S07-S11 are reference-tool candidates recorded on 2026-10-11. All remain proposed, separate from confirmed F01-F07 coverage. The user's direction to selectively learn from existing tools and improve suitable functionality authorizes this planning, not adoption of every candidate or implementation.
+IRTT/iperf2/Crusader dispositions are confirmed as design references/external validation only, without embedding/bundling; other candidates retain their review recommendations. Coherent benchmark versions, transitive license review, native reference builds and calibrated experimental tolerances remain open under T19/T20. Detailed S08/S09/S11 mechanics remain open; action 4 selected basic S08/S09 and S07/S10 validation gates, with S11 later. Completing this review does not authorize implementation or fulfill runtime acceptance.
 
 ## S01: Staged experiment plan
 
@@ -72,6 +72,8 @@ Purpose: expose clustered interruptions that averages and total loss percentages
 Before adoption: define burst boundaries and denominators. Distinguish reconciled loss, late delivery, missed transaction deadlines, and local unsent probes. Stream deadline failures must not be relabeled as proven network packet loss.
 
 ## S03: Separate coordination and measured traffic
+
+2026-10-11 clarification: basic run-plan coordination and maintained one-way clock calibration are now required under F09. This proposal's additional coordination minimization, endpoint persistence, reconciliation and recovery design remains proposed; do not treat basic coordination as awaiting S03 adoption.
 
 - [ ] Not implemented; proposed for later consideration.
 
@@ -113,7 +115,7 @@ Before adoption: choose explainable confidence labels or uncertainty measures. K
 
 ## Reference-tool candidates
 
-Recorded: 2026-10-11. This inventory captures useful ideas from the researched tools, not a completed source audit or proven integration. Prefer improvements that preserve our shared measurement contract across authentic adapters. Existing requirements below remain F01-F07; they are not new optional features or claims of implementation. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+Recorded: 2026-10-11 during action 3a. This initial inventory captures useful ideas, not a completed source audit or proven integration. The later [action 3b decisions](#reference-review-dispositions) and [source review](CHOICES.md#selective-source-review-and-dispositions) provide current dispositions. Prefer improvements that preserve our shared measurement contract across authentic adapters. Existing requirements below remain F01-F07; they are not claims of implementation. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
 
 | Reference | Components to evaluate | Existing scope and improvement to investigate |
 | --- | --- | --- |
@@ -125,64 +127,70 @@ Recorded: 2026-10-11. This inventory captures useful ideas from the researched t
 | [sockperf](https://github.com/mellanox/sockperf) | TCP/UDP latency-under-load and distribution measurements | F02/F07: potential S07 cross-check, with timing boundaries and platform limitations documented. |
 | [dnstt](https://www.bamsoftware.com/software/dnstt/), [iodine](https://github.com/yarrick/iodine) | DNS framing, encoding, resolver limits, fragmentation, polling and sustained tunnel behavior | F04/F07, T16: inspect algorithms and constraints; neither supplies our complete measurement contract. Distinguish reliable TCP tunneling from datagram delivery, record polling/retry overhead, and prevent raw-UDP fallback from being labeled DNS. |
 | [bufferbloat-lab](https://github.com/filip-lebiecki/bufferbloat-lab) | Isolated bottleneck fixtures, matched queue comparisons and live router telemetry | F07 and S10: validation/reference material only; CAKE tuning, shaping, SSH router control and queue management are outside this product's scope. |
+| [StarTrinity Network Tester](https://startrinity.com/VoIP/NetworkTester/NetworkTester.aspx), [CST custom-server guide](https://startrinity.com/InternetQuality/CST/UseCases/MonitoringWithCustomServer.aspx), [SIP Tester tutorial](https://startrinity.com/VoIP/SipTester/SipTesterTutorial.aspx) | Bidirectional UDP size/rate controls, jitter distributions/history, simultaneous upload/download monitoring, quality thresholds, worker-delay diagnostics | F02/F07, S08/S09/S11: documentation/design references; external cross-check candidate only after source/build/license/measurement review. Proposed S12 adds classified degradation episodes. SIP/RTP/MOS, vendor servers, Center/MySQL and global QoS changes are not adopted. [Review evidence](WORK_LOG.md#2026-10-11-startrinity-reference-review-recorded). |
 
 ### S07: Independent reference-tool cross-checks
 
-- [ ] Not implemented; proposed for later consideration. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
 Define a repeatable validation comparison against IRTT, iperf2, sockperf, Crusader or Flent where their measurements overlap ours. Retain tool/version, settings, raw evidence, endpoint/path, timing boundaries and observed workload; explain discrepancies rather than assuming either tool is ground truth.
 
 Purpose: independently check shared-engine timing, delivery accounting and report calculations for F02/F07. This extends validation evidence, not the product's normal managed endpoint workflow.
 
-Before adoption: settle T20's reference matrix, compatible builds and tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. A UDP reference does not validate TLS/QUIC/WireGuard/Hysteria2/DNS behavior. External benchmark execution requires later authorization; no external CLI becomes a mandatory runtime dependency by this proposal.
+Before implementation: settle T20's reference matrix, compatible builds and tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. A UDP reference does not validate TLS/QUIC/WireGuard/Hysteria2/DNS behavior. External benchmark execution requires later authorization; no external CLI becomes a mandatory runtime dependency by this proposal.
 
 ### S08: Timing preflight and diagnostic report
 
-- [ ] Not implemented; proposed for later consideration. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
 Offer an optional local preflight that measures timer wake-up error, scheduling lag and submission overhead, plus a diagnostic view during runs. Keep these observations separate from network RTT, receiver processing and adapter queues; identify CPU pressure and unsupported observations.
 
 Purpose: extend F07's already required timing records with an explainable diagnostic workflow inspired by IRTT. This is not cross-host clock calibration and cannot establish one-way delay.
 
-Before adoption: define preflight duration, bounded resource use, sample windows and advice under T14/T18. Record changes between preflight and the run; do not automatically raise OS scheduling priority, change global settings, subtract a measured floor from all RTTs or dismiss network failures as host problems.
+Before implementation: define preflight duration, bounded resource use, sample windows and advice under T14/T18. Record changes between preflight and the run; do not automatically raise OS scheduling priority, change global settings, subtract a measured floor from all RTTs or dismiss network failures as host problems.
 
 ### S09: Distribution and phase comparison views
 
-- [ ] Not implemented; proposed for later consideration. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
 Add optional histograms/CDFs and matched-run overlays alongside phase timelines for completed RTT, scheduling error, deadline outcomes and delivery interruptions. Show direction, workload phase, units, sample counts, missing/late outcomes and measurement boundaries; allow inspection of the underlying records.
 
 Purpose: extend F07's existing live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Complements S02/S06 without adopting their additional metrics or confidence policy.
 
-Before adoption: settle T13/T14/T18 chart layout, binning/percentile methods and bounded updates. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
+Before implementation: settle T13/T14/T18 chart layout, binning/percentile methods and bounded updates. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
 
 ### S10: Controlled contention scenario catalogue
 
-- [ ] Not implemented; proposed for later consideration. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
 Document reproducible validation scenarios: idle, external upload load, external download load, simultaneous load, bulk TCP beside FPS traffic, and bounded non-responsive UDP contention. Add isolated queue-policy/DSCP-classification fixtures when relevant, with actual load and topology recorded separately from the measurement profile.
 
 Purpose: make F07's existing externally busy-network validation reproducible, drawing on Flent and bufferbloat-lab. This is a validation catalogue, not in-product background-load orchestration, bandwidth control or router configuration.
 
-Before adoption: settle T20 fixture ownership, isolation, resource budgets, restoration and matched repetitions; account for load-generator CPU and path bypass. Local CAKE class observations do not prove ISP prioritization. Router queue telemetry is optional local evidence, not an inferred measurement of inaccessible ISP queues or per-game-packet delay. Execution and temporary network changes require later authorization.
+Before implementation: settle T20 fixture ownership, isolation, resource budgets, restoration and matched repetitions; account for load-generator CPU and path bypass. Local CAKE class observations do not prove ISP prioritization. Router queue telemetry is optional local evidence, not an inferred measurement of inaccessible ISP queues or per-game-packet delay. Execution and temporary network changes require later authorization.
 
 ### S11: Continuous responsiveness monitoring
 
-- [ ] Not implemented; proposed for later consideration. [Planning evidence](WORK_LOG.md#2026-10-11-reference-tool-planning-recorded).
+- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](WORK_LOG.md#2026-10-11-selective-reference-review-completed).
 
 Offer an explicitly started/stopped low-rate session with bounded rolling windows for RTT, variation, deadline outcomes and delivery gaps, inspired by Crusader and IRTT. Keep it separate from finite matched comparison runs and export window identity/settings when retained.
 
 Purpose: reveal intermittent degradation over longer periods without making an old short comparison a current guarantee.
 
-Before adoption: settle T14 resource/retention limits, window denominators, reconnect handling, traffic/receipt cost, and protocol eligibility. Incomplete windows remain visible. Monitoring does not select winners, switch routes, forward games or silently test in the background; richer burst/phase behavior remains under the existing workload choices.
+Before implementation: settle T14 resource/retention limits, window denominators, reconnect handling, traffic/receipt cost, and protocol eligibility. Incomplete windows remain visible. Monitoring does not select winners, switch routes, forward games or silently test in the background; richer burst/phase behavior remains under the existing workload choices.
+
+### S12: Classified degradation episodes and observed availability
+
+- [ ] Not implemented; proposed for later consideration, 2026-10-11. [Review evidence](WORK_LOG.md#2026-10-11-startrinity-reference-review-recorded).
+
+Extend accepted S11 monitoring with configurable, versioned criteria for no-arrival gaps, deadline misses, reconciled loss and latency/variation degradation. Record episode start/end, duration, direction, triggering evidence and recovery; display counts, longest episode and the fraction of eligible observed time meeting the chosen criteria. Keep no-arrival episodes separate from degraded-but-delivering periods and expose unknown/unobserved time.
+
+Purpose: turn a long chart into an explainable event record, inspired by StarTrinity CST's documented downtime thresholds. This is measured availability for a specific path/protocol/workload/window, not proof that the whole Internet was down. It overlaps S02's burst/interruption ideas without accepting S02 or replacing raw delivery accounting.
+
+Before adoption: settle T24's jitter definitions, window/denominator, minimum evidence, transition/debounce/hysteresis, quiet-phase handling and recovery rules. Pauses, intentional burst gaps, canceled runs, local unsent work, control/calibration failures and missing receiver records must not silently become network outages. Distinguish stream stalls from packet loss. No StarTrinity numerical thresholds, VoIP MOS grades, automatic route changes or external notification service are selected. Candidate status does not expand accepted S11 behavior by implication.
 
 ## Maintaining this file
 
-Append future features or suggestions with stable identifiers, purpose, status, and known dependencies/open decisions. Do not invent a release date, priority, or user acceptance.
+Keep stable F/S identifiers with purpose, explicit status and open dependencies. Proposed means undecided; accepted means confirmed scope, not execution authorization. In-progress/partial/completed states need work-log evidence; completed requires applicable implementation/checks. Retain deferred/rejected decisions with date/reason.
 
-- **Proposed:** idea awaiting a decision. **Accepted:** confirmed scope, with execution authorization considered separately.
-- **In progress / partial:** work has begun or only part of the feature exists; link to actual work-log evidence.
-- **Completed:** implementation and applicable checks are complete; retain the identifier and a work-log reference so it is not proposed again. State any platform/protocol coverage limits there.
-- **Deferred / rejected:** retain the dated decision and reason rather than deleting the idea and rediscovering it later.
-
-When the user adopts a proposal, update `DESIGN.md` as needed and record the decision in `WORK_LOG.md`. After meaningful implementation changes, update forward status here and backward evidence there. Preserve completed items as concise references; keep detailed code history only in the work log. An implementation or validation gap remains visible rather than being marked complete.
+Update affected `DESIGN.md` requirements, this forward status and backward `WORK_LOG.md` evidence when scope or implementation changes. Preserve completed identifiers and coverage gaps. Keep entries concise, link canonical details, and log significant compaction; do not invent acceptance, release dates or priority.

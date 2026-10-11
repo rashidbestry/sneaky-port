@@ -10,6 +10,8 @@ The protocol architecture must be extensible: later releases should add probe ad
 
 **Current status: design only. No application has been implemented.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
+First-slice planning is complete: UDP/TCP measurements, tool-owned key-only SSH control, client-local pairing keys, shared measurement/reporting and compile-time adapter registration. The [contract and acceptance gates](DESIGN.md#first-slice-implementation-contract) are documented; implementation remains on hold.
+
 ## Project documents
 
 - [AGENTS.md](AGENTS.md): working instructions and current authorization.
