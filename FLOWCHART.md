@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures and uncertainty-gated one-way estimates are implemented. Production clock-bound validation/API/dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected local run controls are implemented. Production clock bounds, configuration/report API and dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -17,6 +17,7 @@ flowchart TD
     B --> V[client-run: finite authenticated UDP/TCP measurement]
     B --> W[report-replay: validate local and transferred evidence]
     B --> X[report-export: exact JSON, JSONL or CSV]
+    B --> Y[client-api: protected local run controls]
     B --> G[Unknown or unfinished command: error]
     C --> H[writeJSON: public results]
     D --> I[Decode: strict shared profile validation]
@@ -28,6 +29,34 @@ flowchart TD
 ```
 
 Entry points: [main.go](cmd/sneaky-port/main.go) (`main`, `run`, `writeJSON`), [coordination.go](cmd/sneaky-port/coordination.go) (`coordination`, `keyPassphrase`, `loadSigner`). `server` is Linux-only; `client-ready` uses direct owned UDP/TCP plus SSH control. `client-run` performs finite measurement; dashboard mode remains unsupported. Validation/preflight open no network sockets.
+
+## Protected local run API
+
+```mermaid
+flowchart TD
+    A[clientAPI: explicit store key and frozen profile] --> B[Listen: validate literal loopback and snapshot/hash plan]
+    B --> C[Generate process token; return private local bootstrap JSON]
+    C --> D[Serve owned IPv4 or IPv6 HTTP listener]
+    D --> E{Loopback peer and exact Host/Origin; valid bearer and request ID?}
+    E -->|no| X[Structured rejection; no lifecycle mutation]
+    E -->|yes| F{Versioned route and bounded request?}
+    F -->|no| X
+    F -->|adapters| G[Page compile-time descriptors]
+    F -->|status| H[Small immutable lifecycle snapshot]
+    F -->|start/cancel| I[Strict JSON and matching frozen profile revision]
+    I --> J{Already accepted request ID?}
+    J -->|same command| K[Original acknowledgment; no new operation]
+    J -->|different command| X
+    J -->|new| L{History capacity and lifecycle admission?}
+    L -->|no| X
+    L -->|start| M[Owned run context and private plan; execute control.Run]
+    L -->|cancel| N[Cancel only the named active context]
+    M --> O[Actual final identity/completeness; release reservation]
+    N --> O
+    D --> P[Process shutdown: stop admissions and HTTP; cancel and bounded join]
+```
+
+Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. Configuration/pairing/report API and UI paths remain unimplemented; [operator contract](README.md#protected-local-run-api) records exact bounds.
 
 ## Persistent trust and endpoint readiness
 
@@ -326,7 +355,7 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). API/dashboard/SVG, matched comparisons and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Saved configuration/report API, dashboard/SVG, matched comparisons and full acceptance remain pending.
 
 ## Authenticated server evidence transfer and reconciliation
 

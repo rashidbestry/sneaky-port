@@ -8,9 +8,9 @@ Connection quality means timely delivery, low p95/p99 latency, low jitter, and f
 
 The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
 
-**Current status: finite authenticated UDP/TCP CLI runs, bounded local evidence and replay/export implemented; remote reconciliation, dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: finite authenticated UDP/TCP runs, bounded evidence/replay/export, remote reconciliation, one-way estimates and protected local run controls implemented; dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. Current code supplies strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing and key-only SSH readiness/leases. `client-run` connects shared UDP/TCP phase/accounting, reverse receipts, deadlines/cutoffs, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated server reconciliation and uncertainty-gated one-way estimates are available. Independently verified production clock bounds, API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
+Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` adds protected local adapter/start/cancel/status routes. Saved configuration/report API operations, independently verified production clock bounds, dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
 
 ## Run the foundation tools
 
@@ -114,6 +114,27 @@ Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_re
 `client-run` also returns `clock_sampling`; replay/export derives the same bounded window from raw `clock_capture` events. Explicit profile cadence, minimum recent valid samples, window and expiry control captures during warmup/main/grace. Four timestamps use the data epochs; serialization/send costs, invalid captures, skipped cadence slots and calibration application-byte counters remain visible. `samples_available` means enough recent raw constraints; `unavailable` means insufficient/expired evidence. Neither establishes calibrated one-way delay. Snapshot ages refer to the saved `as_of_ns`; replay does not advance a finished run's local clock. Readiness-only runs do not sample. [Sampling policy](DESIGN.md#calibration-and-one-way-evidence-policy), [code flow](FLOWCHART.md#live-ssh-clock-sampling).
 
 `reconciliation.one_way` matches original attempts and complete receiver arrivals, then applies the clock revision available at client send time upstream or client arrival downstream. The report records raw-file hashes and retained results' identities, model/sample IDs, age, signed lower/upper/midpoint/uncertainty and clock-local units. Application serialization/submission/buffering are included. Production bounds are unverified, so values remain `estimate` or `unavailable`; source labels cannot enable `calibrated`. Later samples never upgrade old results. Detail bytes are capped at the smaller of the profile event budget and 256 KiB; exact status counts and omitted-model/result counts remain visible, with raw evidence retained. [One-way flow](FLOWCHART.md#uncertainty-gated-one-way-results).
+
+## Protected local run API
+
+Launch with an existing initialized client store and an explicit profile:
+
+```powershell
+.\build\sneaky-port.exe client-api -data-dir .\client-data -profile .\examples\readiness-udp.yaml
+```
+
+The example profile needs your explicit server/workload settings. Startup JSON returns `api_url`, a fresh `session_token`, `profile_id` and `profile_revision` (the frozen plan hash). Keep the token local. Each request needs `Authorization: Bearer <session_token>` and a safe `X-Request-ID` (1-64 letters, digits, `_` or `-`). Browser requests must use the exact returned origin; no CORS access or token-in-URL bootstrap is provided. `-listen` accepts a literal loopback IP only, defaulting to `127.0.0.1:0`; `[::1]:0` supports IPv6. Ctrl+C cancels and joins owned work within `-shutdown-timeout` (default 10s), reporting expiration explicitly.
+
+| Route | Request / result |
+| --- | --- |
+| `GET /api/v1/adapters?cursor=0&limit=16` | Registry descriptions, at most 16 items; `next_cursor` is empty at the end |
+| `POST /api/v1/runs` | JSON `{ "schema_version": 1, "request_id": "start-1", "profile_id": "<startup ID>", "profile_revision": "<startup hash>" }`; returns `control_run_id` |
+| `GET /api/v1/runs/<control_run_id>` | Bounded lifecycle/identity/completeness status |
+| `POST /api/v1/runs/<control_run_id>/cancel` | JSON `{ "schema_version": 1, "request_id": "cancel-1" }`; cancels that handle only |
+
+Body/header request IDs must agree. Repeating an accepted mutation ID returns its original acknowledgment; reusing it for another operation conflicts. One run executes at a time, independent of HTTP connection/request cancellation. `executing` covers setup/data/finalization; `cancelling` lasts until cleanup returns. Measurement ID/readiness and local completeness become known at finalization; unknown booleans remain `null`, and no live phase/counters are fabricated. Failure reasons direct you to local evidence without exposing file/key paths. Existing replay/export commands remain available.
+
+Mutation bodies are capped at 4 KiB; the process retains at most 32 run statuses and 128 accepted commands. Exhaustion rejects new work and preserves old retries; restarting creates a new token/history. These are engineering limits, not workload recommendations. The launch-time plan remains frozen even if its source file changes. Saved-profile revisions, pairing/report operations and live dashboard views remain later tasks. [API flow](FLOWCHART.md#protected-local-run-api), [task evidence](WORK_LOG.md#2026-10-11-protected-local-run-api).
 
 ## Project documents
 

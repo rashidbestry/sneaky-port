@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,4 +170,119 @@ func TestFiniteCLI(t *testing.T) {
 	if result.Status != "partial" || result.Local == nil || result.Local.Complete {
 		t.Fatal("partial CLI evidence missing")
 	}
+	exerciseFiniteAPI(t, clientStore, path)
+}
+
+// exerciseFiniteAPI reuses the real SSH fixture to verify HTTP start/status/cancel and persisted evidence.
+// These are same-host IPv4 UDP/SSH runs, distinct from deployment/native/live acceptance.
+func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	reader, writer := io.Pipe()
+	done := make(chan error, 1)
+	go func() { // Bootstrap through a pipe so token output never races an in-memory buffer or enters logs.
+		err := run(ctx, []string{"client-api", "-data-dir", store.Root, "-profile", path}, writer)
+		writer.CloseWithError(err)
+		done <- err
+	}()
+	t.Cleanup(func() { // Stop the API and join all finite cleanup before the SSH fixture shuts down.
+		cancel()
+		reader.Close()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Error(err)
+			}
+		case <-time.After(3 * time.Second):
+			t.Error("API CLI cleanup timeout")
+		}
+	})
+	var bootstrap struct {
+		Version   int    `json:"schema_version"`
+		URL       string `json:"api_url"`
+		Token     string `json:"session_token"`
+		ProfileID string `json:"profile_id"`
+		Revision  string `json:"profile_revision"`
+	}
+	if err := json.NewDecoder(reader).Decode(&bootstrap); err != nil {
+		t.Fatal("API bootstrap failed", err)
+	}
+	if bootstrap.Version != 1 || len(bootstrap.Token) != 64 {
+		t.Fatal("invalid API bootstrap")
+	}
+	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	defer client.CloseIdleConnections()
+	for _, interrupted := range []bool{false, true} {
+		requestID := "complete"
+		if interrupted {
+			requestID = "cancelled"
+		}
+		body, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": requestID, "profile_id": bootstrap.ProfileID, "profile_revision": bootstrap.Revision})
+		state := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs", requestID, string(body))
+		controlID, ok := state["control_run_id"].(string)
+		if !ok || controlID == "" {
+			t.Fatal("missing API run handle")
+		}
+		if interrupted {
+			// Cancellation during setup is also bounded; data-phase cancellation is already covered by the CLI fixture above.
+			apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs/"+controlID+"/cancel", "stop", `{"schema_version":1,"request_id":"stop"}`)
+		}
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			state = apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/runs/"+controlID, "poll", "")
+			if state["status"] != "executing" && state["status"] != "cancelling" {
+				break
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+		if interrupted {
+			if state["status"] != "failed" && state["status"] != "partial" {
+				t.Fatal("cancel did not finalize", state["status"])
+			}
+		} else {
+			if state["status"] != "completed" || state["local_complete"] != true || state["measurement_started"] != true {
+				t.Fatal("API finite run missing", state)
+			}
+			id, ok := state["measurement_run_id"].(string)
+			if !ok || len(id) != 32 {
+				t.Fatal("measurement identity absent")
+			}
+			report, err := control.ReplayReport(filepath.Join(store.Root, "reports", id+"-client"), 4<<20)
+			if err != nil || report.Verification != "matched" {
+				t.Fatal("API run evidence failed offline replay", err)
+			}
+		}
+		// A retry after terminal publication must return the original start handle without a new run.
+		retry := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs", requestID, string(body))
+		if retry["control_run_id"] != controlID {
+			t.Fatal("terminal start retry duplicated run")
+		}
+	}
+}
+
+// apiCLIRequest exercises actual authenticated HTTP while keeping bootstrap credentials out of diagnostics.
+func apiCLIRequest(t *testing.T, client *http.Client, base, token, method, path, id, body string) map[string]any {
+	t.Helper()
+	r, err := http.NewRequest(method, base+path, strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Header.Set("Authorization", "Bearer "+token)
+	r.Header.Set("X-Request-ID", id)
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Origin", base)
+	response, err := client.Do(r)
+	if err != nil {
+		t.Fatal("API HTTP failed", err)
+	}
+	defer response.Body.Close()
+	var envelope struct {
+		Version int            `json:"schema_version"`
+		Result  map[string]any `json:"result"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil || response.StatusCode != 200 || envelope.Version != 1 {
+		t.Fatal("API request failed", response.StatusCode, err)
+	}
+	return envelope.Result
 }
