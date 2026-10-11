@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundation and authenticated readiness code**. Scheduled network measurement remains pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap](ROADMAP.md#5-implement-and-validate-the-agreed-first-slice) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundation and authenticated readiness code**. Scheduled network measurement remains pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 

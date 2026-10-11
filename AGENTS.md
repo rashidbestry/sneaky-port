@@ -4,7 +4,7 @@
 
 sneaky-port measures FPS connection quality between Windows 11 clients and one Linux server. The gaming proxy is a separate project.
 
-**First-slice implementation authorized, 2026-10-11.** The user requested starting roadmap step 5: implement and validate the agreed UDP/TCP slice in `DESIGN.md`. Other carriers and later features retain their existing scope/status. Preserve user-owned services and settings.
+**First-slice implementation authorized, 2026-10-11.** The user requested the original roadmap step 5, now split into bounded tasks in `ROADMAP.md`: implement and validate the agreed UDP/TCP slice in `DESIGN.md`. Other carriers and later features retain their existing scope/status. Preserve user-owned services and settings.
 
 ## Task workflow
 
@@ -12,6 +12,7 @@ sneaky-port measures FPS connection quality between Windows 11 clients and one L
 
 - Read [WORK_LOG.md](WORK_LOG.md)'s current index and recent/relevant history; inspect Git status and affected files. Verify existing behavior from code before duplicating or fixing it; log claims can be stale.
 - Consult relevant sections of [DESIGN.md](DESIGN.md) (requirements), [CHOICES.md](CHOICES.md) (technical answers), [PROPOSALS.md](PROPOSALS.md) (feature status), and [ROADMAP.md](ROADMAP.md) (next actions). Latest user instructions win; plans/recommendations do not imply acceptance or execution authorization.
+- Split large roadmap work into separately checkable outcomes before implementation. Work on the selected task only, record its checks/status and report the next step; do not absorb adjacent tasks into the same conversation unless the user requests them. Split expanding scope again before proceeding.
 - After meaningful changes, update affected documents/statuses and the work-log index; append dated evidence with what/why, paths, actual state, checks/results and gaps. Use known Europe/Istanbul timestamps; never invent results. Preserve stable F/S/T identifiers, decision provenance and historical log entries.
 - Automatically mark finished roadmap outcomes complete and append ` (completed)` to their headings after required checks. Keep partial/unvalidated work explicit; planning completion is not implementation.
 

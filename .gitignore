@@ -5,6 +5,3 @@
 /client-data/
 /server-data/
 *.exe
-*.md
-!FLOWCHART.md
-!THIRD_PARTY_NOTICES.md

@@ -10,7 +10,7 @@ First-slice foundations and authenticated UDP/TCP readiness now exist, with meas
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. Next actions are in [ROADMAP.md](ROADMAP.md); no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; foundation/readiness milestones are complete within scope, queue task 7 is next, and no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
