@@ -151,6 +151,7 @@ func TestPhaseAccounting(t *testing.T) {
 	if charged != uint64(r.EventBytes) || charged > uint64(c.plan.Limits.EventBytes) {
 		t.Fatal("inexact byte budget")
 	}
+	assertReplayAccounting(t, c.plan, c.start, r)
 }
 
 // TestRangeInterruptionAndEvidenceLimits checks skipped ranges, canceled admissions and partial evidence.
@@ -173,6 +174,7 @@ func TestRangeInterruptionAndEvidenceLimits(t *testing.T) {
 	if r.Complete || r.Summary.Planned != 1 || r.Summary.Accepted != 1 || r.Summary.Pending != 1 || len(r.Entries) != 3 || r.Entries[2].State != "skipped_local" || r.Entries[2].Attempt != nil {
 		t.Fatalf("interruption %+v entries=%+v", r.Summary, r.Entries)
 	}
+	assertReplayAccounting(t, c.plan, c.start, r)
 	// Exhaustion is explicit and cannot grow retained raw bytes beyond the frozen cap.
 	c, err = NewCollector(phasePlan(), 1, 0)
 	if err != nil {

@@ -25,6 +25,8 @@ func finiteRig(t *testing.T, kind string) *testRig {
 	r.plan.Deadline = 50e6
 	r.plan.Limits.MaxLag = 30e6
 	r.plan.Limits.HeartbeatInterval = 20e6
+	// Success/lifecycle fixtures allow a burst of raw boundary records; saturation has dedicated tests.
+	r.plan.Limits.QueueMessages = 128
 	return r
 }
 
@@ -56,6 +58,7 @@ func TestFiniteAuthenticatedRuns(t *testing.T) {
 				if _, err := os.Stat(filepath.Join(r.client.Root, "active-run.lock")); !os.IsNotExist(err) {
 					t.Fatal("client reservation leaked")
 				}
+				assertPersistedRun(t, r, result, true)
 			}
 		})
 	}
@@ -78,7 +81,7 @@ func TestFiniteCancellationAndControlLoss(t *testing.T) {
 				} else if stage == "grace" {
 					delay = 650 * time.Millisecond
 				}
-				timer := time.AfterFunc(delay, func() { // Trigger an external caller cancellation or real SSH server ownership loss.
+				stopTrigger := afterRunEvidence(t, r.client.Root, delay, func() { // Trigger cancellation/control loss only after this run's measurement actually starts.
 					if stage == "control_loss" {
 						r.stop()
 					} else if stage == "revocation" {
@@ -90,7 +93,7 @@ func TestFiniteCancellationAndControlLoss(t *testing.T) {
 						cancel()
 					}
 				})
-				defer timer.Stop()
+				defer stopTrigger()
 				begin := time.Now()
 				result, err := Run(ctx, r.client, r.signer, r.plan)
 				if err == nil || result.Status != "partial" || result.Local == nil || result.Local.Complete || result.Evidence.Receiver.Complete || time.Since(begin) > 2*time.Second {
@@ -99,6 +102,7 @@ func TestFiniteCancellationAndControlLoss(t *testing.T) {
 				if stage != "grace" && result.Local.Generation >= 500e6 || result.Local.Observation > 750e6 {
 					t.Fatal("interrupted run manufactured a full timeline")
 				}
+				assertPersistedRun(t, r, result, false)
 				if stage != "control_loss" {
 					if stage == "revocation" {
 						client, err := r.client.Client()

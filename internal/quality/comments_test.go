@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -14,13 +15,17 @@ import (
 // TestEveryFunctionCommented audits declarations and anonymous functions in owned Go source.
 func TestEveryFunctionCommented(t *testing.T) {
 	root := filepath.Join("..", "..")
+	module, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err != nil || !strings.HasPrefix(string(module), "module sneaky-port\n") && !strings.HasPrefix(string(module), "module sneaky-port\r\n") {
+		t.Fatal("comment audit must run from this repository's internal/quality package directory")
+	}
 	count := 0
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error { // Inspect source only; downloaded dependencies/build artifacts are not owned code.
+	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error { // Inspect owned source only; exclude generated artifacts and restricted application data.
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if d.Name() == ".git" || d.Name() == ".cache" || d.Name() == "build" || d.Name() == "test-output" {
+			if d.Name() == ".git" || d.Name() == ".cache" || d.Name() == "build" || d.Name() == "test-output" || d.Name() == "client-data" || d.Name() == "server-data" {
 				return filepath.SkipDir
 			}
 			return nil

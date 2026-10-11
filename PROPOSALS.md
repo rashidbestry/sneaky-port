@@ -6,11 +6,11 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-Foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting exist; durable reports, dashboard and full acceptance remain pending. [Lifecycle evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [code flow](FLOWCHART.md).
+Foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting exist; bounded local files, replay and exports exist; remote reconciliation, dashboard and full acceptance remain pending. [Lifecycle evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-11 are complete within scope, local evidence persistence task 12 is next, and no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-13 are complete within scope, remote transfer/reconciliation task 14 is next, and no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
 | F05 | Server/destination ports, optional source ports, selected-port comparisons | Partial: explicit socket controls, server port policy and effective readiness bindings; matched-run comparisons/live NAT evidence pending | [Ports](DESIGN.md#port-selection) |
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; writer-owned physical-phase transitions implemented; outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
-| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; durable reports/remote reconciliation/comparison pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
+| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; bounded local files/replay/exports implemented; remote reconciliation/comparison pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory and test-only option extension; engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
 | F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: persistent trust, SSH plan agreement/authenticated readiness and leases, synthetic clock envelopes; finite start/lifecycle implemented; calibration/report channels, live sampler and verified clock bounds pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 | F10 | Capability-driven dashboard traffic tweaks, including supported fragmentation and header/framing/payload size controls | Accepted; existing payload foundation only; richer controls, schema/mechanisms and dashboard pending ([evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement)) | [Traffic controls](DESIGN.md#protocol-specific-traffic-controls) |
@@ -74,7 +74,7 @@ Before adoption: define burst boundaries and denominators. Distinguish reconcile
 
 ## S03: Separate coordination and measured traffic
 
-2026-10-11 clarification: basic run-plan coordination and maintained one-way clock calibration are now required under F09. This proposal's additional coordination minimization, endpoint persistence, reconciliation and recovery design remains proposed; do not treat basic coordination as awaiting S03 adoption.
+2026-10-11 clarification: basic run-plan coordination and maintained one-way clock calibration are now required under F09. Tasks 12-13 now supply baseline endpoint persistence and local replay/export under F07/F09. Additional coordination minimization and recovery behavior remain proposed; mandatory transfer/reconciliation remains roadmap task 14.
 
 - [ ] Not implemented; proposed for later consideration.
 
@@ -82,7 +82,7 @@ Exchange test plans before probing and collect server records afterward. Keep co
 
 Purpose: preserve enough evidence to understand failed tests while limiting interference from test management.
 
-Before adoption: choose authenticated coordination, bounded local persistence, reconciliation, and recovery behavior. Failure of the coordination path must not automatically classify every measurement protocol as unusable. Missing remote evidence must remain explicitly incomplete.
+Before adopting additional S03 behavior: define recovery/import/retention policy and verify control-traffic minimization; baseline authenticated coordination, bounded local persistence and replay/export exist, while task 14 reconciliation remains pending. Failure of the coordination path must not automatically classify every measurement protocol as unusable. Missing remote evidence must remain explicitly incomplete.
 
 ## S04: Packet-size and packet-rate sweeps
 

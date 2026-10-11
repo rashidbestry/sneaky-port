@@ -33,7 +33,7 @@ type finishAck struct {
 	Status string `json:"status"`
 }
 
-// LocalRun is a transient CLI snapshot, not a durable report/export schema.
+// LocalRun holds endpoint-only quantities shared by CLI snapshots and persisted summary envelopes.
 // Summary delivery stays unknown until compatible authenticated remote evidence is reconciled.
 type LocalRun struct {
 	Complete    bool              `json:"complete"`
@@ -50,14 +50,14 @@ type LocalRun struct {
 type PhaseMarking = engine.PhaseMarking
 
 // localSnapshot extracts bounded physical-phase API evidence alongside local accounting for CLI review.
-// This is a transient snapshot; it cannot replace raw persistence/replay or remote reconciliation.
+// The same local quantities appear in saved/recomputed summaries; remote reconciliation remains separate.
 func localSnapshot(r engine.Result) *LocalRun {
 	s := &LocalRun{Complete: r.Complete, Generation: r.GenerationCutoff, Observation: r.ObservationCutoff, Summary: r.Summary, Warmup: r.Warmup, Phases: r.Phases, Analysis: r.Analysis, Markings: []PhaseMarking{}}
 	s.Markings = append(s.Markings, r.Markings...)
 	return s
 }
 
-// RunResult contains public lifecycle/effective settings and local-only in-memory accounting.
+// RunResult contains public lifecycle/settings, local accounting and the newly saved report path.
 type RunResult struct {
 	Version      int           `json:"schema_version"`
 	Status       string        `json:"status"`
@@ -65,7 +65,8 @@ type RunResult struct {
 	Readiness    ReadyResult   `json:"readiness"`
 	ServerStatus string        `json:"server_lifecycle_status"`
 	Local        *LocalRun     `json:"local"`
-	Evidence     engine.Result `json:"-"` // Internal observations for tests/future persistence; no server reconciliation.
+	Evidence     engine.Result `json:"-"` // Internal observations are persisted separately; no server reconciliation.
+	ReportPath   string        `json:"local_report_path,omitempty"`
 }
 
 // durationSum saturates composed operation budgets instead of wrapping individually valid nanoseconds.
@@ -80,9 +81,9 @@ func durationSum(values ...profile.Decimal) time.Duration {
 	return time.Duration(total)
 }
 
-// drainJoinBudget includes the capped cancellation drain and an independent bounded worker join.
+// drainJoinBudget includes capped drain, worker join and the independent storage-writer join.
 func drainJoinBudget(p profile.Plan) time.Duration {
-	return durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout)
+	return durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout)
 }
 
 // Run freezes mutable input and reserves this client store before authenticated finite measurement.
@@ -130,7 +131,18 @@ func Run(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan) (
 
 // executeRun binds start and stop to the frozen hash and services bounded heartbeats independently of data.
 // Each endpoint starts on processing its own start exchange; the anchors are not synchronized.
-func executeRun(ctx context.Context, raw net.Conn, exchange func(string, any) (Envelope, error), t adapter.Transport, ca, sa probe.Auth, run, session [16]byte, p profile.Plan, result *RunResult) error {
+func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(string, any) (Envelope, error), t adapter.Transport, ca, sa probe.Auth, run, session [16]byte, p profile.Plan, result *RunResult) error {
+	persistence, err := newEvidence(store, p, result.Readiness, "client")
+	if err != nil {
+		return err
+	}
+	result.ReportPath = persistence.path
+	owned := true
+	defer func() { // Preserve an incomplete setup record if start/engine construction fails before ownership transfer.
+		if owned {
+			persistence.Finalize(engine.Result{})
+		}
+	}()
 	hash, _ := p.Hash()
 	body := hashBody{result.Readiness.PlanHash}
 	raw.SetDeadline(time.Now().Add(time.Duration(p.Limits.WriteTimeout)))
@@ -145,10 +157,11 @@ func executeRun(ctx context.Context, raw net.Conn, exchange func(string, any) (E
 	result.Readiness.MeasurementStarted, result.Readiness.Status = true, "started"
 	result.Status = "running"
 	anchor := time.Now()
-	finite, err := engine.NewFinite(ctx, worker.Config{Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false)
+	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false, persistence)
 	if err != nil {
 		return err
 	}
+	owned = false
 	defer finite.Cancel()
 	raw.SetDeadline(time.Time{})
 	ticker := time.NewTicker(time.Duration(p.Limits.HeartbeatInterval))
@@ -192,7 +205,7 @@ loop:
 		return controlErr
 	}
 	// A successful local cutoff is independent of the server's anchor/cutoff and final lifecycle status.
-	raw.SetDeadline(time.Now().Add(durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.WriteTimeout)))
+	raw.SetDeadline(time.Now().Add(durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout, p.Limits.WriteTimeout)))
 	e, err = exchange("stop", body)
 	if err != nil {
 		return err

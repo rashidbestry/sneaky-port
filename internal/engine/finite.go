@@ -21,8 +21,9 @@ func (t retainedTransport) Close() error {
 	return t.Transport.(interface{ Interrupt() error }).Interrupt()
 }
 
-// Finite owns a single local run, bounded drain and joined accounting; results are in memory.
+// Finite owns a local run, bounded drain, joined accounting and optional evidence finalization.
 type Finite struct {
+	persistence Persistence
 	endpoint    *Endpoint
 	cancel      context.CancelFunc
 	done        chan struct{}
@@ -66,6 +67,12 @@ func phaseMarker(t adapter.Transport, windows []worker.Window, start uint64) fun
 // Start/EpochStart are independently captured host-local anchors from authenticated control.
 // retain is for a control-owned server socket whose earlier cutoff must not truncate the peer.
 func NewFinite(parent context.Context, cfg worker.Config, p profile.Plan, retain bool) (*Finite, error) {
+	return NewFiniteWithEvidence(parent, cfg, p, retain, nil)
+}
+
+// NewFiniteWithEvidence connects a pre-created secret-free store before workers can send data.
+// The caller owns finalizing the store if construction fails; successful runs finalize after join.
+func NewFiniteWithEvidence(parent context.Context, cfg worker.Config, p profile.Plan, retain bool, persistence Persistence) (*Finite, error) {
 	if parent == nil || cfg.Transport == nil || cfg.Start.Before(cfg.EpochStart) {
 		return nil, errors.New("invalid finite lifecycle configuration")
 	}
@@ -91,9 +98,9 @@ func NewFinite(parent context.Context, cfg worker.Config, p profile.Plan, retain
 	var endpoint *Endpoint
 	switch p.Adapter {
 	case "udp":
-		endpoint, err = NewUDP(ioCtx, cfg, p)
+		endpoint, err = newEndpoint(ioCtx, cfg, p, "udp", worker.NewUDP, persistence)
 	case "tcp":
-		endpoint, err = NewTCP(ioCtx, cfg, p)
+		endpoint, err = newEndpoint(ioCtx, cfg, p, "tcp", worker.NewTCP, persistence)
 	default:
 		err = errors.New("finite adapter worker unsupported")
 	}
@@ -101,7 +108,7 @@ func NewFinite(parent context.Context, cfg worker.Config, p profile.Plan, retain
 		cancel()
 		return nil, err
 	}
-	f := &Finite{endpoint: endpoint, cancel: cancel, done: make(chan struct{}), end: cfg.ObservationEnd}
+	f := &Finite{endpoint: endpoint, cancel: cancel, done: make(chan struct{}), end: cfg.ObservationEnd, persistence: persistence}
 	go f.finish(ctx, cfg.ObservationEnd, p)
 	return f, nil
 }
@@ -143,6 +150,12 @@ func (f *Finite) finish(ctx context.Context, end time.Time, p profile.Plan) {
 				cause = context.Canceled
 			}
 			f.err = cause
+		}
+	}
+	if f.persistence != nil {
+		if err := f.persistence.Finalize(f.result); err != nil {
+			f.result.Complete, f.result.Receiver.Complete = false, false
+			f.err = errors.Join(f.err, err)
 		}
 	}
 }

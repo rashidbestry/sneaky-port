@@ -481,11 +481,17 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 				fail(request, errors.New("run already started or control ended"))
 				return
 			}
+			persistence, storageErr := newEvidence(s.Store, plan, result, "server")
+			if storageErr != nil {
+				fail(request, storageErr)
+				return
+			}
 			// Finite lifecycle now owns cancellation/drain; preparation must not close its socket early.
 			closePrepared()
 			anchor := time.Now()
-			measured, err = engine.NewFinite(ctx, worker.Config{Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true)
+			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true, persistence)
 			if err != nil {
+				persistence.Finalize(engine.Result{})
 				fail(request, err)
 				return
 			}
@@ -888,7 +894,7 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 		// Run owns draining after control loss; this setup callback must no longer close data early.
 		closeData()
 		measured.Readiness = result
-		err = executeRun(ctx, raw, exchange, t, ca, sa, runID, session, p, measured)
+		err = executeRun(ctx, store, raw, exchange, t, ca, sa, runID, session, p, measured)
 		measured.Readiness.Control = ControlTraffic{"client application control frames through run finalization; SSH overhead excluded", counter, counted.sent, counted.received}
 		return result, err
 	}

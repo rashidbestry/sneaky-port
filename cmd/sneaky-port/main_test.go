@@ -15,7 +15,7 @@ func TestImplementedCommands(t *testing.T) {
 	if !bytes.Contains(out.Bytes(), []byte(`"udp"`)) || !bytes.Contains(out.Bytes(), []byte(`"tcp"`)) {
 		t.Fatal("missing real adapter descriptors")
 	}
-	for _, args := range [][]string{nil, {"server"}, {"client"}, {"validate"}, {"keygen"}, {"preflight"}} {
+	for _, args := range [][]string{nil, {"server"}, {"client"}, {"validate"}, {"keygen"}, {"preflight"}, {"report-replay"}, {"report-export"}, {"report-export", "-report", "unused", "-max-bytes", "100", "-format", "xml"}} {
 		if err := run(context.Background(), args, &out); err == nil {
 			t.Fatalf("unsupported/incomplete invocation %v succeeded", args)
 		}

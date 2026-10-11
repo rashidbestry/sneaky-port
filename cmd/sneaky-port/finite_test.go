@@ -86,6 +86,8 @@ func TestFiniteCLI(t *testing.T) {
 	p.Phases[0].Duration, p.Grace, p.Deadline = 200e6, 100e6, 50e6
 	p.Phases[0].Client.RateNumerator, p.Phases[0].Server.RateNumerator = 50, 25
 	p.Limits.MaxLag = 30e6
+	// This CLI success/cancellation fixture must not conflate storage saturation with lifecycle behavior.
+	p.Limits.QueueMessages = 128
 	path := filepath.Join(root, "plan.json")
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -105,6 +107,22 @@ func TestFiniteCLI(t *testing.T) {
 	}
 	if result.Status != "completed" || result.Local == nil || !result.Local.Complete {
 		t.Fatal("CLI finite result missing")
+	}
+	for _, format := range []string{"json", "jsonl", "csv"} {
+		out.Reset()
+		if err = run(context.Background(), []string{"report-export", "-report", result.ReportPath, "-max-bytes", "4194304", "-format", format}, &out); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Contains(out.Bytes(), []byte("completed")) || !bytes.Contains(out.Bytes(), []byte("unknown")) {
+			t.Fatal("CLI export omitted local/remote status")
+		}
+	}
+	out.Reset()
+	if err = run(context.Background(), []string{"report-replay", "-report", result.ReportPath, "-max-bytes", "4194304"}, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(out.Bytes(), []byte(`"saved_summary_verification": "matched"`)) {
+		t.Fatal("CLI replay did not verify saved summary")
 	}
 	out.Reset()
 	canceled, stop := context.WithCancel(context.Background())

@@ -159,6 +159,12 @@ func DecodeObject(b []byte, out any) error {
 
 // requiredFields checks explicit struct fields recursively while leaving opaque protocol payloads to their own decoder.
 func requiredFields(b []byte, typ reflect.Type) error {
+	return requiredJSONFields(b, typ, false)
+}
+
+// requiredJSONFields shares strict presence checks; saved reports may contain nil observation collections.
+// Control messages retain their existing rejection of null collections.
+func requiredJSONFields(b []byte, typ reflect.Type, nullableCollections bool) error {
 	if typ.Kind() == reflect.Pointer && bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
 		return nil
 	}
@@ -169,6 +175,9 @@ func requiredFields(b []byte, typ reflect.Type) error {
 		return nil
 	}
 	if bytes.Equal(bytes.TrimSpace(b), []byte("null")) {
+		if nullableCollections && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map) {
+			return nil
+		}
 		return errors.New("null JSON fields are unsupported")
 	}
 	switch typ.Kind() {
@@ -199,7 +208,7 @@ func requiredFields(b []byte, typ reflect.Type) error {
 				}
 				return errors.New("required JSON field missing: " + name)
 			}
-			if err := requiredFields(value, f.Type); err != nil {
+			if err := requiredJSONFields(value, f.Type, nullableCollections); err != nil {
 				return err
 			}
 		}
@@ -214,7 +223,7 @@ func requiredFields(b []byte, typ reflect.Type) error {
 			return err
 		}
 		for _, item := range items {
-			if err := requiredFields(item, typ.Elem()); err != nil {
+			if err := requiredJSONFields(item, typ.Elem(), nullableCollections); err != nil {
 				return err
 			}
 		}

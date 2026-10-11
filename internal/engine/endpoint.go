@@ -1,5 +1,5 @@
 // Package engine owns finite in-memory phase/accounting integration over worker events.
-// Finite lifecycle adds phase marking and bounded observation; persisted reports remain separate.
+// Finite lifecycle adds phase marking, bounded observation and optional local persistence.
 package engine
 
 import (
@@ -19,7 +19,7 @@ import (
 	"sneaky-port/internal/writer"
 )
 
-// Record is a bounded, secret-free internal observation, not the future persisted file schema.
+// Record is a bounded, secret-free observation reused as persisted event details.
 // All quantities that could exceed browser integer precision use canonical decimal strings.
 type Record struct {
 	Kind                                                          string
@@ -62,6 +62,15 @@ type Result struct {
 	Markings                                        []PhaseMarking
 }
 
+// Persistence accepts exact local records independently of socket timing and UI updates.
+// Append must be bounded/nonblocking; Failed closes on asynchronous storage failure.
+// Finalize flushes accepted records and publishes cutoffs, or leaves recognizable incomplete files.
+type Persistence interface {
+	Append(json.RawMessage) error
+	Failed() <-chan struct{}
+	Finalize(Result) error
+}
+
 // ticket keeps one bounded admission result until joined shutdown guarantees availability.
 type ticket struct {
 	frame probe.Frame
@@ -70,6 +79,7 @@ type ticket struct {
 
 // Collector has one event-loop owner; concurrent mutation is intentionally unsupported.
 type Collector struct {
+	persistence                 Persistence
 	plan                        profile.Plan
 	windows                     []worker.Window
 	localEnds, peerEnds         []uint64
@@ -149,7 +159,7 @@ func record(e worker.Event) Record {
 }
 
 // keep charges the exact internal JSONL byte size, terminating on exhaustion instead of dropping silently.
-// File budgets and durable schema are task 12; this is a separate run-wide in-memory evidence cap.
+// Durable envelope/file bytes are independently charged by the optional persistence owner.
 func (c *Collector) keep(r Record) error {
 	if len(r.Reason) > 4096 || len(r.Error) > 4096 {
 		return errors.New("oversized evidence detail")
@@ -161,6 +171,11 @@ func (c *Collector) keep(r Record) error {
 	n := uint64(len(b) + 1)
 	if n > uint64(c.plan.Limits.EventBytes)-c.bytes {
 		return errors.New("run event byte budget exhausted")
+	}
+	if c.persistence != nil {
+		if err = c.persistence.Append(b); err != nil {
+			return err
+		}
 	}
 	c.records = append(c.records, b)
 	c.bytes += n
@@ -195,6 +210,11 @@ func (c *Collector) Apply(e worker.Event) error {
 	if err := c.keep(record(e)); err != nil {
 		return err
 	}
+	return c.apply(e, true)
+}
+
+// apply shares accounting transitions with offline replay; only live events own completion channels.
+func (c *Collector) apply(e worker.Event, tickets bool) error {
 	if e.Kind == "marking" && e.Marking != nil {
 		m := PhaseMarking{At: profile.Decimal(e.At), Lifecycle: e.MarkLifecycle, Phase: e.MarkPhase, Marking: *e.Marking}
 		if e.Err != nil {
@@ -248,7 +268,7 @@ func (c *Collector) Apply(e worker.Event) error {
 			}
 		}
 	}
-	if e.Kind == "admission" && e.Admission.State == writer.Accepted {
+	if tickets && e.Kind == "admission" && e.Admission.State == writer.Accepted {
 		if e.Admission.Done == nil || len(c.tickets) >= c.plan.Limits.LedgerMessages {
 			return errors.New("invalid ticket/budget")
 		}
@@ -310,10 +330,12 @@ func (c *Collector) Finish(workerErr error, observed uint64) (Result, error) {
 			if result.Err != nil {
 				r.Error = result.Err.Error()
 			}
-			if e := c.keep(r); e != nil && err == nil {
-				err = e
+			kept := c.keep(r)
+			if kept != nil && err == nil {
+				err = kept
 			}
-			if t.frame.Kind == probe.Data && !result.Attempted {
+			// An unsaved completion cannot revise the final ledger into an unreplayable local resolution.
+			if kept == nil && t.frame.Kind == probe.Data && !result.Attempted {
 				if e := c.ledger.Unattempted(identity(t.frame), observed, "canceled_unattempted: "+string(result.Reason)); e != nil && err == nil {
 					err = e
 				}
@@ -347,7 +369,7 @@ type Endpoint struct {
 
 // newEndpoint validates the frozen plan digest and connects shared multi-phase accounting.
 // Standalone callers apply constant markings; finite lifecycle supplies the physical-phase writer hook.
-func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id string, create func(context.Context, worker.Config) (*worker.Endpoint, error)) (*Endpoint, error) {
+func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id string, create func(context.Context, worker.Config) (*worker.Endpoint, error), persistence ...Persistence) (*Endpoint, error) {
 	if p.Adapter != id {
 		return nil, errors.New("accounting adapter mismatch")
 	}
@@ -358,6 +380,9 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 	c, err := NewCollector(p, cfg.Direction, uint64(start))
 	if err != nil {
 		return nil, err
+	}
+	if len(persistence) > 0 {
+		c.persistence = persistence[0]
 	}
 	hash, _ := c.plan.Hash()
 	if cfg.SendAuth.Plan != hash || cfg.ReceiveAuth.Plan != hash {
@@ -382,7 +407,33 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 // collect drains until joined worker shutdown, recording the first accounting failure as partial.
 func (u *Endpoint) collect(c *Collector, cfg worker.Config) {
 	defer close(u.done)
-	for e := range u.worker.Events() {
+	var failed <-chan struct{}
+	if c.persistence != nil {
+		failed = c.persistence.Failed()
+	}
+events:
+	for {
+		var e worker.Event
+		select {
+		case <-failed:
+			c.err = errors.New("local evidence storage failed")
+			failed = nil
+			u.worker.Close()
+			continue
+		case value, ok := <-u.worker.Events():
+			if !ok {
+				break events
+			}
+			e = value
+		}
+		// Cutoffs remain observable after raw admission fails; the reserved final record retains them.
+		// Other events cannot revise a failed ledger or become claimed complete evidence.
+		if e.Kind == "generation_end" {
+			c.generation = e.At
+		}
+		if e.Kind == "observation_end" {
+			c.observation = e.At
+		}
 		if c.err == nil {
 			if err := c.Apply(e); err != nil {
 				c.err = err

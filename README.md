@@ -8,9 +8,9 @@ Connection quality means timely delivery, low p95/p99 latency, low jitter, and f
 
 The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
 
-**Current status: finite authenticated UDP/TCP CLI runs implemented; durable reports, dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: finite authenticated UDP/TCP CLI runs, bounded local evidence and replay/export implemented; remote reconciliation, dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing, key-only SSH readiness/leases and shared UDP/TCP warmup/main/burst/quiet accounting with reverse receipts, deadlines/cutoffs and RTT/variation/spike/stall analysis. TCP includes complete-frame arrivals, prefix/partial-byte evidence and stream stalls; finite start, writer-owned physical-phase marking, grace and bounded cancellation now connect that accounting to `client-run`. Live calibration, durable reports/API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
+Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing, key-only SSH readiness/leases and shared UDP/TCP warmup/main/burst/quiet accounting with reverse receipts, deadlines/cutoffs and RTT/variation/spike/stall analysis. TCP includes complete-frame arrivals, prefix/partial-byte evidence and stream stalls; finite start, writer-owned physical-phase marking, grace and bounded cancellation now connect that accounting to `client-run`. Bounded local evidence files are now saved on both endpoints. Local replay/export is available; remote reconciliation, live calibration/API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
 
 ## Run the foundation tools
 
@@ -86,9 +86,26 @@ After pairing and readiness, review every workload, deadline, grace and resource
 
 The server stays running between finite trials. Both endpoints process an authenticated frozen-plan start and use independent local monotonic anchors; they do not claim simultaneous starts. Warmup, phases and grace come from the profile. Each FIFO writer applies the current physical phase's directional DSCP before outgoing data or receipts; queued identities remain attributed to their original phase, and grace retains the last phase setting. A frame already being written cannot be remarked mid-frame. API application is separate from unobserved outer packets.
 
-Ctrl+C, control/lease loss and endpoint failures stop generation and allow at most the configured grace/shutdown drain. Output is a transient, secret-free local snapshot with actual cutoffs, phase summaries and a server lifecycle status. Interrupted/failed runs exit nonzero and remain partial. Remote delivery, underlying TCP packet loss and one-way delay remain unknown; a completed lifecycle does not prove successful timely delivery. Durable files, replay/export and remote reconciliation are tasks 12-14. Standalone `preflight` remains a separate local check.
+Ctrl+C, control/lease loss and endpoint failures stop generation and allow at most the configured grace/shutdown drain. Output includes a secret-free local snapshot with actual cutoffs, phase summaries, a server lifecycle status and `local_report_path`. Interrupted/failed runs exit nonzero and remain partial. Remote delivery, underlying TCP packet loss and one-way delay remain unknown; a completed lifecycle does not prove successful timely delivery. Local replay/export is available below; remote reconciliation remains task 14. Standalone `preflight` remains a separate local check.
+
+Each endpoint saves `reports/<run-id>-client/` or `reports/<run-id>-server/` under its own data directory: `events.jsonl`, `manifest.json` and, after finalization, `summary.json`. Settings and an incomplete manifest are synced before measurement; raw records preserve host-local decimal nanoseconds and original identities. The final manifest governs storage completeness; a summary or final cutoff alone cannot prove successful publication. Remote records stay unknown. Existing run files are never overwritten or automatically deleted.
+
+Storage admission is nonblocking, with active-inclusive `queue_messages` and `event_bytes` queue caps. `file_bytes` covers raw envelopes, settings, summaries and simultaneous publication staging files; space is reserved before start, and infeasible budgets reject measurement. A queue/file/disk failure stops the local run as partial. `shutdown_timeout_ns` separately bounds the storage-worker join; a stalled filesystem can leave incomplete files until the OS call returns. File sync/atomic replacement is checked, but power-loss/nonlocal-filesystem durability remains unvalidated. [Persistence flow](FLOWCHART.md#local-evidence-persistence).
 
 Only one `client-run` can reserve a client data directory. Normal exit removes `active-run.lock`; after a crash, inspect it and verify no process still owns that run before removing the stale file. The server's own lease bounds cleanup when a client disappears. [Finite lifecycle evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [implemented flow](FLOWCHART.md#finite-run-lifecycle).
+
+## Replay and export local reports
+
+Use the run directory returned as `local_report_path`. Choose an explicit aggregate input-byte limit; these example limits are editable operator inputs, not a heap-memory cap:
+
+```powershell
+.\build\sneaky-port.exe report-replay -report .\client-data\reports\<run-id>-client -max-bytes 4194304
+.\build\sneaky-port.exe report-export -report .\client-data\reports\<run-id>-client -max-bytes 4194304 -format csv
+```
+
+Both commands read local files and write to stdout, with no server connection or source-file changes. Replay validates schema/identities, frozen plan, raw checksum and declared cutoffs, then recomputes the saved summary through the shared ledger. A finalized `saved` summary mismatch rejects the report. Partial reports can be exported successfully; check `status`, `reason`, integrity and verification fields. Initial manifests and torn trailing writes remain partial, with discarded tail bytes recorded. Failed storage can expose a summary mismatch rather than inventing missing observations.
+
+Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_report` header plus `raw_event` envelopes, or `csv` for fixed long-form rows containing run/event identity, indexed field path, unit, exact value, missing-value status and reason. Integer text stays exact; JSON nulls and CSV empty unknowns retain their meaning. Duration/offset units are nanoseconds; times remain host-local and uncalibrated. The input ceiling is 1 GiB. Checksums prove local consistency, and remote delivery, TCP packet loss and one-way delay remain unknown. [Replay flow](FLOWCHART.md#local-report-replay-and-export), [evidence](WORK_LOG.md#2026-10-11-local-report-replay-and-export).
 
 ## Project documents
 
