@@ -127,9 +127,9 @@ func closeReportFiles(files []*os.File) {
 	}
 }
 
-// routeReportChannels refuses premature/extra/shell channels promptly and admits one report only after stop.
+// routeReportChannels admits one in-run calibration channel and one post-stop report; all others are rejected.
 // A finite flood budget prevents unbounded channel work while the control lifecycle owns the connection.
-func routeReportChannels(ctx context.Context, incoming <-chan ssh.NewChannel, reports chan<- ssh.NewChannel, ready <-chan struct{}, max int, cancel context.CancelFunc) {
+func routeReportChannels(ctx context.Context, incoming <-chan ssh.NewChannel, reports chan<- ssh.NewChannel, ready <-chan struct{}, max int, cancel context.CancelFunc, clock *clockGate) {
 	defer close(reports)
 	admitted := false
 	for n := 0; n < max; n++ {
@@ -139,6 +139,10 @@ func routeReportChannels(ctx context.Context, incoming <-chan ssh.NewChannel, re
 		case ch, ok := <-incoming:
 			if !ok {
 				return
+			}
+			if ch.ChannelType() == CalibrationChannelType {
+				clock.accept(ctx, ch)
+				continue
 			}
 			allowed := false
 			select {

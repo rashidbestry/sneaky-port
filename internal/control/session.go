@@ -232,8 +232,10 @@ func (s *Server) connection(ctx context.Context, raw net.Conn) {
 		go rejectRequests(ctx, reqs, policy.MaxControlRequests, cancel)
 		reportReady := make(chan struct{})
 		reports := make(chan ssh.NewChannel, 1)
-		go routeReportChannels(ctx, channels, reports, reportReady, policy.MaxControlRequests, cancel)
-		s.control(ctx, raw, ch, reports, reportReady)
+		clock := &clockGate{raw: raw, timeout: time.Duration(policy.ShutdownTimeout)}
+		defer clock.stop()
+		go routeReportChannels(ctx, channels, reports, reportReady, policy.MaxControlRequests, cancel, clock)
+		s.control(ctx, raw, ch, reports, reportReady, clock)
 	}
 }
 
@@ -309,8 +311,8 @@ func reply(ch ssh.Channel, request Envelope, kind string, body any) error {
 	return Write(ch, message(kind, request.RequestID, request.RunID, request.SessionID, body))
 }
 
-// control performs frozen-plan readiness/start/liveness/stop and then one bounded report transfer; calibration remains unsupported.
-func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, channels <-chan ssh.NewChannel, reportReady chan struct{}) {
+// control owns finite lifecycle, one in-run calibration channel and post-stop report transfer.
+func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, channels <-chan ssh.NewChannel, reportReady chan struct{}, clock *clockGate) {
 	policy := s.Identity.Policy
 	seen := map[string]bool{}
 	read := func(run, session string) (Envelope, error) { // Enforce bounded, unique requests and exact lifecycle identity.
@@ -469,7 +471,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 		if err != nil {
 			return
 		}
-		if len(seen) > plan.Limits.ControlRequests {
+		if len(seen) > plan.Limits.ControlRequests || measured != nil && len(seen)+clockBudget(plan) > plan.Limits.ControlRequests {
 			fail(request, errors.New("plan control request budget exhausted"))
 			return
 		}
@@ -484,6 +486,10 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 				fail(request, errors.New("run already started or control ended"))
 				return
 			}
+			if finiteRequestDemand(plan) > uint64(plan.Limits.ControlRequests) {
+				fail(request, errors.New("finite run exceeds control/calibration request budget"))
+				return
+			}
 			persistence, storageErr := newEvidence(s.Store, plan, result, "server")
 			if storageErr != nil {
 				fail(request, storageErr)
@@ -493,6 +499,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 			// Finite lifecycle now owns cancellation/drain; preparation must not close its socket early.
 			closePrepared()
 			anchor := time.Now()
+			clock.start(anchor, result, plan)
 			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true, persistence)
 			if err != nil {
 				persistence.Finalize(engine.Result{})
@@ -526,6 +533,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 			}
 		case "stop":
 			if measured != nil {
+				clock.stop()
 				measured.Cancel()
 				join, stop := context.WithTimeout(context.Background(), drainJoinBudget(plan))
 				local, runErr := measured.Wait(join)
@@ -539,7 +547,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 				raw.SetWriteDeadline(time.Now().Add(time.Duration(plan.Limits.WriteTimeout)))
 				close(reportReady)
 				if reply(ch, request, "finished", finishAck{prep.Hash, status}) == nil {
-					serveReportChannel(ctx, raw, channels, reportPath, result, plan, plan.Limits.ControlRequests-len(seen))
+					serveReportChannel(ctx, raw, channels, reportPath, result, plan, plan.Limits.ControlRequests-len(seen)-clockBudget(plan))
 				}
 				return
 			}
@@ -775,7 +783,11 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 	exchange := func(kind string, body any) (Envelope, error) { // Serialize one request/response with unique IDs and bounded owned-connection deadlines.
 		counter++
 		id := fmt.Sprintf("request-%d", counter)
-		if counter > p.Limits.ControlRequests {
+		reserved := 0
+		if measured != nil {
+			reserved = clockBudget(p)
+		}
+		if counter+reserved > p.Limits.ControlRequests {
 			return Envelope{}, errors.New("control request budget exhausted")
 		}
 		if err := Write(counted, message(kind, id, runText, sessionText, body)); err != nil {

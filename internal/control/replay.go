@@ -37,6 +37,7 @@ type ReplayedReport struct {
 	Reconciliation  *Reconciliation   `json:"reconciliation,omitempty"`
 	ServerReport    *ReplayedReport   `json:"server_report,omitempty"`
 	TransferReceipt *RemoteTransfer   `json:"server_evidence_transfer,omitempty"`
+	Clock           *ClockSnapshot    `json:"clock_sampling,omitempty"`
 }
 
 // decodeReportObject rejects ambiguity, missing/unknown fields and null scalars while allowing saved nil collections.
@@ -163,6 +164,9 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 	}
 	var generation, observation profile.Decimal
 	var cutoffComplete, cutoff bool
+	var clockRetention string
+	clock := clockWindow{policy: m.Plan.Calibration, recent: make([]ClockCapture, 0, m.Plan.Calibration.Window)}
+	var clockFinished profile.Decimal
 	scan := bufio.NewReaderSize(bytes.NewReader(raw), 4096)
 	for {
 		line, readErr := scan.ReadSlice('\n')
@@ -198,9 +202,10 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 		}
 		if e.Type == "final_cutoff" {
 			var end struct {
-				Generation  profile.Decimal `json:"generation_cutoff_ns"`
-				Observation profile.Decimal `json:"observation_cutoff_ns"`
-				Complete    bool            `json:"endpoint_observation_complete"`
+				Generation     profile.Decimal `json:"generation_cutoff_ns"`
+				Observation    profile.Decimal `json:"observation_cutoff_ns"`
+				Complete       bool            `json:"endpoint_observation_complete"`
+				ClockRetention string          `json:"clock_retention_reason,omitempty"`
 			}
 			if err = decodeReportObject(e.Details, &end); err != nil {
 				return nil, err
@@ -209,6 +214,20 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 				return nil, errors.New("invalid final cutoff envelope")
 			}
 			generation, observation, cutoffComplete, cutoff = end.Generation, end.Observation, end.Complete, true
+			if end.ClockRetention != "" && (m.Endpoint != "client" || end.ClockRetention != "calibration evidence budget/storage unavailable") {
+				return nil, errors.New("invalid clock retention reason")
+			}
+			clockRetention = end.ClockRetention
+		} else if e.Type == "clock_capture" {
+			var capture ClockCapture
+			if err = decodeReportObject(e.Details, &capture); err != nil {
+				return nil, err
+			}
+			if len(line) > clockFrameMax || capture.Sent > clockFrameMax+4 || capture.Received > 2*(clockFrameMax+4) || capture.Skipped > profile.Decimal(clockBudget(m.Plan)) || m.Endpoint != "client" || e.Identity != nil || e.Direction != 0 || e.At != capture.Finished || clock.totals.Attempts >= clockBudget(m.Plan) || capture.ID != fmt.Sprintf("clock-%d", clock.totals.Attempts+1) || capture.ClientEpoch != e.Epoch || capture.Valid && (validateCapture(capture) != "" || capture.Reason != "" || capture.ResponseID != capture.ID || capture.ResponseRun != m.RunID || capture.ResponseSession != m.SessionID || capture.ResponseHash != m.PlanHash) || !capture.Valid && capture.Reason == "" || clock.totals.Attempts > 0 && capture.Finished < clockFinished {
+				return nil, errors.New("invalid raw calibration capture")
+			}
+			clock.add(capture)
+			clockFinished = capture.Finished
 		} else {
 			var record engine.Record
 			if err = decodeReportObject(e.Details, &record); err != nil {
@@ -250,6 +269,15 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 	result.Session, _ = probe.ID(m.SessionID)
 	result.Epoch, result.PeerEpoch = 1, 1
 	r.Evidence = result
+	if clock.totals.Attempts > 0 {
+		r.Clock = clock.snapshot(max(observation, clockFinished))
+	}
+	if clockRetention != "" {
+		if r.Clock == nil {
+			r.Clock = clock.snapshot(observation)
+		}
+		r.Clock.Reason = clockRetention
+	}
 	if complete != result.Complete {
 		return nil, errors.New("complete report does not cover frozen observation window")
 	}

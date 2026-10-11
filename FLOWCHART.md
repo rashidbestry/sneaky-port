@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting**. Bounded local persistence, replay/export and authenticated server transfer/reconciliation are implemented; dashboard and live calibration remain pending. Each function has a purpose comment; `go test ./internal/quality -v` checks declarations and anonymous functions. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation and live SSH clock captures are implemented; one-way integration/dashboard remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -63,7 +63,7 @@ flowchart TD
     W -->|control EOF or lease expiry or cancellation| Z
 ```
 
-Sources: [store.go](internal/control/store.go) (`OpenStore`, `InitServer`, `InitClient`, `Enroll`, `Disable`, `ImportPairing`, `writeAtomic`), [session.go](internal/control/session.go) (`NewServer`, `Serve`, `connection`, `control`, `Ready`, `acceptBind`, `checkBind`, `markPlan`, `checkEffective`, `watchAuthorization`). `Ready` checks the imported host pin before accepting session secrets. Shell/exec/forwarding/calibration and premature/extra report channels are refused; one report channel is admitted after finite stop. Invalid UDP first tuples receive no acknowledgement and cannot pin the listener; partial TCP frames cannot authenticate. IDs/challenges/keys are fresh per preparation, and the public result contains no MAC keys.
+Sources: [store.go](internal/control/store.go) (`OpenStore`, `InitClient`, `InitServer`, `Enroll`, `ImportPairing`), [session.go](internal/control/session.go) (`NewServer`, `Serve`, `connection`, `control`, `Ready`, `acceptBind`, `checkBind`, `watchAuthorization`). Host pinning precedes session secrets. Shell/exec/forwarding and premature/extra channels are refused; one calibration channel is admitted during a finite run and one report channel after stop. Invalid UDP first tuples cannot elicit a reply or pin the listener; partial TCP frames cannot authenticate. Fresh identities/challenges/keys never enter public results.
 
 Both roles retain actual local/remote bindings; NAT observations need not equal the client's local tuple. Marking API success leaves packet-observed values unknown. Readiness holds only a lease, counts client application-control bytes through stop, and performs no scheduler/ledger/calibration run. Readiness-only cleanup produces no measurement samples. [Tests](internal/control/session_test.go), [store tests](internal/control/store_test.go), [setup commands](README.md#pair-endpoints-and-check-readiness).
 
@@ -78,6 +78,8 @@ flowchart TD
     E --> F[Writer selects current physical phase and applies owned-socket DSCP]
     F --> G[Retain API evidence; timestamp, encode and write frame]
     E --> H[Independent control heartbeats and server lifecycle status]
+    E --> S[startClock: independent bounded calibration channel]
+    S --> T[Persist captures; stop and join before raw finalization]
     E --> I[Finite half-open grace cutoff]
     H -->|failure, lease expiry or cancellation| J[StopGeneration fixes truncated generation boundary]
     J --> K[Drain at most grace and shutdown; preserve original identities]
@@ -324,7 +326,7 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-The next connection is [task 15](ROADMAP.md#queued-implementation-tasks), live SSH clock sampling. Clock sampling/calibration, API/dashboard/SVG and matched comparisons remain pending under the [acceptance contract](DESIGN.md#first-slice-implementation-contract).
+Raw clock captures now replay independently of measurement accounting. [Task 16](ROADMAP.md#queued-implementation-tasks) owns clock-model/one-way integration; API/dashboard/SVG, matched comparisons and full acceptance remain pending.
 
 ## Authenticated server evidence transfer and reconciliation
 
@@ -352,4 +354,32 @@ flowchart TD
 
 Sources: [transfer.go](internal/control/transfer.go) (`routeReportChannels`, `serveReportChannel`, `openReportSnapshot`, `serveReport`, `receiveServerReport`, `receiveReport`, `verifyTransferredFiles`), [reconcile.go](internal/control/reconcile.go) (`reconcileReports`, `reconcileOrigin`, `replayTransferred`), [replay.go](internal/control/replay.go), [exports](internal/control/export.go), [shared ledger](internal/measure/ledger.go) (`SummarizeSnapshot`), [fixtures](internal/control/transfer_test.go). Numbered frames/acks and final hashes bind exact ordered bytes to the existing enrolled-client/pinned-host session. Endpoint raw summaries remain unchanged; each observation cutoff belongs to its own clock. Lost receipts do not imply missing data; stream delivery never establishes zero network packet loss.
 
-The explicit per-endpoint file cap (maximum 1 GiB), remaining control-request budget and whole network-transfer setup timeout bound work. Offline input budgets include both remote hash/replay passes; they do not claim a heap cap. Interrupted/unfinalized transfer stays unknown. Saved receipts are local provenance, not transferable authentication attestations. No reconnect/resume/manual recovery, calibration, dashboard or native/live/impairment acceptance is added.
+The per-endpoint file cap (maximum 1 GiB), remaining request budget after lifecycle/calibration reservations and whole network-transfer timeout bound work. Offline input budgets include both remote hash/replay passes; they are not heap caps. Interrupted transfer stays unknown; saved receipts are local provenance, not transferable attestations. Recovery/dashboard and native/live/impairment acceptance remain pending.
+
+## Live SSH clock sampling
+
+```mermaid
+flowchart TD
+    A[Authenticated finite start publishes both data epochs] --> B[One in-run calibration channel on pinned SSH]
+    B --> C[Absolute cadence; skip overdue slots without catch-up]
+    C --> D[t1 before serialization; retain client send costs]
+    D --> E[t2 at complete request bytes before decode]
+    E --> F[Validate frozen identity, epoch, unique ordered request and budget]
+    F --> G[t3 before response serialization and submission]
+    G --> H[t4 at complete response bytes before decode]
+    G --> I[Separate follow-up server serialization and send costs]
+    H --> J[Correlate captures and follow-up; preserve invalid or incomplete samples]
+    I --> J
+    J --> K[Reserved calibration file bytes; shared bounded disk queue]
+    K --> L[Bounded recent window, counters, age and expiry]
+    L --> C
+    K -->|admission fails| M[Stop sampler; retain reason in reserved final cutoff]
+    A --> N[Data/control keep independent schedules and RTT]
+    N --> O[Finite completion or cancellation joins sampler before finalization]
+    O --> P[Stop server calibration before post-stop report channel]
+    P --> Q[Replay and export exact raw captures; one-way remains unavailable]
+```
+
+Sources: [clock.go](internal/control/clock.go) (`clockGate`, `startClock`, `run`, `clockRead`, `clockWrite`, `appendClock`, `clockWindow`), [lifecycle](internal/control/run.go) (`executeRun`, `drainJoinBudget`), [routing](internal/control/transfer.go) (`routeReportChannels`), [persistence](internal/control/evidence.go) (`Finalize`), [replay](internal/control/replay.go), [fixtures](internal/control/clock_test.go). Captures use the actual endpoint data epochs; t3 submission includes separately measured serialization/send costs, and t4 excludes follow-up arrival. Recent invalid samples remain visible and can displace older valid samples. Readiness-only sessions never sample.
+
+Requests, 4 KiB frames/raw captures, recent attempts and event/file/queue bytes have explicit bounds. Calibration rejection, invalidity, expiry or response timeout does not cancel working data/control. If the shared SSH transport blocks channel accept/close/write past shutdown, the owned connection closes as control failure. The sole uncancellable SSH channel-open wait belongs to that connection and ends at teardown. Captures provide constraints only; affine models, revisions, uncertainty-gated one-way results and production clock-quality validation remain [task 16](ROADMAP.md#queued-implementation-tasks) and later acceptance work.

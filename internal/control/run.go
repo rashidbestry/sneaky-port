@@ -69,6 +69,7 @@ type RunResult struct {
 	ReportPath     string          `json:"local_report_path,omitempty"`
 	Remote         *RemoteTransfer `json:"server_evidence_transfer,omitempty"`
 	Reconciliation *Reconciliation `json:"reconciliation,omitempty"`
+	Clock          *ClockSnapshot  `json:"clock_sampling,omitempty"`
 }
 
 // durationSum saturates composed operation budgets instead of wrapping individually valid nanoseconds.
@@ -83,9 +84,9 @@ func durationSum(values ...profile.Decimal) time.Duration {
 	return time.Duration(total)
 }
 
-// drainJoinBudget includes capped drain, worker join and the independent storage-writer join.
+// drainJoinBudget includes capped drain, worker join, calibration join and the independent disk-writer join.
 func drainJoinBudget(p profile.Plan) time.Duration {
-	return durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout)
+	return durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout)
 }
 
 // Run freezes mutable input and reserves this client store before authenticated finite measurement.
@@ -109,9 +110,8 @@ func Run(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan) (
 	if err != nil {
 		return result, err
 	}
-	total := uint64(p.Warmup) + p.Duration() + uint64(p.Grace)
-	if total/uint64(p.Limits.HeartbeatInterval)+8 > uint64(p.Limits.ControlRequests) {
-		return result, errors.New("finite run exceeds control request budget")
+	if finiteRequestDemand(p) > uint64(p.Limits.ControlRequests) {
+		return result, errors.New("finite run exceeds control/calibration request budget")
 	}
 	lockPath := filepath.Join(store.Root, "active-run.lock")
 	lock, err := os.OpenFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
@@ -159,6 +159,8 @@ func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(s
 	result.Readiness.MeasurementStarted, result.Readiness.Status = true, "started"
 	result.Status = "running"
 	anchor := time.Now()
+	clock := startClock(ctx, sshClient, anchor, p, result.Readiness, persistence)
+	defer clock.stop()
 	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false, persistence)
 	if err != nil {
 		return err
@@ -200,6 +202,15 @@ loop:
 	join, cancel := context.WithTimeout(context.Background(), drainJoinBudget(p))
 	local, runErr := finite.Wait(join)
 	cancel()
+	clock.stop()
+	asOf := local.ObservationCutoff
+	if len(clock.window.recent) > 0 {
+		asOf = max(asOf, clock.window.recent[len(clock.window.recent)-1].Finished)
+	}
+	result.Clock = clock.window.snapshot(asOf)
+	if clock.terminal == "calibration evidence budget/storage unavailable" {
+		result.Clock.Reason = clock.terminal
+	}
 	result.Evidence = local
 	result.Local = localSnapshot(local)
 	result.Status = "partial"
@@ -207,7 +218,7 @@ loop:
 		return controlErr
 	}
 	// A successful local cutoff is independent of the server's anchor/cutoff and final lifecycle status.
-	raw.SetDeadline(time.Now().Add(durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout, p.Limits.WriteTimeout)))
+	raw.SetDeadline(time.Now().Add(durationSum(min(p.Grace, p.Limits.ShutdownTimeout), p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout, p.Limits.ShutdownTimeout, p.Limits.WriteTimeout)))
 	e, err = exchange("stop", body)
 	if err != nil {
 		return err

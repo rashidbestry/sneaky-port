@@ -158,13 +158,13 @@ func reportUnit(path string) string {
 	switch field {
 	case "At", "Scheduled", "Call", "Attempt", "PeerArrival", "PeerAttempt", "RTTMedian", "RTTP95", "RTTP99", "RTTMin", "RTTMax", "RTTVariation", "ScheduledMedian", "ScheduledP95", "ScheduledP99", "CorrectedP95", "Threshold", "BaselineMedian", "Start", "End", "Duration", "Peak":
 		return "ns"
-	case "Bytes", "raw_bytes", "discarded_tail_bytes", "queue_bytes", "event_bytes", "file_bytes", "content_bytes":
+	case "Bytes", "raw_bytes", "discarded_tail_bytes", "queue_bytes", "event_bytes", "file_bytes", "content_bytes", "sent_bytes", "received_bytes":
 		return "bytes"
-	case "Planned", "Skipped", "Attempted", "Written", "WriteFailed", "OnTime", "Late", "Unresolved", "DuplicateReceipts", "Received", "MissingAtReceiver", "RTTSamples", "VariationGaps", "Accepted", "LocalMisses", "DeadlineMisses", "AcceptedMisses", "Pending", "CorrectedSamples", "InvalidCorrections", "Count", "raw_events", "queue_messages", "receipt_reserve", "outstanding_data", "ledger_messages", "samples", "window", "control_requests":
+	case "Planned", "Skipped", "Attempted", "Written", "WriteFailed", "OnTime", "Late", "Unresolved", "DuplicateReceipts", "Received", "MissingAtReceiver", "RTTSamples", "VariationGaps", "Accepted", "LocalMisses", "DeadlineMisses", "AcceptedMisses", "Pending", "CorrectedSamples", "InvalidCorrections", "Count", "raw_events", "queue_messages", "receipt_reserve", "outstanding_data", "ledger_messages", "samples", "window", "control_requests", "attempts", "valid_total", "invalid_total", "recent_valid", "skipped_cadence_slots", "requests":
 		return "count"
 	case "time_ns":
 		return "ns"
-	case "sequence", "event_id", "clock_epoch_id", "phase", "Phase", "lifecycle", "Lifecycle":
+	case "sequence", "event_id", "clock_epoch_id", "phase", "Phase", "lifecycle", "Lifecycle", "calibration_id", "client_epoch", "server_epoch":
 		return "identity"
 	case "rate_numerator":
 		return "messages"

@@ -102,6 +102,9 @@ type evidenceWriter struct {
 	path                            string
 	manifest                        EvidenceManifest
 	timeout                         time.Duration
+	beforeFinalize                  func()
+	clockLimit, clockCharged        uint64
+	clockRetention                  string
 }
 
 // evidenceFile keeps disk fault fixtures at the actual write/flush boundary without transport substitutions.
@@ -150,6 +153,14 @@ func newEvidence(store *Store, p profile.Plan, ready ReadyResult, endpoint strin
 	summaryReserve := uint64(32768 + (len(p.Phases)+1)*8192 + p.Limits.LedgerMessages*1024)
 	manifestReserve := uint64(len(b) + 4096)
 	reserve := summaryReserve + 2*manifestReserve + 4096
+	clockReserve := uint64(0)
+	if endpoint == "client" {
+		clockReserve = uint64(clockBudget(p)) * clockFrameMax
+	}
+	if clockReserve > uint64(p.Limits.EventBytes) || uint64(p.Calibration.Window)*clockFrameMax > uint64(p.Limits.EventBytes) {
+		return nil, errors.New("calibration demand exceeds event budget")
+	}
+	reserve += clockReserve
 	if reserve >= uint64(p.Limits.FileBytes) {
 		return nil, errors.New("file_bytes cannot reserve local summary/manifest publication space")
 	}
@@ -183,6 +194,7 @@ func newEvidence(store *Store, p profile.Plan, ready ReadyResult, endpoint strin
 		return nil, err
 	}
 	w := &evidenceWriter{queue: make(chan []byte, p.Limits.QueueMessages), done: make(chan struct{}), failed: make(chan struct{}), queueBytes: uint64(p.Limits.EventBytes), rawLimit: uint64(p.Limits.FileBytes) - reserve, manifestReserve: manifestReserve, summaryReserve: summaryReserve, file: f, digest: sha256.New(), path: dir, manifest: m, timeout: time.Duration(p.Limits.ShutdownTimeout)}
+	w.clockLimit = clockReserve
 	go w.writeLoop()
 	return w, nil
 }
@@ -217,7 +229,7 @@ func publishEvidence(dir, name string, b []byte, replace bool) error {
 // event wraps only the already filtered record, excluding keys, payloads, authentication tags and channels.
 func (w *evidenceWriter) event(kind string, at profile.Decimal, details json.RawMessage) ([]byte, error) {
 	e := EvidenceEvent{Version: 1, ID: profile.Decimal(w.sequence + 1), RunID: w.manifest.RunID, SessionID: w.manifest.SessionID, Endpoint: w.manifest.Endpoint, Epoch: 1, At: at, Type: kind, Details: details}
-	if kind != "final_cutoff" {
+	if kind != "final_cutoff" && kind != "clock_capture" {
 		var r engine.Record
 		if err := json.Unmarshal(details, &r); err != nil {
 			return nil, err
@@ -309,6 +321,9 @@ func (w *evidenceWriter) writeLoop() {
 // Finalize drains accepted raw records, appends exact final cutoffs, then publishes summary and manifest.
 // A failure retains partial/unknown status; a crash or join timeout leaves the initial incomplete manifest.
 func (w *evidenceWriter) Finalize(r engine.Result) error {
+	if w.beforeFinalize != nil {
+		w.beforeFinalize()
+	}
 	w.mu.Lock()
 	if w.closed {
 		w.mu.Unlock()
@@ -329,10 +344,11 @@ func (w *evidenceWriter) Finalize(r engine.Result) error {
 		r.Complete, r.Receiver.Complete = false, false
 	}
 	details, _ := json.Marshal(struct {
-		Generation  profile.Decimal `json:"generation_cutoff_ns"`
-		Observation profile.Decimal `json:"observation_cutoff_ns"`
-		Complete    bool            `json:"endpoint_observation_complete"`
-	}{r.GenerationCutoff, r.ObservationCutoff, r.Complete})
+		Generation     profile.Decimal `json:"generation_cutoff_ns"`
+		Observation    profile.Decimal `json:"observation_cutoff_ns"`
+		Complete       bool            `json:"endpoint_observation_complete"`
+		ClockRetention string          `json:"clock_retention_reason,omitempty"`
+	}{r.GenerationCutoff, r.ObservationCutoff, r.Complete, w.clockRetention})
 	b, err := w.event("final_cutoff", r.ObservationCutoff, details)
 	if err != nil {
 		return err

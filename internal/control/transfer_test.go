@@ -297,7 +297,7 @@ func TestAuthenticatedReportReplay(t *testing.T) {
 func TestReportBudgetFailure(t *testing.T) {
 	r := finiteRig(t, "udp")
 	r.plan.Limits.HeartbeatInterval = 100e6
-	r.plan.Limits.ControlRequests = 10
+	r.plan.Limits.ControlRequests = 10 + clockBudget(r.plan)
 	result, err := Run(context.Background(), r.client, r.signer, r.plan)
 	if err == nil || result.Status != "partial" || result.Local == nil || !result.Local.Complete || result.Remote == nil || result.Remote.Status != "incomplete" || result.Reconciliation != nil || result.Local.Summary.Received != nil {
 		t.Fatalf("transfer failure invented delivery or lost local report: %v", err)

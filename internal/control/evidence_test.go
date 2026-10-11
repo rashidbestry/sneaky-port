@@ -33,9 +33,18 @@ func afterRunEvidence(t *testing.T, root string, delay time.Duration, action fun
 			paths, _ := filepath.Glob(filepath.Join(root, "reports", "*-client", "events.jsonl"))
 			started := false
 			for _, path := range paths {
-				if info, err := os.Stat(path); err == nil && info.Size() > 0 {
-					started = true
-					break
+				b, err := os.ReadFile(path)
+				if err == nil {
+					for _, line := range bytes.Split(b, []byte{'\n'}) {
+						var event EvidenceEvent
+						if json.Unmarshal(line, &event) == nil && event.Type != "clock_capture" && event.Type != "final_cutoff" {
+							started = true
+							break
+						}
+					}
+					if started {
+						break
+					}
 				}
 			}
 			if started {
@@ -158,11 +167,17 @@ func TestEvidenceDiskBoundaries(t *testing.T) {
 func assertPersistedRun(t *testing.T, rig *testRig, result RunResult, complete bool) {
 	t.Helper()
 	m, s, events := readEvidence(t, result.ReportPath)
-	if m.Complete != complete || s.Local.Complete != complete || s.Local.Generation != result.Local.Generation || s.Local.Observation != result.Local.Observation || len(events) != len(result.Evidence.Records)+1 {
+	var measurement []EvidenceEvent
+	for _, event := range events {
+		if event.Type != "clock_capture" {
+			measurement = append(measurement, event)
+		}
+	}
+	if m.Complete != complete || s.Local.Complete != complete || s.Local.Generation != result.Local.Generation || s.Local.Observation != result.Local.Observation || len(measurement) != len(result.Evidence.Records)+1 {
 		t.Fatal("persisted client state differs from joined engine")
 	}
 	for i, raw := range result.Evidence.Records {
-		if !bytes.Equal(raw, events[i].Details) {
+		if !bytes.Equal(raw, measurement[i].Details) {
 			t.Fatal("persisted event changed original evidence")
 		}
 	}

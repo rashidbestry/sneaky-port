@@ -49,8 +49,8 @@ limits:
   lease_ns: "10000000000"
   control_requests: 128
 calibration: # Explicit placeholders; readiness performs no clock sampling or one-way measurement.
-  samples: 2
-  window: 4
+  samples: 2 # Minimum recent valid exchanges when client-run samples; no startup burst.
+  window: 4 # Recent attempts, including invalid samples; older raw captures remain on disk.
   cadence_ns: "1000000000"
   expiry_ns: "10000000000"
   max_error_ns: "1000000"

@@ -110,7 +110,8 @@ type Limits struct {
 	ControlRequests   int     `json:"control_requests"`
 }
 
-// Calibration retains explicit sample/bound inputs and their provenance.
+// Calibration retains explicit cadence/bound inputs and provenance; Samples is the minimum
+// recent valid count and Window caps attempts, including invalid samples, without a startup burst.
 type Calibration struct {
 	Samples        int     `json:"samples"`
 	Window         int     `json:"window"`

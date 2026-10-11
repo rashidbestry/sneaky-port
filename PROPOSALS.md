@@ -10,7 +10,7 @@ Foundations, authenticated readiness and finite UDP/TCP CLI lifecycle/accounting
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-14 are complete within scope, live SSH clock sampling task 15 is next, and no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-15 are complete within scope. Task 16 owns one-way integration; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; writer-owned physical-phase transitions implemented; outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
 | F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; bounded local files/replay/exports and authenticated remote reconciliation implemented; comparisons pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory and test-only option extension; engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
-| F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: persistent trust, SSH plan agreement/authenticated readiness and leases, synthetic clock envelopes; finite start/lifecycle implemented; post-stop report transfer/reconciliation implemented; calibration channel/live sampler and verified clock bounds pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
+| F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: trust/readiness/leases, finite lifecycle, authenticated reconciliation and live SSH clock captures implemented; synthetic envelopes tested. Model/one-way integration, independently verified bounds and clock-change/native/live acceptance pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 | F10 | Capability-driven dashboard traffic tweaks, including supported fragmentation and header/framing/payload size controls | Accepted; existing payload foundation only; richer controls, schema/mechanisms and dashboard pending ([evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement)) | [Traffic controls](DESIGN.md#protocol-specific-traffic-controls) |
 
 Keep implementation details, validation coverage, and completed changes in the work log. When progress begins, annotate this index with its actual state and a reference to the relevant work-log entry. Partial delivery of an item does not complete all its protocol/platform variants.
@@ -85,6 +85,8 @@ Purpose: preserve enough evidence to understand failed tests while limiting inte
 Before adopting additional S03 behavior: define recovery/import/retention policy and verify control-traffic minimization; baseline authenticated coordination, bounded local persistence, replay/export and post-stop reconciliation exist. Failure of the coordination path must not automatically classify every measurement protocol as unusable. Missing remote evidence must remain explicitly incomplete.
 
 Task 14 milestone suggestion (still proposed): bounded manual authenticated recovery/import could make retained endpoint reports usable after SSH interruption. The transfer schema and replay checks now provide prerequisites. Before accepting S03 recovery, decide who can retrieve old runs, authorization expiry, input/file budgets and retention; validate stale/mismatched/partial evidence. No recovery implementation is authorized by this suggestion.
+
+Task 15 milestone suggestion (still proposed): audit S03 coordination overhead across explicit clock cadences. Separate calibration byte/cadence/serialization/send-call records now allow measuring its workload and SSH blockage alongside RTT. Before accepting minimization, choose matched trial profiles/repetitions and predeclared comparison bands; preserve required clock coverage/expiry and validate actual SSH/network overhead separately. Do not silently reduce sampling or claim that application bytes measure outer traffic.
 
 ## S04: Packet-size and packet-rate sweeps
 
