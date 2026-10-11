@@ -8,9 +8,9 @@ Connection quality means timely delivery, low p95/p99 latency, low jitter, and f
 
 The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
 
-**Current status: foundations, authenticated UDP/TCP readiness and internal phase-aware UDP/TCP accounting implemented; CLI measurement workflow pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: finite authenticated UDP/TCP CLI runs implemented; durable reports, dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing, key-only SSH readiness/leases and shared UDP/TCP warmup/main/burst/quiet accounting with reverse receipts, deadlines/cutoffs and RTT/variation/spike/stall analysis. TCP includes complete-frame arrivals, prefix/partial-byte evidence and stream stalls; finite CLI execution, phase marking, live calibration, durable reports/API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
+Implementation was authorized on 2026-10-11. Current code includes strict profiles/hashes, bounded scheduling/queues, local preflight, restricted pairing, key-only SSH readiness/leases and shared UDP/TCP warmup/main/burst/quiet accounting with reverse receipts, deadlines/cutoffs and RTT/variation/spike/stall analysis. TCP includes complete-frame arrivals, prefix/partial-byte evidence and stream stalls; finite start, writer-owned physical-phase marking, grace and bounded cancellation now connect that accounting to `client-run`. Live calibration, durable reports/API/dashboard and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [TCP evidence](WORK_LOG.md#2026-10-11-tcp-integration).
 
 ## Run the foundation tools
 
@@ -75,6 +75,20 @@ All workload/timeout/budget settings are explicit; there is no automatically sel
 Initialization creates each private key locally and refuses existing identities/key destinations. Add `-key EXISTING_PRIVATE_KEY` to `client-init` or `server-init` to reference an existing compatible key unchanged; encrypted keys prompt in an interactive terminal without echo. Public imports accept UTF-8 with an optional BOM. The app directories are restricted; keep private keys on their originating endpoints.
 
 `server-export -data-dir ./server-data` reprints the public bundle. `server-disable -data-dir ./server-data -client-id rashid` revokes access, including authenticated connections on the next policy authorization poll. To set expiry or re-enable, explicitly edit the public enrollment's `enabled` / optional RFC3339 `expires_at` and run `server-enroll` again. Replacing imported server trust requires trusted re-import with `client-import ... -replace`. Updates serialize with an exclusive store lock and synced same-directory file replacement; a stale lock is left for explicit operator inspection, never stolen automatically. Power-loss durability and nonlocal filesystem behavior are unvalidated.
+
+## Run a finite measurement
+
+After pairing and readiness, review every workload, deadline, grace and resource value in the explicit profile, then run:
+
+```powershell
+.\build\sneaky-port.exe client-run -data-dir .\client-data -profile .\readiness.yaml
+```
+
+The server stays running between finite trials. Both endpoints process an authenticated frozen-plan start and use independent local monotonic anchors; they do not claim simultaneous starts. Warmup, phases and grace come from the profile. Each FIFO writer applies the current physical phase's directional DSCP before outgoing data or receipts; queued identities remain attributed to their original phase, and grace retains the last phase setting. A frame already being written cannot be remarked mid-frame. API application is separate from unobserved outer packets.
+
+Ctrl+C, control/lease loss and endpoint failures stop generation and allow at most the configured grace/shutdown drain. Output is a transient, secret-free local snapshot with actual cutoffs, phase summaries and a server lifecycle status. Interrupted/failed runs exit nonzero and remain partial. Remote delivery, underlying TCP packet loss and one-way delay remain unknown; a completed lifecycle does not prove successful timely delivery. Durable files, replay/export and remote reconciliation are tasks 12-14. Standalone `preflight` remains a separate local check.
+
+Only one `client-run` can reserve a client data directory. Normal exit removes `active-run.lock`; after a crash, inspect it and verify no process still owns that run before removing the stale file. The server's own lease bounds cleanup when a client disappears. [Finite lifecycle evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [implemented flow](FLOWCHART.md#finite-run-lifecycle).
 
 ## Project documents
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/platform"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/schedule"
@@ -40,10 +41,12 @@ type Config struct {
 	Direction             byte
 	Epoch, PeerEpoch      uint32
 	EpochStart, Start     time.Time
+	ObservationEnd        time.Time // Optional finite half-open cutoff; read errors after it cannot truncate earlier evidence.
 	Local, Peer           Schedule
 	Windows               []Window // Optional frozen multi-phase timeline; replaces Local/Peer.
 	Limits                profile.Limits
 	EventCapacity         int
+	BeforeWrite           func(context.Context, uint64) (*platform.Marking, byte, uint32, error) // Optional writer-owned physical-phase marking.
 }
 
 // Event preserves local boundaries without treating socket acceptance as delivery.
@@ -58,6 +61,9 @@ type Event struct {
 	Bytes                      int
 	Err                        error
 	Reason                     string
+	Marking                    *platform.Marking
+	MarkLifecycle              byte
+	MarkPhase                  uint32
 }
 
 // attempt records only actual data attempts for validating echoed receipt evidence.
@@ -88,6 +94,9 @@ type Endpoint struct {
 	windows                   []runtimeWindow
 	expiries                  expiryHeap
 	stopAt                    uint64
+	generationAt              uint64
+	genCtx                    context.Context
+	genCancel                 context.CancelFunc
 }
 
 // validateSchedule checks finite identity ranges and content before allocating workers.
@@ -117,6 +126,9 @@ func newEndpoint(parent context.Context, c Config, contract transportContract) (
 	if total > uint64(math.MaxInt64-int64(startOffset)) {
 		return nil, errors.New("measurement epoch/timeline overflow")
 	}
+	if !c.ObservationEnd.IsZero() && c.ObservationEnd.Before(c.Start) {
+		return nil, errors.New("observation cutoff precedes local start")
+	}
 	for _, w := range windows {
 		if w.Deadline > uint64(math.MaxInt64-int64(startOffset))-w.Offset-w.Local.Duration {
 			return nil, errors.New("measurement deadline epoch overflow")
@@ -124,6 +136,7 @@ func newEndpoint(parent context.Context, c Config, contract transportContract) (
 	}
 	ctx, cancel := context.WithCancel(parent)
 	u := &Endpoint{c: c, contract: contract, localCount: localCount, peerCount: peerCount, windows: windows, ctx: ctx, cancel: cancel, events: make(chan Event, c.EventCapacity), done: make(chan struct{}), scheduled: make(chan struct{}), readDone: make(chan struct{}), attempts: make([]attempt, localCount), seen: make([]bool, peerCount)}
+	u.genCtx, u.genCancel = context.WithCancel(ctx)
 	u.queue, err = writer.New(ctx, c.Limits, u.write)
 	if err != nil {
 		cancel()
@@ -142,7 +155,27 @@ func (u *Endpoint) Events() <-chan Event { return u.events }
 func (u *Endpoint) Scheduled() <-chan struct{} { return u.scheduled }
 
 // Close requests idempotent cleanup of only the transferred component transport.
-func (u *Endpoint) Close() { u.recordStop(); u.cancel() }
+func (u *Endpoint) Close() { u.StopGeneration(); u.recordStop(); u.cancel() }
+
+// StopGeneration fixes a half-open generation cutoff while reads and queued receipts can drain.
+func (u *Endpoint) StopGeneration() {
+	u.admitMu.Lock()
+	defer u.admitMu.Unlock()
+	u.mu.Lock()
+	if u.generationAt == 0 {
+		u.generationAt = u.now()
+	}
+	u.mu.Unlock()
+	u.genCancel()
+}
+
+// generationStop fixes the cancellation boundary even when parent cancellation preceded scheduling.
+func (u *Endpoint) generationStop() uint64 {
+	u.StopGeneration()
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.generationAt
+}
 
 // Wait joins every owned worker within the caller's bound, retaining the first failure.
 // Explicit/parent cancellation is normal cleanup, not successful full-run acceptance.
@@ -215,11 +248,11 @@ func (u *Endpoint) schedule() {
 		next := uint64(0)
 		for next < w.localCount {
 			offset, _ := p.Offset(next, w.Local.Duration)
-			waiting := schedule.Wait(u.ctx.Done(), u.c.Start, w.Offset+offset)
+			waiting := schedule.Wait(u.genCtx.Done(), u.c.Start, w.Offset+offset)
 			elapsed := uint64(time.Since(u.c.Start))
-			stopped := !waiting || u.ctx.Err() != nil
+			stopped := !waiting || u.genCtx.Err() != nil
 			if stopped {
-				stop := u.recordStop()
+				stop := u.generationStop()
 				if stop <= base+w.Offset {
 					break
 				}
@@ -264,8 +297,8 @@ func (u *Endpoint) schedule() {
 		return
 	}
 	end := base + u.windows[len(u.windows)-1].Offset + u.windows[len(u.windows)-1].Local.Duration
-	if !schedule.Wait(u.ctx.Done(), u.c.EpochStart, end) {
-		end = u.recordStop()
+	if !schedule.Wait(u.genCtx.Done(), u.c.EpochStart, end) {
+		end = u.generationStop()
 	}
 	if stop := u.stoppedAt(); stop != 0 && stop < end {
 		end = stop
@@ -278,6 +311,15 @@ func (u *Endpoint) schedule() {
 func (u *Endpoint) admit(f probe.Frame, scheduled uint64) {
 	u.admitMu.Lock()
 	defer u.admitMu.Unlock()
+	if f.Kind == probe.Data && u.genCtx.Err() != nil {
+		u.mu.Lock()
+		cutoff := u.generationAt
+		u.mu.Unlock()
+		if scheduled < cutoff {
+			u.emit(Event{Kind: "schedule_skip", Frame: f, At: u.now(), Scheduled: scheduled, Count: 1, Reason: "stopped_scheduler"})
+		}
+		return
+	}
 	u.mu.Lock()
 	u.expireLocked(u.now())
 	full := f.Kind == probe.Data && u.outstanding >= u.c.Limits.Outstanding
@@ -313,6 +355,26 @@ func (u *Endpoint) admit(f probe.Frame, scheduled uint64) {
 func (u *Endpoint) write(ctx context.Context, f probe.Frame) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
+	}
+	if !u.c.ObservationEnd.IsZero() && u.now() >= uint64(u.c.ObservationEnd.Sub(u.c.EpochStart)) {
+		u.admitMu.Lock()
+		u.emit(Event{Kind: "unattempted", Frame: f, At: u.now(), Reason: "observation_cutoff"})
+		u.admitMu.Unlock()
+		u.Close()
+		return 0, context.Canceled
+	}
+	if u.c.BeforeWrite != nil {
+		m, life, phase, err := u.c.BeforeWrite(ctx, u.now())
+		if m != nil && !u.emit(Event{Kind: "marking", At: u.now(), Marking: m, MarkLifecycle: life, MarkPhase: phase, Err: err}) {
+			return 0, errors.New("marking evidence capacity exhausted")
+		}
+		if err != nil {
+			u.admitMu.Lock()
+			u.emit(Event{Kind: "unattempted", Frame: f, At: u.now(), Reason: "phase_marking_failed", Err: err})
+			u.admitMu.Unlock()
+			u.fail(err)
+			return 0, err
+		}
 	}
 	u.admitMu.Lock()
 	at := u.now()
@@ -419,6 +481,7 @@ func (u *Endpoint) receive() {
 		}
 		b, err := u.c.Transport.Read()
 		arrival := u.now()
+		pastCutoff := !u.c.ObservationEnd.IsZero() && arrival >= uint64(u.c.ObservationEnd.Sub(u.c.EpochStart))
 		if err != nil {
 			// Partial reads expose only consumed bytes; complete authenticated frames alone arrive.
 			var partial interface{ ReadBytes() int }
@@ -429,10 +492,15 @@ func (u *Endpoint) receive() {
 			if u.ctx.Err() == nil || n > 0 {
 				u.emit(Event{Kind: "read_error", At: arrival, Bytes: n, Err: err})
 			}
-			if u.ctx.Err() == nil {
+			if pastCutoff {
+				u.Close()
+			} else if u.ctx.Err() == nil {
 				u.fail(err)
 			}
 			return
+		}
+		if pastCutoff {
+			u.Close()
 		}
 		// Retain a complete read racing stop, even outside cutoff; do not manufacture a receipt after stop.
 		f, err := u.c.ReceiveAuth.Decode(b, u.contract.maxFrame)

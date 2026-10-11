@@ -1,4 +1,4 @@
-// sneaky-port exposes foundation tools and authenticated endpoint readiness; measurement orchestration is pending.
+// sneaky-port exposes foundation tools, authenticated readiness and finite UDP/TCP measurement.
 package main
 
 import (
@@ -33,12 +33,12 @@ func main() {
 // run dispatches only implemented operations; no measurement result is fabricated.
 func run(ctx context.Context, args []string, out io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: sneaky-port adapters | validate | preflight | keygen | server-init | client-init | server-enroll | server-disable | server-export | client-import | server | client-ready\nUse COMMAND -h for flags. client-ready verifies readiness only; measurement and dashboard remain pending")
+		return errors.New("usage: sneaky-port adapters | validate | preflight | keygen | server-init | client-init | server-enroll | server-disable | server-export | client-import | server | client-ready | client-run\nUse COMMAND -h for flags. client-run performs a finite local measurement; durable reports and dashboard remain pending")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.SetOutput(out)
 	switch args[0] {
-	case "server-init", "client-init", "server-enroll", "server-disable", "server-export", "client-import", "server", "client-ready":
+	case "server-init", "client-init", "server-enroll", "server-disable", "server-export", "client-import", "server", "client-ready", "client-run":
 		return coordination(ctx, args, out)
 	case "adapters":
 		if len(args) != 1 {

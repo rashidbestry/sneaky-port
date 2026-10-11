@@ -1,5 +1,5 @@
 // Package engine owns finite in-memory phase/accounting integration over worker events.
-// Negotiated starts, phase markings, CLI lifecycle and persisted reports remain separate.
+// Finite lifecycle adds phase marking and bounded observation; persisted reports remain separate.
 package engine
 
 import (
@@ -12,6 +12,7 @@ import (
 
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/measure"
+	"sneaky-port/internal/platform"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/worker"
@@ -29,6 +30,18 @@ type Record struct {
 	Bytes                                                         profile.Decimal
 	Admission, Reason, Error                                      string
 	CallbackInvoked                                               bool
+	Marking                                                       *platform.Marking
+	MarkLifecycle                                                 byte
+	MarkPhase                                                     uint32
+}
+
+// PhaseMarking retains the local API boundary and physical phase independently of original message attribution.
+type PhaseMarking struct {
+	At        profile.Decimal  `json:"time_ns"`
+	Lifecycle byte             `json:"lifecycle"`
+	Phase     uint32           `json:"phase"`
+	Marking   platform.Marking `json:"marking"`
+	Error     string           `json:"error,omitempty"`
 }
 
 // Result retains local records and cutoffs; Complete applies only to this endpoint's evidence.
@@ -46,6 +59,7 @@ type Result struct {
 	Summary, Warmup                                 measure.Summary
 	Phases                                          []measure.Summary
 	Analysis                                        measure.Analysis
+	Markings                                        []PhaseMarking
 }
 
 // ticket keeps one bounded admission result until joined shutdown guarantees availability.
@@ -65,6 +79,7 @@ type Collector struct {
 	receiver                    map[measure.Identity]uint64
 	tickets                     []ticket
 	records                     []json.RawMessage
+	markings                    []PhaseMarking
 	bytes                       uint64
 	generation, observation     uint64
 	err                         error
@@ -123,6 +138,7 @@ func identity(f probe.Frame) measure.Identity {
 // record converts an event to exact public quantities, excluding keys, content and channels.
 func record(e worker.Event) Record {
 	r := Record{Kind: e.Kind, Identity: identity(e.Frame), FrameKind: e.Frame.Kind, Direction: e.Frame.Direction, Epoch: e.Frame.OriginEpoch, PeerEpoch: e.Frame.PeerEpoch, At: profile.Decimal(e.At), Scheduled: profile.Decimal(e.Scheduled), Call: profile.Decimal(e.Call), Count: profile.Decimal(e.Count), Attempt: profile.Decimal(e.Frame.Attempt), PeerArrival: profile.Decimal(e.Frame.Arrival), PeerAttempt: profile.Decimal(e.Frame.ReceiptAttempt), Admission: string(e.Admission.State), Reason: e.Reason}
+	r.Marking, r.MarkLifecycle, r.MarkPhase = e.Marking, e.MarkLifecycle, e.MarkPhase
 	if e.Bytes >= 0 {
 		r.Bytes = profile.Decimal(e.Bytes)
 	}
@@ -179,6 +195,14 @@ func (c *Collector) Apply(e worker.Event) error {
 	if err := c.keep(record(e)); err != nil {
 		return err
 	}
+	if e.Kind == "marking" && e.Marking != nil {
+		m := PhaseMarking{At: profile.Decimal(e.At), Lifecycle: e.MarkLifecycle, Phase: e.MarkPhase, Marking: *e.Marking}
+		if e.Err != nil {
+			m.Error = e.Err.Error()
+		}
+		c.markings = append(c.markings, m)
+		return nil
+	}
 	if e.Kind == "generation_end" {
 		c.generation = e.At
 		return nil
@@ -233,6 +257,8 @@ func (c *Collector) Apply(e worker.Event) error {
 	id := identity(e.Frame)
 	if e.Frame.Kind == probe.Data {
 		switch e.Kind {
+		case "unattempted":
+			return c.ledger.Unattempted(id, e.At, e.Reason)
 		case "attempt":
 			return c.ledger.Attempt(id, e.At)
 		case "write":
@@ -306,6 +332,7 @@ func (c *Collector) Finish(workerErr error, observed uint64) (Result, error) {
 	hash, _ := c.plan.Hash()
 	r := Result{PlanHash: hash, Direction: c.direction, GenerationCutoff: profile.Decimal(c.generation), ObservationCutoff: profile.Decimal(cutoff), Complete: complete, EventBytes: profile.Decimal(c.bytes), Records: c.records, Entries: c.ledger.Snapshot(), Receiver: measure.ReceiverEvidence{Complete: complete, Cutoff: cutoff, Arrivals: c.receiver}, Summary: c.ledger.Summarize(cutoff, nil), Warmup: c.ledger.SummarizePhase(cutoff, nil, 1, nil), Analysis: c.ledger.Analyze(cutoff, uint64(c.plan.SpikeThreshold), 2, nil)}
 	r.Phases = c.ledger.SummarizePhases(cutoff, nil, len(c.plan.Phases))
+	r.Markings = c.markings
 	return r, err
 }
 
@@ -319,7 +346,7 @@ type Endpoint struct {
 }
 
 // newEndpoint validates the frozen plan digest and connects shared multi-phase accounting.
-// Markings must already be applied by the caller; negotiated per-phase marking belongs to task 11.
+// Standalone callers apply constant markings; finite lifecycle supplies the physical-phase writer hook.
 func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id string, create func(context.Context, worker.Config) (*worker.Endpoint, error)) (*Endpoint, error) {
 	if p.Adapter != id {
 		return nil, errors.New("accounting adapter mismatch")
@@ -336,9 +363,9 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 	if cfg.SendAuth.Plan != hash || cfg.ReceiveAuth.Plan != hash {
 		return nil, errors.New("accounting plan digest mismatch")
 	}
-	// A single already marked socket cannot satisfy per-phase changes before task 11 owns those transitions.
+	// Standalone constant-marking callers must not silently run a changing plan without the finite hook.
 	for _, w := range c.windows {
-		if w.Local.Traffic.DSCP != c.windows[0].Local.Traffic.DSCP {
+		if cfg.BeforeWrite == nil && w.Local.Traffic.DSCP != c.windows[0].Local.Traffic.DSCP {
 			return nil, errors.New("per-phase markings require lifecycle integration")
 		}
 	}
@@ -373,6 +400,9 @@ func (u *Endpoint) Scheduled() <-chan struct{} { return u.worker.Scheduled() }
 
 // Close stops only the transferred endpoint socket and its workers, retaining partial evidence.
 func (u *Endpoint) Close() { u.worker.Close() }
+
+// StopGeneration retains reads and queued work for a lifecycle-owned bounded drain.
+func (u *Endpoint) StopGeneration() { u.worker.StopGeneration() }
 
 // Wait returns a finalized immutable local result after all owned workers/tickets have joined.
 func (u *Endpoint) Wait(ctx context.Context) (Result, error) {

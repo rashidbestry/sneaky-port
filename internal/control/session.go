@@ -16,9 +16,11 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/engine"
 	"sneaky-port/internal/platform"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
+	"sneaky-port/internal/worker"
 )
 
 const ChannelType = "sneaky-port/control/v1"
@@ -305,7 +307,7 @@ func reply(ch ssh.Channel, request Envelope, kind string, body any) error {
 	return Write(ch, message(kind, request.RequestID, request.RunID, request.SessionID, body))
 }
 
-// control performs plan agreement and readiness; start/calibration/report channels remain unsupported.
+// control performs frozen-plan readiness, finite start, liveness and stop; calibration/report channels remain unsupported.
 func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 	policy := s.Identity.Policy
 	seen := map[string]bool{}
@@ -332,7 +334,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 		fail(hello, errors.New("contract 1 hello required"))
 		return
 	}
-	if err = reply(ch, hello, "hello", helloBody{[]int{1}, s.Registry.Describe(), false}); err != nil {
+	if err = reply(ch, hello, "hello", helloBody{[]int{1}, s.Registry.Describe(), true}); err != nil {
 		return
 	}
 	e, err := Read(ch)
@@ -449,6 +451,15 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 	if err = reply(ch, confirmation, "ready", result); err != nil {
 		return
 	}
+	var measured *engine.Finite
+	defer func() { // Join any started run before transport/listener cleanup and lease release.
+		if measured != nil {
+			measured.Cancel()
+			join, stop := context.WithTimeout(context.Background(), drainJoinBudget(plan))
+			defer stop()
+			measured.Wait(join)
+		}
+	}()
 	for {
 		raw.SetDeadline(time.Now().Add(time.Duration(plan.Limits.Lease)))
 		request, err := read(e.RunID, e.SessionID)
@@ -465,12 +476,60 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 			return
 		}
 		switch request.Type {
+		case "start":
+			if measured != nil || ctx.Err() != nil {
+				fail(request, errors.New("run already started or control ended"))
+				return
+			}
+			// Finite lifecycle now owns cancellation/drain; preparation must not close its socket early.
+			closePrepared()
+			anchor := time.Now()
+			measured, err = engine.NewFinite(ctx, worker.Config{Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true)
+			if err != nil {
+				fail(request, err)
+				return
+			}
+			raw.SetWriteDeadline(time.Now().Add(time.Duration(plan.Limits.WriteTimeout)))
+			if reply(ch, request, "started", startAck{prep.Hash, 1, 1}) != nil {
+				return
+			}
 		case "heartbeat":
 			raw.SetWriteDeadline(time.Now().Add(time.Duration(plan.Limits.WriteTimeout)))
+			if measured != nil {
+				status := "running"
+				select {
+				case <-measured.Done():
+					local, runErr := measured.Wait(context.Background())
+					status = "completed"
+					if runErr != nil || !local.Complete {
+						status = "partial"
+					}
+				default:
+				}
+				if reply(ch, request, "run-alive", finishAck{prep.Hash, status}) != nil {
+					return
+				}
+				continue
+			}
 			if reply(ch, request, "alive", body) != nil {
 				return
 			}
 		case "stop":
+			if measured != nil {
+				measured.Cancel()
+				join, stop := context.WithTimeout(context.Background(), drainJoinBudget(plan))
+				local, runErr := measured.Wait(join)
+				stop()
+				status := "completed"
+				if runErr != nil || !local.Complete {
+					status = "partial"
+				}
+				t.Close()
+				prepared.Close()
+				raw.SetWriteDeadline(time.Now().Add(time.Duration(plan.Limits.WriteTimeout)))
+				reply(ch, request, "finished", finishAck{prep.Hash, status})
+				return
+			}
 			t.Close()
 			prepared.Close()
 			budget := plan.Limits.WriteTimeout
@@ -481,7 +540,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel) {
 			reply(ch, request, "stopped", body)
 			return
 		default:
-			fail(request, errors.New("unsupported lifecycle message; measurement start is not implemented"))
+			fail(request, errors.New("unsupported lifecycle message"))
 			return
 		}
 	}
@@ -621,6 +680,11 @@ func parse32(s string) ([32]byte, error) {
 
 // Ready verifies identity/plan/data readiness, optionally holds a heartbeat lease, then explicitly stops without measuring.
 func Ready(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan, hold time.Duration) (ReadyResult, error) {
+	return clientSession(ctx, store, signer, p, hold, nil)
+}
+
+// clientSession shares exact trust/binding/readiness with either readiness-only or finite execution.
+func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan, hold time.Duration, measured *RunResult) (ReadyResult, error) {
 	ctx, stopClient := context.WithCancel(ctx)
 	defer stopClient()
 	var result ReadyResult
@@ -730,6 +794,9 @@ func Ready(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan,
 	if e.Type != "hello" || DecodeObject(e.Body, &hello) != nil || len(hello.Contracts) != 1 || hello.Contracts[0] != 1 {
 		return result, errors.New("unsupported control contract")
 	}
+	if measured != nil && !hello.Measurement {
+		return result, errors.New("server does not support finite measurement")
+	}
 	runText = hex.EncodeToString(runID[:])
 	planJSON, _ := json.Marshal(p)
 	e, err = exchange("prepare", prepareBody{planJSON, hashText})
@@ -815,6 +882,14 @@ func Ready(ctx context.Context, store *Store, signer ssh.Signer, p profile.Plan,
 		return result, errors.New("client effective settings changed by server")
 	}
 	if err = raw.SetDeadline(time.Time{}); err != nil {
+		return result, err
+	}
+	if measured != nil {
+		// Run owns draining after control loss; this setup callback must no longer close data early.
+		closeData()
+		measured.Readiness = result
+		err = executeRun(ctx, raw, exchange, t, ca, sa, runID, session, p, measured)
+		measured.Readiness.Control = ControlTraffic{"client application control frames through run finalization; SSH overhead excluded", counter, counted.sent, counted.received}
 		return result, err
 	}
 	end := time.Now().Add(hold)

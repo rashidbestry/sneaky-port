@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-10 are complete within their stated scopes. **Next: task 11 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-11 are complete within their stated scopes. **Next: task 12 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -70,15 +70,18 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for internal TCP integration and recorded fixtures.** F02/F07, T06/T14/T15/T18. UDP/TCP now share phase schedules, bounded FIFO workers and accounting. TCP retains complete-frame arrivals, four-byte prefix/partial-byte evidence, queued cancellation and application receipt stalls; underlying packet loss stays unknown. Windows/Ubuntu/CentOS IPv4/IPv6 loopback and injected local blockage/truncation fixtures, ordinary/full race checks, 20 worker/engine race repetitions and four builds pass. [Evidence](WORK_LOG.md#2026-10-11-tcp-integration), [code flow](FLOWCHART.md#udptcp-phase-accounting).
 
-**Next: task 11, finite run lifecycle.** Start/control negotiation, phase marking, grace and finite CLI execution remain unconnected. The caller supplies authenticated transports, local anchors and observation stop; per-phase DSCP changes still reject explicitly. Durable reports/replay and authenticated remote reconciliation remain tasks 12-14. Native ARM64, calibrated one-way, independent impairment and live acceptance stay pending.
+## 11. Connect finite run start/stop lifecycle (completed)
+
+**Complete for finite CLI/component implementation and recorded fixtures.** F01/F02/F06/F07/F09, T09/T11/T14/T15/T17/T22. Authenticated frozen-plan start, independent local anchors, physical-phase writer markings, grace, bounded generation-stop/drain/join, lease/control-loss cleanup and exclusive client reservation connect the shared UDP/TCP engine to `client-run`. Public snapshots retain local partial/complete evidence and unknown remote delivery; server status is lifecycle evidence only. [Evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle), [code flow](FLOWCHART.md#finite-run-lifecycle).
+
+**Next: task 12, bounded local evidence persistence.** Durable files/replay and remote reconciliation remain tasks 12-14. Native ARM64, cross-endpoint CLI deployment, outer captures, calibrated one-way, impairment and live acceptance remain pending.
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**; task 11 is next. Existing primitives are reused; these rows describe integration outcomes rather than new feature acceptance. Task 11 finishes assembling the finite measurement engine.
+Every row is a separate task, currently **not started**; task 12 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 11 | Connect finite run start/stop lifecycle | Frozen-plan start, phase-specific markings, grace, cancellation/control loss and lease cleanup pass; expose the finite CLI run workflow |
 | 12 | Persist bounded local raw evidence and summaries | Completed and interrupted runs retain exact events/cutoffs within file budgets; finalization does not expose secrets |
 | 13 | Replay and export local reports | Recomputed summaries match raw records; JSON/JSONL/CSV preserve units, decimal precision, unknowns and partial status |
 | 14 | Transfer and reconcile server evidence | Bounded authenticated chunks/checksums bind to the same run/plan; missing/incompatible receiver evidence remains unknown |

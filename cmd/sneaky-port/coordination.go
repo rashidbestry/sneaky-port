@@ -18,7 +18,7 @@ import (
 	"sneaky-port/internal/profile"
 )
 
-// coordination dispatches explicit application-store and readiness operations; it never starts a measured run.
+// coordination dispatches explicit application-store, readiness and finite measurement operations.
 func coordination(ctx context.Context, args []string, out io.Writer) error {
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	f.SetOutput(out)
@@ -42,9 +42,11 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		f.StringVar(&pairing, "pairing-id", "", "local pairing ID matching the profile")
 		f.StringVar(&bundlePath, "bundle", "", "trusted public server bundle JSON")
 		f.BoolVar(&replace, "replace", false, "explicitly replace existing host trust")
-	case "client-ready":
+	case "client-ready", "client-run":
 		f.StringVar(&planPath, "profile", "", "explicit YAML/JSON profile")
-		f.StringVar(&hold, "hold-ns", "", "explicit readiness-only hold duration, including zero")
+		if args[0] == "client-ready" {
+			f.StringVar(&hold, "hold-ns", "", "explicit readiness-only hold duration, including zero")
+		}
 	case "server", "server-export":
 	default:
 		return fmt.Errorf("unknown coordination command %q", args[0])
@@ -76,6 +78,10 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 	case "client-ready":
 		if planPath == "" || hold == "" {
 			return errors.New("-profile and explicit -hold-ns required")
+		}
+	case "client-run":
+		if planPath == "" {
+			return errors.New("client-run requires -profile")
 		}
 	case "server":
 		if runtime.GOOS != "linux" {
@@ -174,10 +180,13 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		}
 		fmt.Fprintln(os.Stderr, "embedded SSH listening on", ln.Addr())
 		return server.Serve(ctx, ln)
-	case "client-ready":
-		n, err := strconv.ParseUint(hold, 10, 63)
-		if err != nil {
-			return err
+	case "client-ready", "client-run":
+		var n uint64
+		if args[0] == "client-ready" {
+			n, err = strconv.ParseUint(hold, 10, 63)
+			if err != nil {
+				return err
+			}
 		}
 		file, err := os.Open(planPath)
 		if err != nil {
@@ -195,6 +204,13 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		signer, err := loadSigner(id.KeyRef)
 		if err != nil {
 			return err
+		}
+		if args[0] == "client-run" {
+			result, runErr := control.Run(ctx, store, signer, plan)
+			if err = writeJSON(out, result); err != nil {
+				return err
+			}
+			return runErr
 		}
 		result, err := control.Ready(ctx, store, signer, plan, time.Duration(n))
 		if err != nil {

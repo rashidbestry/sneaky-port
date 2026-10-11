@@ -228,6 +228,10 @@ type socket struct {
 // SetReadDeadline bounds authentication reads without substituting a peer or transport.
 func (s *socket) SetReadDeadline(t time.Time) error { return s.conn.SetReadDeadline(t) }
 
+// Interrupt stops owned reads/writes at a cutoff while the coordinator retains the peer connection until stop.
+// This prevents an earlier local grace cutoff from creating a premature peer TCP EOF.
+func (s *socket) Interrupt() error { return s.conn.SetDeadline(time.Now()) }
+
 // Read returns complete raw datagrams/frames; wrong UDP tuples are discarded, not migrated.
 func (s *socket) Read() ([]byte, error) {
 	if s.first != nil {
