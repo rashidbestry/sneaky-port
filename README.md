@@ -8,7 +8,7 @@ Connection quality means timely delivery, low p95/p99 latency, low jitter, and f
 
 The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
 
-**Current status: finite authenticated UDP/TCP runs, bounded evidence/replay/export, remote reconciliation, one-way estimates and protected local run controls implemented; dashboard and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: finite authenticated UDP/TCP runs, bounded evidence/replay/export, remote reconciliation, one-way estimates, protected local API and dashboard setup/run controls implemented; diagnostic views, comparisons and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
 Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Independently verified production clock bounds, dashboard, comparisons and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
 
@@ -117,6 +117,17 @@ Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_re
 
 ## Protected local run API
 
+### Dashboard setup and run controls
+
+After launching `client-api` below, open its exact `api_url` in your browser and paste the startup `session_token` into **Local session → Connect**. The embedded shell has no credentials/settings; all setup reads and actions use the protected API. The token stays in page memory, never in a URL, cookie or browser storage. Disconnect forgets it and stops polling; an admitted run continues until completion, explicit cancellation or API shutdown.
+
+1. Review the public server bundle/address/fingerprint from your trusted transfer, then import under a pairing ID. Existing trust requires the explicit replacement checkbox. Select its reference and review the independently editable data address/ports. Generate a managed client key only if needed; transfer public enrollment JSON to the server operator using the existing [pairing workflow](#pair-endpoints-and-check-readiness).
+2. Edit the launch or loaded saved profile, including registered adapter/options, ports, ordered phases, independent directional payload/rates/bursts/DSCP, timing, limits and calibration inputs. Durations/64-bit quantities remain exact decimal strings. Phase deadline left blank inherits the run deadline. Duplicate/move/remove phases explicitly; the editor supports up to 64 phases and rejects larger profiles visibly (the CLI retains its existing limits). Complete JSON is strictly validated before application; loading a profile or applying JSON explicitly replaces editor contents.
+3. **Validate** leaves disk unchanged. **Save profile explicitly** uses the loaded revision; a changed profile ID creates only. Stale saves conflict and keep edits visible; load the saved version to resolve them. **Start selected revision** requires clean saved settings. Frozen settings for that start remain visible while later edits/saves affect future runs.
+4. **Read status** or **Cancel this run** uses the displayed control handle. Keep that ID to recover status after reload. Polls coalesce to at most one per second while executing/cancelling; errors stop polling visibly. Lost start/cancel acknowledgments retain the exact command ID/target for explicit retry in the same API process. Reload loses page-local retry state; a restarted API has new credentials/history. Unknown/readiness/completeness states stay explicit; live phase/counters, charts and comparisons remain tasks 20–21.
+
+Adapter options come from registry descriptions and require explicit JSON values (for example a boolean); selecting another carrier keeps existing options visible for correction rather than silently rewriting them. Requested markings are not captured evidence. Richer fragmentation/header controls remain open under T25. [Dashboard source flow](FLOWCHART.md#dashboard-setup-and-run-controls).
+
 Launch with an explicit application-owned client store and profile:
 
 ```powershell
@@ -127,6 +138,7 @@ The example profile needs your explicit server/workload settings. Startup JSON r
 
 | Route | Request / result |
 | --- | --- |
+| `GET /api/v1/setup` | Selected normalized launch/saved profile and revision, persisted flag and optional public client enrollment; no key references |
 | `GET /api/v1/adapters?cursor=0&limit=16` | Registry descriptions, at most 16 items; `next_cursor` is empty at the end |
 | `POST /api/v1/runs` | JSON `{ "schema_version": 1, "request_id": "start-1", "profile_id": "<selected ID>", "profile_revision": "<selected hash>" }`; freezes that validated revision and returns `control_run_id` |
 | `GET /api/v1/runs/<control_run_id>` | Bounded lifecycle/identity/completeness status |
@@ -143,7 +155,7 @@ Body/header request IDs must agree. Repeating an accepted mutation ID returns it
 
 Start/cancel bodies are capped at 4 KiB; saved-operation bodies at 1 MiB including base64 overhead. Every mutation body carries `schema_version: 1` and matching `request_id`. The process retains at most 32 run statuses and 128 accepted start/cancel commands without evicting retries. Saved catalogs inspect at most 256 directory entries; report replay charges at most 8 MiB of file reads (including remote verification/replay), and serialized export is capped at 16 MiB. One saved operation executes at a time; busy requests return 503. Larger reports remain inspectable through the CLI with its explicit byte budget. These are engineering limits, not workload recommendations.
 
-Report imports accept `manifest.json`, `events.jsonl`, optional referenced `summary.json` and `server-transfer.json`, and the complete transferred `remote-server/{manifest.json,events.jsonl,summary.json}` group. Import uses existing checksum/schema/accounting validators; cached reconciliation is excluded and recomputed. Offline integrity does not authenticate imported evidence. Imports never connect to a server, enroll keys remotely or resume runs. Explicit profile saves affect future starts; active plans and retry acknowledgments stay frozen. Saved-operation request IDs provide correlation; automatic retry deduplication applies to start/cancel only. Dashboard/live views and report comparison remain tasks 19-21. [API flow](FLOWCHART.md#protected-local-run-api), [saved operations](FLOWCHART.md#saved-configuration-and-report-api).
+Report imports accept `manifest.json`, `events.jsonl`, optional referenced `summary.json` and `server-transfer.json`, and the complete transferred `remote-server/{manifest.json,events.jsonl,summary.json}` group. Import uses existing checksum/schema/accounting validators; cached reconciliation is excluded and recomputed. Offline integrity does not authenticate imported evidence. Imports never connect to a server, enroll keys remotely or resume runs. Explicit profile saves affect future starts; active plans and retry acknowledgments stay frozen. Validation/saves also reject unsupported registered-adapter options. Saved-operation request IDs provide correlation; automatic retry deduplication applies to start/cancel only. Diagnostic/live views and report comparison remain tasks 20-21. [API flow](FLOWCHART.md#protected-local-run-api), [saved operations](FLOWCHART.md#saved-configuration-and-report-api).
 
 ## Project documents
 

@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API are implemented. Production clock bounds, dashboard/live views, comparisons and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Production clock bounds, diagnostic/live views, comparisons and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -28,7 +28,7 @@ flowchart TD
     F --> H
 ```
 
-Entry points: [main.go](cmd/sneaky-port/main.go) (`main`, `run`, `writeJSON`), [coordination.go](cmd/sneaky-port/coordination.go) (`coordination`, `keyPassphrase`, `loadSigner`). `server` is Linux-only; `client-ready` uses direct owned UDP/TCP plus SSH control. `client-run` performs finite measurement; dashboard mode remains unsupported. Validation/preflight open no network sockets.
+Entry points: [main.go](cmd/sneaky-port/main.go) (`main`, `run`, `writeJSON`), [coordination.go](cmd/sneaky-port/coordination.go) (`coordination`, `keyPassphrase`, `loadSigner`). `server` is Linux-only; `client-ready` uses direct owned UDP/TCP plus SSH control. `client-run` performs finite measurement; `client-api` also serves the embedded setup/run dashboard. Validation/preflight open no network sockets.
 
 ## Protected local run API
 
@@ -37,8 +37,11 @@ flowchart TD
     A[clientAPI: explicit store and launch profile; existing key or explicit later generation] --> B[ListenWithStore: validate saved ID and literal loopback; snapshot/hash fallback]
     B --> C[Generate process token; return private local bootstrap JSON]
     C --> D[Serve owned IPv4 or IPv6 HTTP listener]
-    D --> E{Loopback peer and exact Host/Origin; valid bearer and request ID?}
-    E -->|no| X[Structured rejection; no lifecycle mutation]
+    D --> S{Loopback peer and exact Host/Origin?}
+    S -->|no| X[Structured rejection; no lifecycle mutation]
+    S -->|exact public asset| T[Static credential-free dashboard shell]
+    S -->|API| E{Valid bearer and request ID?}
+    E -->|no| X
     E -->|yes| F{Versioned route and bounded request?}
     F -->|no| X
     F -->|adapters| G[Page compile-time descriptors]
@@ -57,7 +60,7 @@ flowchart TD
     D --> P[Process shutdown: stop admissions and HTTP; cancel and bounded join]
 ```
 
-Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; dashboard/live views and comparison remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
+Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; diagnostic/live views and comparison remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
 
 ## Saved configuration and report API
 
@@ -80,7 +83,7 @@ flowchart TD
     A --> O[Shutdown closes admission and joins storage plus finite runs]
 ```
 
-Sources: [routes](internal/localapi/saved.go) (`saved`, `catalog`, `savedBody`, `profileWrite`, `pairingImport`, `keyCreate`, `reportImport`, `reportExport`, `diskReply`), [store](internal/control/saved.go) (`ownedDir`, `SavedIDs`, `Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [trust/key store](internal/control/store.go) (`ImportPairing`, `Pairing`, `InitClient`), [replay](internal/control/replay.go) (`ReplayReport`), [exports](internal/control/export.go) (`ExportReport`), [store fixtures](internal/control/saved_test.go), [HTTP fixtures](internal/localapi/saved_test.go), [real HTTP/SSH report fixtures](cmd/sneaky-port/finite_test.go). Saved bodies cap at 1 MiB including base64 overhead; catalog inspection at 256 entries; replay reads at 8 MiB; export at 16 MiB. Busy saved requests reject with 503. Offline integrity cannot authenticate imported evidence or verify clock bounds; cached reconciliation is excluded. No import resumes traffic or remotely enrolls a client. Remaining UI/comparison paths are tasks 19-21.
+Sources: [routes](internal/localapi/saved.go) (`saved`, `catalog`, `savedBody`, `profileWrite`, `pairingImport`, `keyCreate`, `reportImport`, `reportExport`, `diskReply`), [store](internal/control/saved.go) (`ownedDir`, `SavedIDs`, `Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [trust/key store](internal/control/store.go) (`ImportPairing`, `Pairing`, `InitClient`), [replay](internal/control/replay.go) (`ReplayReport`), [exports](internal/control/export.go) (`ExportReport`), [store fixtures](internal/control/saved_test.go), [HTTP fixtures](internal/localapi/saved_test.go), [real HTTP/SSH report fixtures](cmd/sneaky-port/finite_test.go). Saved bodies cap at 1 MiB including base64 overhead; catalog inspection at 256 entries; replay reads at 8 MiB; export at 16 MiB. Busy saved requests reject with 503. Offline integrity cannot authenticate imported evidence or verify clock bounds; cached reconciliation is excluded. No import resumes traffic or remotely enrolls a client. Remaining diagnostic/live UI and comparison paths are tasks 20-21; task 19 setup/run controls are implemented below.
 
 ## Persistent trust and endpoint readiness
 
@@ -379,7 +382,34 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved configuration/report API is implemented; dashboard/SVG, matched comparisons and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved API and [dashboard setup/run controls](#dashboard-setup-and-run-controls) are implemented; diagnostic/SVG/live views, matched comparisons and full acceptance remain pending.
+
+## Dashboard setup and run controls
+
+```mermaid
+flowchart TD
+    A[client-api prints exact loopback URL and process token] --> B[Public embedded shell after peer Host Origin guards]
+    B --> C[Operator pastes token; memory only]
+    C --> D[Protected setup read and bounded sequential catalogs]
+    D --> E[Preview public trust; explicit pairing import or replacement]
+    D --> F[Explicit managed client key creation or public enrollment read]
+    D --> G[Separate loaded revision and unsaved editable profile]
+    G --> H[Registry adapter options; common ordered phase and directional controls]
+    H --> I[Shared profile and adapter validation; no save]
+    I --> J[Explicit revision-checked save; conflict retains edits]
+    J --> K[Start clean saved revision; retain exact command identity]
+    K --> L[Finite runner owns frozen settings and timing]
+    K -->|acknowledgment lost| M[Explicit retry of same command in same API process]
+    M --> K
+    L --> N[Single coalesced lifecycle status poll per second]
+    N --> O[Executing cancelling or actual terminal state; unknowns retained]
+    O --> P[Explicit handle-scoped cancel; independent cleanup]
+    G --> Q[Later edits and saves leave displayed frozen start intact]
+    N -->|read failure| R[Stop polling visibly; explicit status recovery]
+    C --> S[Disconnect forgets token and stops polls; run continues]
+```
+
+Sources: [dashboard.go](internal/localapi/dashboard.go) (`dashboard`, `setup`), [router](internal/localapi/server.go) (`handle`, `mutate`, `status`, `execute`), [saved operations](internal/localapi/saved.go) (`saved`, `profileWrite`, `pairingImport`, `keyCreate`), [HTML](internal/localapi/web/index.html), [CSS](internal/localapi/web/dashboard.css), [script](internal/localapi/web/dashboard.js) (`api`, `renderEditor`, `adapterOptions`, `renderPhases`, `selectProfile`, `catalog`, `transmitPending`, `schedulePoll`, `disconnect`), [HTTP/security fixtures](internal/localapi/dashboard_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs). Static assets contain no token/settings; private reads/mutations retain bearer/identity guards. Exact decimals and malformed inputs stay explicit. The 64-phase editor limit is separate from existing CLI bounds. Pending start/cancel commands survive disconnect in page memory with only a process fingerprint, never a retained token; reload loses retry state. This path has synthetic HTTP/script and CLI evidence, not rendered-browser, live phase/counter, native ARM64 or full-network acceptance. SVG/diagnostic views and comparisons remain tasks 20–21.
 
 ## Authenticated server evidence transfer and reconciliation
 
@@ -407,7 +437,7 @@ flowchart TD
 
 Sources: [transfer.go](internal/control/transfer.go) (`routeReportChannels`, `serveReportChannel`, `openReportSnapshot`, `serveReport`, `receiveServerReport`, `receiveReport`, `verifyTransferredFiles`), [reconcile.go](internal/control/reconcile.go) (`reconcileReports`, `reconcileOrigin`, `replayTransferred`), [replay.go](internal/control/replay.go), [exports](internal/control/export.go), [shared ledger](internal/measure/ledger.go) (`SummarizeSnapshot`), [fixtures](internal/control/transfer_test.go). Numbered frames/acks and final hashes bind exact ordered bytes to the existing enrolled-client/pinned-host session. Endpoint raw summaries remain unchanged; each observation cutoff belongs to its own clock. Lost receipts do not imply missing data; stream delivery never establishes zero network packet loss.
 
-The per-endpoint file cap (maximum 1 GiB), remaining request budget after lifecycle/calibration reservations and whole network-transfer timeout bound work. Offline input budgets include both remote hash/replay passes; they are not heap caps. Interrupted transfer stays unknown; saved receipts are local provenance, not transferable attestations. Recovery/dashboard and native/live/impairment acceptance remain pending.
+The per-endpoint file cap (maximum 1 GiB), remaining request budget after lifecycle/calibration reservations and whole network-transfer timeout bound work. Offline input budgets include both remote hash/replay passes; they are not heap caps. Interrupted transfer stays unknown; saved receipts are local provenance, not transferable attestations. Additional recovery/report-dashboard and native/live/impairment acceptance remain pending.
 
 ## Live SSH clock sampling
 

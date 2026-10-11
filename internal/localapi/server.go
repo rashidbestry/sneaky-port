@@ -229,7 +229,8 @@ func reject(w http.ResponseWriter, code int, id, kind, field, reason string) {
 	reply(w, code, id, nil, &apiError{kind, field, reason})
 }
 
-// handle applies peer/authority/origin/token guards to every route, including reads and errors.
+// handle applies peer/authority/origin guards to every route and token guards to all API reads/mutations.
+// Only the exact public static dashboard shell/assets bypass credentials; they contain no session settings.
 func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -243,6 +244,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	fetch := r.Header.Get("Sec-Fetch-Site")
 	if len(origins) > 1 || len(r.Header.Values("Sec-Fetch-Site")) > 1 || len(origins) == 1 && origins[0] != s.URL() || fetch != "" && fetch != "same-origin" && fetch != "none" {
 		reject(w, 403, "", "forbidden", "origin", "same local origin required")
+		return
+	}
+	if s.dashboard(w, r) {
 		return
 	}
 	auth := r.Header.Values("Authorization")

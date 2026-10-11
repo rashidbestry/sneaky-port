@@ -214,6 +214,19 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	}
 	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}
 	defer client.CloseIdleConnections()
+	shell, err := client.Get(bootstrap.URL + "/")
+	if err != nil {
+		t.Fatal("CLI dashboard shell unavailable", err)
+	}
+	shellBody, readErr := io.ReadAll(shell.Body)
+	shell.Body.Close()
+	if readErr != nil || shell.StatusCode != 200 || !bytes.Contains(shellBody, []byte("Local session")) || bytes.Contains(shellBody, []byte(bootstrap.Token)) {
+		t.Fatal("CLI dashboard public shell boundary failed")
+	}
+	setup := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/setup", "setup", "")
+	if setup["selected_profile"].(map[string]any)["profile_revision"] != bootstrap.Revision {
+		t.Fatal("CLI dashboard setup revision changed")
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)

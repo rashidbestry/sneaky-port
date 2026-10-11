@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/profile"
 )
@@ -48,10 +49,10 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return false
 	}
 	ns := parts[0]
-	if ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" {
+	if ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" && ns != "setup" {
 		return false
 	}
-	if s.store == nil {
+	if s.store == nil && ns != "setup" {
 		return false
 	}
 	s.mu.Lock()
@@ -68,6 +69,14 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return true
 	}
 	defer s.savedMu.Unlock()
+	if ns == "setup" {
+		if len(parts) == 1 && r.Method == "GET" {
+			s.setup(w, id)
+		} else {
+			reject(w, 404, id, "not_found", "route", "route or method unavailable")
+		}
+		return true
+	}
 	if len(parts) == 1 && r.Method == "GET" && ns != "client-keys" {
 		s.catalog(w, r, id, ns)
 		return true
@@ -222,6 +231,11 @@ func (s *Server) profileWrite(w http.ResponseWriter, r *http.Request, id, target
 	p, err := profile.Decode(bytes.NewReader(in.Profile))
 	if err != nil || target != "" && p.ID != target {
 		reject(w, 422, id, "invalid_profile", "profile", "profile fields or identity failed shared validation")
+		return
+	}
+	factory, err := adapter.Default().Get(p.Adapter)
+	if err != nil || factory.Validate(p) != nil {
+		reject(w, 422, id, "unsupported_profile", "adapter_options", "registered adapter and supported explicit options required")
 		return
 	}
 	if target == "" {
