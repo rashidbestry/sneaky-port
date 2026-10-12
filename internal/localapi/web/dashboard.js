@@ -40,6 +40,7 @@ function controls() {
   element("retry").hidden = !state.pending;
   element("pending").textContent = state.pending ? "Acknowledgment unknown. Retry uses the same command ID and frozen target. Do not start another run." : "";
   element("edit-state").textContent = state.draft ? (dirty() ? "Unsaved edits — validate and explicitly save before starting." : state.saved ? "Saved revision " + state.selected.profile_revision : "Launch profile is unsaved — explicitly save before starting.") : "";
+  if (typeof diagnosticControls === "function") diagnosticControls();
 }
 // perform serializes explicit UI actions; status polling remains independent and never overlaps itself.
 async function perform(action) {
@@ -213,6 +214,7 @@ async function transmitPending() {
 }
 // disconnect forgets the token and stops reads; it does not send a run cancellation or alter saved files.
 function disconnect() {
+  if (typeof clearDiagnostics === "function") clearDiagnostics();
   state.epoch++; state.token = ""; state.session = ""; clearTimeout(state.timer); element("token").value = ""; element("workspace").hidden = true; notice("Disconnected. Any admitted measurement continues until completion or explicit cancellation."); controls();
 }
 // bind wraps explicit actions with serialization and visible errors, avoiding unhandled promises.

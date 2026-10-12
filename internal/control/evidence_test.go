@@ -313,6 +313,35 @@ func readEvidence(t *testing.T, dir string) (EvidenceManifest, EvidenceSummary, 
 	return m, s, events
 }
 
+// TestExampleProfileEvidenceBudget verifies the shipped UDP profile can reserve and
+// finalize local evidence on both endpoints; readiness alone never exercises storage.
+func TestExampleProfileEvidenceBudget(t *testing.T) {
+	f, err := os.Open(filepath.Join("..", "..", "examples", "readiness-udp.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	p, err := profile.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, _, ready := evidenceFixture(t)
+	hash, err := p.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready.PlanHash = hex.EncodeToString(hash[:])
+	for _, endpoint := range []string{"client", "server"} {
+		w, err := newEvidence(store, p, ready, endpoint)
+		if err != nil {
+			t.Fatalf("%s example storage reservation: %v", endpoint, err)
+		}
+		if err := w.Finalize(engine.Result{}); err != nil {
+			t.Fatalf("%s example incomplete finalization: %v", endpoint, err)
+		}
+	}
+}
+
 // TestEvidencePersistence preserves original raw records, >2^53 offsets and public settings for complete/partial endpoints.
 func TestEvidencePersistence(t *testing.T) {
 	for _, complete := range []bool{true, false} {

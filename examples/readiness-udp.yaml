@@ -38,7 +38,7 @@ limits:
   queue_bytes: "1048576"
   receipt_reserve: 8
   outstanding_data: 1024
-  ledger_messages: 10000
+  ledger_messages: 1024 # Leaves summary/manifest reservation room within the 8 MiB file budget.
   event_bytes: "4194304"
   file_bytes: "8388608"
   max_schedule_lag_ns: "10000000"

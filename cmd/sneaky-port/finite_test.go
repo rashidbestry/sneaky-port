@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -299,6 +300,26 @@ func exerciseReportAPI(t *testing.T, client *http.Client, base, token string, st
 	got := apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports/"+id, "report", "")
 	if got["saved_summary_verification"] != "matched" {
 		t.Fatal("HTTP replay verification lost")
+	}
+	for _, endpoint := range []string{"local", "server"} {
+		report := original
+		if endpoint == "server" {
+			report = original.ServerReport
+		}
+		for _, scope := range []string{"main", "warmup", "0"} {
+			view := apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports/"+id+"/diagnostics?endpoint="+endpoint+"&scope="+scope, "diagnostic", "")
+			expected := report.Evidence.Summary
+			if scope == "warmup" {
+				expected = report.Evidence.Warmup
+			}
+			if scope == "0" {
+				expected = report.Evidence.Phases[0]
+			}
+			summary := view["summary"].(map[string]any)
+			if summary["RTTSamples"] != fmt.Sprint(expected.RTTSamples) || summary["DeadlineMisses"] != fmt.Sprint(expected.DeadlineMisses) || view["endpoint"] != report.Manifest.Endpoint || len(view["time"].([]any)) > 128 {
+				t.Fatal("real endpoint/phase diagnostics diverged", endpoint, scope)
+			}
+		}
 	}
 	for _, format := range []string{"json", "jsonl", "csv"} {
 		r, err := http.NewRequest("GET", base+"/api/v1/reports/"+id+"/export?format="+format, nil)

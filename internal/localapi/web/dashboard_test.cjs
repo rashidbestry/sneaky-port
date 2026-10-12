@@ -14,6 +14,8 @@ class Node {
   replaceChildren(...nodes) { this.children = []; if (this.tagName === "select") this.value = ""; this.append(...nodes); }
   // addEventListener records actions for explicit fixture activation without synthetic scheduling.
   addEventListener(name, action) { (this.listeners[name] ||= []).push(action); }
+  // setAttribute retains native SVG attributes for bounded rendering assertions.
+  setAttribute(name, value) { (this.attributes ||= {})[name] = value; }
   // firstElementChild exposes the owned label's input for override-field event wiring.
   get firstElementChild() { return this.children[0]; }
   // lastChild exposes the most recently appended label for descriptor/phase event wiring.
@@ -30,6 +32,8 @@ const context = vm.createContext({ document: {
   getElementById(id) { assert.ok(ids[id], "missing HTML binding: " + id); return ids[id]; },
   // createElement models safe text/field construction; no innerHTML interface is supplied.
   createElement(tag) { return new Node(tag); },
+  // createElementNS models SVG construction without claiming browser geometry/layout coverage.
+  createElementNS(namespace, tag) { assert.equal(namespace, "http://www.w3.org/2000/svg"); return new Node(tag); },
   // querySelectorAll returns all owned workspace controls for operation/dirty-state gating.
   querySelectorAll() { return Object.values(ids).flatMap(descendants); }
 }, crypto: webcrypto, TextEncoder, AbortSignal,
@@ -47,6 +51,7 @@ const context = vm.createContext({ document: {
   }
 });
 vm.runInContext(fs.readFileSync(__dirname + "/dashboard.js", "utf8"), context);
+vm.runInContext(fs.readFileSync(__dirname + "/diagnostics.js", "utf8"), context);
 // evaluate inspects the actual script's lexical model instead of mirroring its implementation.
 function evaluate(code) { return vm.runInContext(code, context); }
 // click executes the bound UI handler and waits for its serialized asynchronous operation to finish.
@@ -59,6 +64,20 @@ async function click(id) {
 // main exercises actual script/API pairing, exact edits, revision conflicts and idempotent control recovery.
 async function main() {
   ids.token.value = process.env.DASHBOARD_TEST_TOKEN; await click("connect"); assert.equal(ids.workspace.hidden, false); assert.equal(ids.token.value, ""); assert.equal(ids.start.disabled, true);
+  await click("refresh-reports"); ids.reports.value = "diagnostic"; ids["report-endpoint"].value = "local"; ids["report-scope"].value = "main";
+  await click("read-report"); assert.equal(ids.notice.dataset.error, "false"); assert.ok(ids["diagnostic-status"].textContent.includes("complete=false"));
+  assert.equal(ids["time-plot"].children[0].tagName, "svg"); assert.ok(descendants(ids["diagnostic-table"]).some(function unavailableCell(node) { /* Null evidence must stay visibly unavailable. */ return node.textContent === "unavailable"; }));
+  const emptyView = evaluate("JSON.stringify(diagnosticsState.view)");
+  evaluate('diagnosticsState.view.cutoff_ns = "9007199254741993"; diagnosticsState.view.summary.RTTSamples = "2"; diagnosticsState.view.summary.RTTP99 = "9007199254740993"; diagnosticsState.view.time = [{start_ns:"1",end_ns:"2",slots:"3",missing:"1",local:"0",rtt:{count:"2",min_ns:"0",max_ns:"9007199254740993"},scheduled:{count:"2",min_ns:"1",max_ns:"9007199254740994"}}]; diagnosticsState.view.rtt_ecdf = [{count:"2",min_ns:"0",max_ns:"9007199254740993",first_rank:"1",last_rank:"2"}]; diagnosticsState.view.scheduled_ecdf = [{count:"2",min_ns:"1",max_ns:"9007199254740994",first_rank:"1",last_rank:"2"}]; renderDiagnostic()');
+  assert.ok(descendants(ids["time-plot"]).some(function missingMarker(node) { /* Missing population retains a distinct SVG marker. */ return node.attributes?.class === "missing-marker"; }));
+  assert.ok(descendants(ids["diagnostic-table"]).some(function exactTail(node) { /* Final tails must retain decimal values beyond Number precision. */ return node.textContent === "9007199254740993"; }));
+  assert.ok(descendants(ids["ecdf-plot"]).some(function rankTitle(node) { /* ECDF tooltips retain exact tied-sample ranks and extrema. */ return node.tagName === "title" && node.textContent.includes('"last_rank":"2"'); }));
+  assert.equal(evaluate('ratio("9007199254740993", 9007199254740993n)'), 1);
+  evaluate("diagnosticsState.view = " + emptyView + "; renderDiagnostic()");
+  assert.equal(ids["metrics-prev"].disabled, true); await click("metrics-next"); assert.ok(ids["metric-page"].textContent.includes("Page 2")); await click("metrics-prev");
+  ids["report-endpoint"].value = "server"; await click("read-report"); assert.equal(ids.notice.dataset.error, "true"); assert.equal(evaluate("diagnosticsState.view.endpoint"), "client");
+  ids["preflight-duration"].value = "1000000"; ids["preflight-interval"].value = "100000"; await click("preflight"); assert.ok(ids["preflight-status"].textContent.includes("source/resolution unverified")); assert.equal(ids["wakes-prev"].disabled, true);
+  ids["preflight-duration"].value = "1000000001"; await click("preflight"); assert.equal(ids.notice.dataset.error, "true");
   ids["client-id"].value = "dashboard-client"; await click("create-key"); assert.ok(ids.enrollment.textContent.includes("public_key")); assert.ok(!ids.enrollment.textContent.includes("key_ref")); assert.equal(ids["create-key"].disabled, true);
   ids["pairing-id"].value = "dashboard-peer"; ids.bundle.value = process.env.DASHBOARD_TEST_BUNDLE; await click("import-pairing"); assert.ok(ids["pairing-preview"].textContent.includes("host_key_fingerprint"));
   await click("import-pairing"); assert.equal(ids.notice.dataset.error, "true"); ids.replace.checked = true; await click("import-pairing"); assert.equal(ids.notice.dataset.error, "false"); assert.equal(ids.replace.checked, false);
@@ -84,6 +103,7 @@ async function main() {
   await click("cancel"); assert.ok(["cancelling", "partial"].includes(evaluate("state.run.status"))); await click("status"); assert.equal(evaluate("state.run.status"), "partial"); assert.equal(evaluate("state.run.local_complete"), null);
   ids["run-id"].value = "unknown"; await click("status"); assert.equal(ids.notice.dataset.error, "true"); assert.equal(evaluate("state.run.control_run_id"), currentRun);
   await click("disconnect"); assert.equal(ids.workspace.hidden, true);
+  assert.equal(evaluate("diagnosticsState.view"), null); assert.equal(evaluate("diagnosticsState.preflight"), null);
   assert.ok(!fs.readFileSync(__dirname + "/dashboard.js", "utf8").match(/localStorage|sessionStorage|innerHTML|document\.cookie/));
 }
 main().catch(function failure(error) { /* Surface fixture failures without printing test credentials or request headers. */ process.stderr.write(String(error.stack)); process.exitCode = 1; });

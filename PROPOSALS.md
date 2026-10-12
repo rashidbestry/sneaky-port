@@ -6,7 +6,7 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard/live views, comparisons and full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
+Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run and saved diagnostic/distribution views exist; live counters, comparisons and full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
@@ -14,7 +14,7 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
-| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: persistent pairing, key-only SSH, finite CLI, protected configuration/run/report API and dashboard setup/run controls; four builds; diagnostic/live views and native ARM64/Linux minima pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
+| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: persistent pairing, key-only SSH, finite CLI, protected configuration/run/report API and dashboard setup/run controls; four builds; saved diagnostics/distributions implemented; live counters and native ARM64/Linux minima pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
 | F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, queues and shared UDP/TCP phase/accounting pass Windows/WSL fixtures; finite CLI lifecycle implemented; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
@@ -35,7 +35,7 @@ Detailed options/provenance belong in `CHOICES.md`; [WORK_LOG.md](ARCHIVE.md#202
 
 ## Suggestions and accepted additions
 
-S01-S06 remain proposed, with stable IDs. S07-S11 were accepted together on 2026-10-11; S08 has a partial local preflight, other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
+S01-S06 remain proposed, with stable IDs. S07-S11 were accepted together on 2026-10-11; S08/S09 have local preflight and saved diagnostic/distribution views; verified clock quality, live counters and other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
 
 ### Reference review dispositions
 
@@ -44,8 +44,8 @@ Reviewed/answered: 2026-10-11, action 3b. User confirmed IRTT/iperf2/Crusader as
 | ID | Recommendation for the first-slice discussion | Decision / implementation state |
 | --- | --- | --- |
 | S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Accepted future scope by user, 2026-10-11; first-slice checks specified, not implemented or executed |
-| S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: CLI preflight, UDP/TCP local-cause and partial-stream events and phase/accounting inputs exist; dashboard diagnostic interpretation and clock-quality evidence pending |
-| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: phase summaries/exact distribution inputs exist; SVG/dashboard views and coalesced live rendering remain pending |
+| S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: explicit CLI/dashboard local preflight, endpoint fault/local-miss counts and partial-stream/accounting evidence exist; clock source/resolution verification remains pending |
+| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: bounded SVG time/ECDF, exact phase/quantile/count and missing/local views exist; coalesced live counters and rendered-browser QA remain pending |
 | S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Accepted future scope by user, 2026-10-11; checks specified, no fixtures executed |
 | S11 | Explicit continuous monitoring retained for a later slice; retention/windows/reconnect/eligibility remain future choices. | Accepted future scope by user, 2026-10-11; outside first slice, not implemented |
 | S01-S06 | Keep existing proposals open; this review does not accept screening, new burst metrics, a separate coordination path, sweeps, proxy exports or a confidence model. | Proposed; no state change |
@@ -71,6 +71,8 @@ Report consecutive failures, delivery-interruption duration, event frequency, an
 Purpose: expose clustered interruptions that averages and total loss percentages can hide. Loss distribution matters to real-time delivery; [RFC 3357](https://www.rfc-editor.org/rfc/rfc3357.html) describes loss-pattern metrics.
 
 Before adoption: define burst boundaries and denominators. Distinguish reconciled loss, late delivery, missed transaction deadlines, and local unsent probes. Stream deadline failures must not be relabeled as proven network packet loss.
+
+Task 20 milestone suggestion (still proposed): S02 sequence-based interruption metrics could quantify clusters now visible in missing/local plot markers. The replay ledger and diagnostic entry point provide inputs; first define burst boundaries, populations and treatment of late/local-unsent/partial evidence, then validate synthetic sequences. S02 is not accepted or implemented.
 
 ## S03: Separate coordination and measured traffic
 

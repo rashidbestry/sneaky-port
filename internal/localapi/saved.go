@@ -18,9 +18,9 @@ import (
 	"sneaky-port/internal/profile"
 )
 
-// queryRoute permits queries only on bounded catalogs and explicit report-format exports.
+// queryRoute permits queries only on bounded catalogs and explicit report export/diagnostic selectors.
 func queryRoute(path string) bool {
-	return path == "/api/v1/adapters" || path == "/api/v1/profiles" || path == "/api/v1/pairings" || path == "/api/v1/reports" || strings.HasPrefix(path, "/api/v1/reports/") && strings.HasSuffix(path, "/export")
+	return path == "/api/v1/adapters" || path == "/api/v1/profiles" || path == "/api/v1/pairings" || path == "/api/v1/reports" || strings.HasPrefix(path, "/api/v1/reports/") && (strings.HasSuffix(path, "/export") || strings.HasSuffix(path, "/diagnostics"))
 }
 
 // selectedProfile takes a validated private snapshot; a saved ID takes precedence over the transient launch plan.
@@ -49,10 +49,10 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return false
 	}
 	ns := parts[0]
-	if ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" && ns != "setup" {
+	if ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" && ns != "setup" && ns != "preflight" {
 		return false
 	}
-	if s.store == nil && ns != "setup" {
+	if s.store == nil && ns != "setup" && ns != "preflight" {
 		return false
 	}
 	s.mu.Lock()
@@ -69,6 +69,14 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return true
 	}
 	defer s.savedMu.Unlock()
+	if ns == "preflight" {
+		if len(parts) == 1 && r.Method == "POST" {
+			s.preflight(w, r, id)
+		} else {
+			reject(w, 404, id, "not_found", "route", "route or method unavailable")
+		}
+		return true
+	}
 	if ns == "setup" {
 		if len(parts) == 1 && r.Method == "GET" {
 			s.setup(w, id)
@@ -113,6 +121,8 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		s.diskReply(w, id, p, err)
 	case ns == "reports" && len(parts) == 3 && parts[2] == "export" && r.Method == "GET":
 		s.reportExport(w, r, id, parts[1])
+	case ns == "reports" && len(parts) == 3 && parts[2] == "diagnostics" && r.Method == "GET":
+		s.diagnostics(w, r, id, parts[1])
 	default:
 		reject(w, 404, id, "not_found", "route", "route or method unavailable")
 	}

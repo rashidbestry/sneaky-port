@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-11. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Production clock bounds, diagnostic/live views, comparisons and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-12. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Production clock bounds, live counters, comparisons and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Start reading here
 
@@ -60,7 +60,7 @@ flowchart TD
     D --> P[Process shutdown: stop admissions and HTTP; cancel and bounded join]
 ```
 
-Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; diagnostic/live views and comparison remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
+Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; saved diagnostic views are implemented below; live counters and comparison remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
 
 ## Saved configuration and report API
 
@@ -83,7 +83,7 @@ flowchart TD
     A --> O[Shutdown closes admission and joins storage plus finite runs]
 ```
 
-Sources: [routes](internal/localapi/saved.go) (`saved`, `catalog`, `savedBody`, `profileWrite`, `pairingImport`, `keyCreate`, `reportImport`, `reportExport`, `diskReply`), [store](internal/control/saved.go) (`ownedDir`, `SavedIDs`, `Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [trust/key store](internal/control/store.go) (`ImportPairing`, `Pairing`, `InitClient`), [replay](internal/control/replay.go) (`ReplayReport`), [exports](internal/control/export.go) (`ExportReport`), [store fixtures](internal/control/saved_test.go), [HTTP fixtures](internal/localapi/saved_test.go), [real HTTP/SSH report fixtures](cmd/sneaky-port/finite_test.go). Saved bodies cap at 1 MiB including base64 overhead; catalog inspection at 256 entries; replay reads at 8 MiB; export at 16 MiB. Busy saved requests reject with 503. Offline integrity cannot authenticate imported evidence or verify clock bounds; cached reconciliation is excluded. No import resumes traffic or remotely enrolls a client. Remaining diagnostic/live UI and comparison paths are tasks 20-21; task 19 setup/run controls are implemented below.
+Sources: [routes](internal/localapi/saved.go) (`saved`, `catalog`, `savedBody`, `profileWrite`, `pairingImport`, `keyCreate`, `reportImport`, `reportExport`, `diskReply`), [store](internal/control/saved.go) (`ownedDir`, `SavedIDs`, `Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [trust/key store](internal/control/store.go) (`ImportPairing`, `Pairing`, `InitClient`), [replay](internal/control/replay.go) (`ReplayReport`), [exports](internal/control/export.go) (`ExportReport`), [store fixtures](internal/control/saved_test.go), [HTTP fixtures](internal/localapi/saved_test.go), [real HTTP/SSH report fixtures](cmd/sneaky-port/finite_test.go). Saved bodies cap at 1 MiB including base64 overhead; catalog inspection at 256 entries; replay reads at 8 MiB; export at 16 MiB. Busy saved requests reject with 503. Offline integrity cannot authenticate imported evidence or verify clock bounds; cached reconciliation is excluded. No import resumes traffic or remotely enrolls a client. Setup/run controls and saved diagnostic views are implemented below; live counters remain unavailable and matched comparison remains task 21.
 
 ## Persistent trust and endpoint readiness
 
@@ -339,8 +339,9 @@ Sources: [identity.go](internal/control/identity.go), [key Windows](internal/con
 
 ```mermaid
 flowchart TD
-    A[Authenticated frozen readiness/settings] --> B[newEvidence: exclusive restricted run directory]
-    B --> C[Reserve file publication space; sync incomplete manifest and raw file]
+    A[Authenticated frozen readiness/settings] --> B[newEvidence: reserve summary, manifest and clock file space]
+    B -->|insufficient file budget| X[Reject setup before measurement; no report files]
+    B --> C[Create exclusive restricted run directory; sync incomplete manifest and raw file]
     C --> D[NewFiniteWithEvidence: start independent socket workers]
     D --> E[Collector.keep: exact record to bounded storage admission]
     E --> F[One FIFO disk worker; active-inclusive message/byte accounting]
@@ -382,7 +383,7 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved API and [dashboard setup/run controls](#dashboard-setup-and-run-controls) are implemented; diagnostic/SVG/live views, matched comparisons and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved API and [dashboard setup/run controls](#dashboard-setup-and-run-controls) are implemented; saved diagnostic/SVG views are implemented below; live counters, matched comparisons and full acceptance remain pending.
 
 ## Dashboard setup and run controls
 
@@ -409,7 +410,7 @@ flowchart TD
     C --> S[Disconnect forgets token and stops polls; run continues]
 ```
 
-Sources: [dashboard.go](internal/localapi/dashboard.go) (`dashboard`, `setup`), [router](internal/localapi/server.go) (`handle`, `mutate`, `status`, `execute`), [saved operations](internal/localapi/saved.go) (`saved`, `profileWrite`, `pairingImport`, `keyCreate`), [HTML](internal/localapi/web/index.html), [CSS](internal/localapi/web/dashboard.css), [script](internal/localapi/web/dashboard.js) (`api`, `renderEditor`, `adapterOptions`, `renderPhases`, `selectProfile`, `catalog`, `transmitPending`, `schedulePoll`, `disconnect`), [HTTP/security fixtures](internal/localapi/dashboard_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs). Static assets contain no token/settings; private reads/mutations retain bearer/identity guards. Exact decimals and malformed inputs stay explicit. The 64-phase editor limit is separate from existing CLI bounds. Pending start/cancel commands survive disconnect in page memory with only a process fingerprint, never a retained token; reload loses retry state. This path has synthetic HTTP/script and CLI evidence, not rendered-browser, live phase/counter, native ARM64 or full-network acceptance. SVG/diagnostic views and comparisons remain tasks 20–21.
+Sources: [dashboard.go](internal/localapi/dashboard.go) (`dashboard`, `setup`), [router](internal/localapi/server.go) (`handle`, `mutate`, `status`, `execute`), [saved operations](internal/localapi/saved.go) (`saved`, `profileWrite`, `pairingImport`, `keyCreate`), [HTML](internal/localapi/web/index.html), [CSS](internal/localapi/web/dashboard.css), [script](internal/localapi/web/dashboard.js) (`api`, `renderEditor`, `adapterOptions`, `renderPhases`, `selectProfile`, `catalog`, `transmitPending`, `schedulePoll`, `disconnect`), [HTTP/security fixtures](internal/localapi/dashboard_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs). Static assets contain no token/settings; private reads/mutations retain bearer/identity guards. Exact decimals and malformed inputs stay explicit. The 64-phase editor limit is separate from existing CLI bounds. Pending start/cancel commands survive disconnect in page memory with only a process fingerprint, never a retained token; reload loses retry state. This path has synthetic HTTP/script and CLI evidence, not rendered-browser, live phase/counter, native ARM64 or full-network acceptance. Saved SVG/diagnostic views are implemented below; live counters and matched comparisons remain pending.
 
 ## Authenticated server evidence transfer and reconciliation
 
@@ -496,3 +497,27 @@ flowchart TD
 ```
 
 Sources: [one_way.go](internal/control/one_way.go) (`productionOneWay`, `deriveOneWay`, `oneWayQueries`, `retainOneWay`), [calibration.go](internal/calibration/calibration.go) (`Build`, `Delay`), [reconciliation](internal/control/reconcile.go) (`reconcileReports`), [replay](internal/control/replay.go), [exports](internal/control/export.go), [synthetic fixtures](internal/control/one_way_test.go), [real SSH/UDP/TCP fixtures](internal/control/clock_test.go). Revisions are reconstructed from raw captures, with hashes/sample IDs, signed bounds, age and clock-local units; future samples never upgrade earlier results. Missing receiver captures stay null. Exact populations include omitted details under min(event budget, 256 KiB). Endpoint-only RTT/delivery and raw files remain unchanged. Production verification cannot be enabled by profile/source text; independent clock-bound, native clock-change/impairment/live acceptance remains pending.
+
+## Diagnostic and distribution views
+
+```mermaid
+flowchart TD
+    A[Explicit report catalog and endpoint/scope load] --> B[Protected serialized report replay; bounded file reads]
+    B --> C[Validated raw ledger and strict endpoint cutoff]
+    C --> D[Shared exact counts and full-sample quantiles]
+    C --> E[At most 128 consecutive-slot time groups; no crossing phases]
+    C --> F[Sort all completed samples; at most 128 ECDF rank groups]
+    E --> G[Exact extrema and completed/missing/local populations]
+    F --> G
+    D --> H[Paginated exact tables and frozen report provenance]
+    G --> I[Native SVG range envelopes; approximate coordinates and exact tooltips]
+    C --> J[Host-local phase boundaries and endpoint fault counts]
+    J --> H
+    K[Explicit duration/interval local preflight] --> L[Protected serialized request; finite duration/sample caps]
+    L --> M[Monotonic waits; no network data or OS tuning]
+    M --> N[Exact wake lag/missed slots and tails; clock quality unverified]
+    N --> H
+    L --> O[Request cancellation or API close interrupts waits]
+```
+
+Sources: [diagnostics.go](internal/localapi/diagnostics.go) (`diagnostics`, `buildDiagnostic`, `addRange`, `ecdf`, `preflight`), [protected routes](internal/localapi/saved.go) (`saved`, `queryRoute`), [replay](internal/control/replay.go), [shared summaries](internal/measure/ledger.go) (`SummarizeSnapshot`, `Percentile`), [timer](internal/measure/preflight.go), [SVG/tables](internal/localapi/web/diagnostics.js) (`readDiagnostic`, `renderDiagnostic`, `plot`, `ratio`, `tablePage`, `renderPreflight`, `diagnosticControls`, `clearDiagnostics`), [fixtures](internal/localapi/diagnostics_test.go), [actual-script fixture](internal/localapi/web/dashboard_test.cjs), [real endpoint HTTP/SSH/UDP fixture](cmd/sneaky-port/finite_test.go). [Operator workflow/bounds](README.md#diagnostic-and-distribution-views) is canonical. Time groups retain absent/local outcomes; ECDF rank envelopes include late eligible completions and never supply final quantiles. Both endpoints keep separate clock origins. Partial/offline evidence cannot establish remote authentication, packet loss, calibrated one-way timing or ISP causation. Plotting/preflight never schedule probes. Live phase/counters, matched comparison, rendered-browser/visual QA and full acceptance remain pending.

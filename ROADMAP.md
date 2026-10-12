@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-11. Planning steps 1-4 and implementation milestones 5-19 are complete within their stated scopes. **Next: task 20 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-12. Planning steps 1-4 and implementation milestones 5-20 are complete within their stated scopes. **Next: task 21 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -110,17 +110,22 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 ## 19. Build dashboard setup and run controls (completed)
 
-**Complete for embedded controls and recorded HTTP/script/CLI fixtures.** F01/F08/F10, T04/T06/T14/T25. Exact public shell assets preserve API guards; protected setup, public pairing/key controls, registry-driven options, editable ordered phases, strict validation, explicit revision saves and frozen start/cancel/status work through the existing API. Exact decimals, unsaved/conflict states, same-process lost-acknowledgment retries and coalesced status reads pass. Windows tests/vet/build, affected race checks, comment audit and four target builds pass. Rendered-browser QA is unverified because no browser surface is available; richer T25 controls, diagnostic/live views and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-11-dashboard-setup-and-run-controls), [code flow](FLOWCHART.md#dashboard-setup-and-run-controls), [operator workflow](README.md#dashboard-setup-and-run-controls).
+**Complete for embedded controls and recorded HTTP/script/CLI fixtures.** F01/F08/F10, T04/T06/T14/T25. Exact public shell assets preserve API guards; protected setup, public pairing/key controls, registry-driven options, editable ordered phases, strict validation, explicit revision saves and frozen start/cancel/status work through the existing API. Exact decimals, unsaved/conflict states, same-process lost-acknowledgment retries and coalesced status reads pass. Windows tests/vet/build, affected race checks, comment audit and four target builds pass. Rendered-browser QA is unverified because no browser surface is available; richer T25 controls, live counters and full acceptance remain pending; task 20 below supplies saved diagnostic views. [Evidence](WORK_LOG.md#2026-10-11-dashboard-setup-and-run-controls), [code flow](FLOWCHART.md#dashboard-setup-and-run-controls), [operator workflow](README.md#dashboard-setup-and-run-controls).
 
-**Next: task 20 only, add diagnostic and distribution views.** Comparisons and full slice acceptance remain incomplete.
+**Task 20 below supplies saved diagnostic/distribution views.** Live counters and full slice acceptance remain incomplete.
+
+## 20. Add diagnostic and distribution views (completed)
+
+**Complete for saved diagnostic/distribution and local-preflight component implementation and recorded fixtures, 2026-10-12.** F01/F07, T13/T14, basic S08/S09. Protected bounded replay supplies endpoint/main/warmup/phase counts, exact full-population tails, phase boundaries and local fault evidence. Native SVG time/ECDF range groups preserve extrema/counts/missing/local markers; tables paginate and explicit local timer preflight reports lag/missed slots with unverified clock quality. Windows tests/vet/build, affected race checks, actual-script and real HTTP/SSH/UDP fixtures, Ubuntu/CentOS WSL API/CLI checks and four target builds pass. Rendered-browser QA, live phase/counters, verified clock quality and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views), [source flow](FLOWCHART.md#diagnostic-and-distribution-views), [operator workflow](README.md#diagnostic-and-distribution-views).
+
+**Next: task 21 only, compare matched saved runs.** No comparison or automatic winner is implemented.
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**; task 20 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
+Every row is a separate task, currently **not started**; task 21 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 20 | Add diagnostic and distribution views | Bounded SVG time/ECDF and phase/preflight views preserve exact final quantiles, counts and missing samples |
 | 21 | Compare matched saved runs | Selected repeated trials show compatible deltas/ties/inconclusive states without inventing winners |
 | 22 | Complete the adapter extension gate | One test adapter uses common configuration, lifecycle, accounting, UI and reports without protocol switches in shared code |
 
