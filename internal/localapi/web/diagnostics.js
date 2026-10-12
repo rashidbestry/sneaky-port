@@ -9,7 +9,7 @@ function exactValue(value) { return value === null || value === undefined ? "una
 // tablePage renders at most twenty rows; page controls never reload raw evidence.
 function tablePage(target, headers, rows, page) {
   const table = document.createElement("table"), head = document.createElement("tr");
-  for (const label of headers) head.append(textNode("th", label)); table.append(head);
+  for (const label of headers) { const cell=textNode("th",label); cell.setAttribute("scope","col"); head.append(cell); } table.append(head);
   for (const row of rows.slice(page * 20, (page + 1) * 20)) { const tr = document.createElement("tr"); for (const value of row) tr.append(textNode("td", exactValue(value))); table.append(tr); }
   element(target).replaceChildren(table);
 }
@@ -62,8 +62,10 @@ function renderDiagnostic() {
   // Deadline misses and their populations precede tails; no ranking or combined score.
   const first = ["DeadlineMisses", "Planned", "LocalMisses", "AcceptedMisses", "Pending", "Skipped", "OnTime", "Late", "Unresolved", "RTTSamples", "RTTP95", "RTTP99"];
   const keys = [...first, ...Object.keys(view.summary).filter(function remaining(key) { /* Retain remaining scalar fields once. */ return !first.includes(key); }).sort()];
-  const rows = keys.map(function summaryRow(key) { /* State timing units; never convert null to zero. */ return [key + (/Median|P95|P99|Min|Max/.test(key) ? " (ns)" : ""), view.summary[key]]; });
-  tablePage("diagnostic-table", ["Metric", "Exact value"], rows, diagnosticsState.page);
+  const rows = keys.map(function summaryRow(key) { /* State timing units; never conceal a small sample or convert null to zero. */ return [key + (/Median|P95|P99|Min|Max/.test(key) ? " (ns)" : ""), view.summary[key], evidenceText(view.evidence_labels && view.evidence_labels[key])]; });
+  tablePage("diagnostic-table", ["Metric", "Exact value", "Evidence / reasons"], rows, diagnosticsState.page);
+  element("evidence-policy").textContent = "Loaded diagnostic policy: " + JSON.stringify(view.evidence_policy);
+  element("context-evidence").textContent = JSON.stringify(view.context_evidence_labels, null, 2);
   element("metric-page").textContent = "Page " + (diagnosticsState.page + 1) + " / " + Math.ceil(rows.length / 20);
   element("metrics-prev").disabled = diagnosticsState.page === 0; element("metrics-next").disabled = (diagnosticsState.page + 1) * 20 >= rows.length;
   const metric = element("plot-metric").value || "rtt"; plot("time-plot", view, metric, false); plot("ecdf-plot", view, metric, true);
@@ -75,7 +77,7 @@ function renderDiagnostic() {
 async function readDiagnostic() {
   const report = safeID(element("reports").value), scope = element("report-scope").value;
   if (!/^(main|warmup|0|[1-9][0-9]*)$/.test(scope)) throw new Error("Choose main, warmup, or a zero-based originating phase index.");
-  const view = await api("/api/v1/reports/" + report + "/diagnostics?endpoint=" + element("report-endpoint").value + "&scope=" + scope);
+  const view = await api("/api/v1/reports/" + report + "/diagnostics?endpoint=" + element("report-endpoint").value + "&scope=" + scope + evidenceQuery());
   diagnosticsState.view = view; diagnosticsState.page = 0; diagnosticsState.phasePage = 0; renderDiagnostic(); notice("Validated saved evidence loaded. Counts and quantiles retain exact values.");
 }
 // renderPreflight paginates wake evidence with unverified clock quality and exact lag tails.
@@ -86,7 +88,35 @@ function renderPreflight() {
   element("wakes-prev").disabled = diagnosticsState.wakePage === 0; element("wakes-next").disabled = (diagnosticsState.wakePage + 1) * 20 >= result.wakes.length;
 }
 // clearDiagnostics clears provenance on session changes so earlier evidence cannot appear current.
-function clearDiagnostics() { diagnosticsState.view = null; diagnosticsState.preflight = null; for (const id of ["diagnostic-status", "plot-policy", "diagnostic-table", "time-plot", "ecdf-plot", "phase-table", "preflight-status", "preflight-table", "metric-page", "phase-page"]) element(id).replaceChildren(); }
+function clearDiagnostics() { diagnosticsState.view = null; diagnosticsState.preflight = null; for (const id of ["diagnostic-status", "plot-policy", "diagnostic-table", "time-plot", "ecdf-plot", "phase-table", "preflight-status", "preflight-table", "metric-page", "phase-page", "evidence-policy", "context-evidence", "live-status", "live-counters"]) element(id).replaceChildren(); element("live-progress").value=0; }
+
+// evidencePolicy validates explicit page-local advisory targets without editing a workload or its hash.
+function evidencePolicy() {
+  const values = ["median", "p95", "p99", "repeat"].map(function target(name) { /* Bound canonical target strings before any HTTP allocation. */ const value = element("target-" + name).value; if (!/^[1-9][0-9]*$/.test(value) || value.length > 7) throw new Error("Evidence targets require positive canonical integers."); return BigInt(value); });
+  if (values[0] > values[1] || values[1] > values[2] || values[2] > 1000000n || values[3] > 8n) throw new Error("Require median ≤ p95 ≤ p99 ≤ 1000000 and pair target 1..8.");
+  return { policy_version: 1, median_target: String(values[0]), p95_target: String(values[1]), p99_target: String(values[2]), repeat_target: String(values[3]) };
+}
+// evidenceQuery encodes validated presentation preferences separately from existing report selectors.
+function evidenceQuery() { const policy=evidencePolicy(); return ["median_target", "p95_target", "p99_target", "repeat_target"].map(function queryTarget(name) { /* Values contain canonical digits only. */ return "&" + name + "=" + policy[name]; }).join(""); }
+// evidenceText keeps per-metric coverage, basis, actual counts and fixed reason codes beside its value.
+function evidenceText(label) { if (!label) return "See endpoint context"; return label.coverage + " · " + label.basis + " · observations " + label.completed + "/" + label.eligible + " · missing " + label.missing + " · local misses " + label.local_misses + " · gaps " + label.gaps + (label.advisory_target !== "0" ? " · advisory target " + label.advisory_target : "") + (label.reasons.length ? " · " + label.reasons.map(function readableReason(reason) { /* Keep machine codes in exported evidence while displaying ordinary words. */ return reason.replaceAll("_", " "); }).join(", ") : ""); }
+
+// downloadReport exports the full validated report, including every scope and available transferred endpoint.
+async function downloadReport() {
+  const report=safeID(element("reports").value), format=element("report-format").value;
+  if (!["json", "jsonl", "csv"].includes(format)) throw new Error("Select JSON, JSONL or CSV.");
+  const id=requestID(), epoch=state.epoch;
+  const response=await fetch("/api/v1/reports/"+report+"/export?format="+format+evidenceQuery(), { headers:{Authorization:"Bearer "+state.token,"X-Request-ID":id}, credentials:"omit", cache:"no-store", redirect:"error", signal:AbortSignal.timeout(10000) });
+  if (!response.ok) { const error=await response.json(); throw new Error(error.error ? error.error.reason : "Report export failed."); }
+  if (response.headers.get("X-Request-ID")!==id || epoch!==state.epoch) throw new Error("Session or export identity changed.");
+  const bytes=await response.arrayBuffer(); if (bytes.byteLength>16777216) throw new Error("Export exceeds the bounded report size.");
+  if (epoch!==state.epoch) throw new Error("Session changed during export.");
+  const blob=new Blob([bytes],{type:response.headers.get("Content-Type")}), url=URL.createObjectURL(blob), link=document.createElement("a");
+  try { link.href=url; link.download=report+"."+format; link.click(); } finally { URL.revokeObjectURL(url); }
+  notice("Full validated report downloaded with the selected evidence policy. All scopes and available endpoints are retained.");
+}
+for (const [name, value] of [["median","20"],["p95","200"],["p99","1000"],["repeat","3"]]) element("target-"+name).value=value;
+bind("export-report",downloadReport);
 
 // diagnosticControls preserves page bounds after common controls update without rerendering charts on edits.
 function diagnosticControls() {

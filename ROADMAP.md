@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-12. Planning steps 1-4 and milestones 5-23 are complete within their stated scopes. **Next: task 24 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-12. Planning steps 1-4 and milestones 5-23 are complete within their stated scopes. **Next: task 24 only.** Task 24 is selected and awaiting native Windows 11 ARM64 hardware; its [checklist](#task-24-native-windows-11-arm64-client) remains unexecuted. The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -102,7 +102,7 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 ## 17. Protect the local run-control API (completed)
 
-**Complete for the protected local adapter/start/cancel/status subset and recorded fixtures.** F01/F08/F09, T06/T14/T22. `client-api` serves literal IPv4/IPv6 loopback only, with process-random bearer entropy, exact Host/Origin/peer guards on every route, strict bounded JSON and atomic identity-scoped idempotency. An explicit launch-time frozen profile/hash connects independent HTTP controls to the existing finite SSH/UDP/TCP runner; one active run, bounded histories, honest unknown/terminal status and shutdown joins preserve engine ownership. Windows ordinary/race fixtures, Ubuntu/CentOS WSL API and real HTTP/SSH/UDP CLI fixtures and four builds pass. Task 18 supplies saved operations; live phase/counter views and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-11-protected-local-run-api), [code flow](FLOWCHART.md#protected-local-run-api), [operator contract](README.md#protected-local-run-api).
+**Complete for the protected local adapter/start/cancel/status subset and recorded fixtures.** F01/F08/F09, T06/T14/T22. `client-api` serves literal IPv4/IPv6 loopback only, with process-random bearer entropy, exact Host/Origin/peer guards on every route, strict bounded JSON and atomic identity-scoped idempotency. An explicit launch-time frozen profile/hash connects independent HTTP controls to the existing finite SSH/UDP/TCP runner; one active run, bounded histories, honest unknown/terminal status and shutdown joins preserve engine ownership. Windows ordinary/race fixtures, Ubuntu/CentOS WSL API and real HTTP/SSH/UDP CLI fixtures and four builds pass. Task 18 supplies saved operations; checkpoint 23b supplies live phase/counters and full acceptance remains pending. [Evidence](WORK_LOG.md#2026-10-11-protected-local-run-api), [code flow](FLOWCHART.md#protected-local-run-api), [operator contract](README.md#protected-local-run-api).
 
 ## 18. Connect saved profile/pairing/report API operations (completed)
 
@@ -110,15 +110,15 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 ## 19. Build dashboard setup and run controls (completed)
 
-**Complete for embedded controls and recorded HTTP/script/CLI fixtures.** F01/F08/F10, T04/T06/T14/T25. Exact public shell assets preserve API guards; protected setup, public pairing/key controls, registry-driven options, editable ordered phases, strict validation, explicit revision saves and frozen start/cancel/status work through the existing API. Exact decimals, unsaved/conflict states, same-process lost-acknowledgment retries and coalesced status reads pass. Windows tests/vet/build, affected race checks, comment audit and four target builds pass. Rendered-browser QA is unverified because no browser surface is available; richer T25 controls, live counters and full acceptance remain pending; task 20 below supplies saved diagnostic views. [Evidence](WORK_LOG.md#2026-10-11-dashboard-setup-and-run-controls), [code flow](FLOWCHART.md#dashboard-setup-and-run-controls), [operator workflow](README.md#dashboard-setup-and-run-controls).
+**Complete for embedded controls and recorded HTTP/script/CLI fixtures.** F01/F08/F10, T04/T06/T14/T25. Exact public shell assets preserve API guards; protected setup, public pairing/key controls, registry-driven options, editable ordered phases, strict validation, explicit revision saves and frozen start/cancel/status work through the existing API. Exact decimals, unsaved/conflict states, same-process lost-acknowledgment retries and coalesced status reads pass. Windows tests/vet/build, affected race checks, comment audit and four target builds pass. Rendered-browser QA is unverified because no browser surface is available; richer T25 controls are deferred; live counters are implemented in checkpoint 23b and full acceptance remains pending; task 20 below supplies saved diagnostic views. [Evidence](WORK_LOG.md#2026-10-11-dashboard-setup-and-run-controls), [code flow](FLOWCHART.md#dashboard-setup-and-run-controls), [operator workflow](README.md#dashboard-setup-and-run-controls).
 
-**Task 20 below supplies saved diagnostic/distribution views.** Live counters and full slice acceptance remain incomplete.
+**Task 20 below supplies saved diagnostic/distribution views.** Live counters are implemented in checkpoint 23b; full slice acceptance remains incomplete.
 
 ## 20. Add diagnostic and distribution views (completed)
 
-**Complete for saved diagnostic/distribution and local-preflight component implementation and recorded fixtures, 2026-10-12.** F01/F07, T13/T14, basic S08/S09. Protected bounded replay supplies endpoint/main/warmup/phase counts, exact full-population tails, phase boundaries and local fault evidence. Native SVG time/ECDF range groups preserve extrema/counts/missing/local markers; tables paginate and explicit local timer preflight reports lag/missed slots with unverified clock quality. Windows tests/vet/build, affected race checks, actual-script and real HTTP/SSH/UDP fixtures, Ubuntu/CentOS WSL API/CLI checks and four target builds pass. Rendered-browser QA, live phase/counters, verified clock quality and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views), [source flow](FLOWCHART.md#diagnostic-and-distribution-views), [operator workflow](README.md#diagnostic-and-distribution-views).
+**Complete for saved diagnostic/distribution and local-preflight component implementation and recorded fixtures, 2026-10-12.** F01/F07, T13/T14, basic S08/S09. Protected bounded replay supplies endpoint/main/warmup/phase counts, exact full-population tails, phase boundaries and local fault evidence. Native SVG time/ECDF range groups preserve extrema/counts/missing/local markers; tables paginate and explicit local timer preflight reports lag/missed slots with unverified clock quality. Windows tests/vet/build, affected race checks, actual-script and real HTTP/SSH/UDP fixtures, Ubuntu/CentOS WSL API/CLI checks and four target builds pass. Live client-local phase/counters are implemented in checkpoint 23b; rendered-browser QA, verified clock quality and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views), [source flow](FLOWCHART.md#diagnostic-and-distribution-views), [operator workflow](README.md#diagnostic-and-distribution-views).
 
-Task 21 below supplies matched saved-run comparisons. Live counters and full slice acceptance remain incomplete.
+Task 21 below supplies matched saved-run comparisons. Live counters are implemented in checkpoint 23b; full slice acceptance remains incomplete.
 
 ## 21. Compare matched saved runs (completed)
 
@@ -140,27 +140,59 @@ Task 21 below supplies matched saved-run comparisons. Live counters and full sli
 - [x] Fresh CLI replay and JSON/JSONL/CSV export on both endpoints, saved-summary/identity/platform checks.
 - [x] Client reservations, server data ports and owned SSH server released; sandbox access resolved through narrow review without changing user services/settings.
 
-This case does not establish bare-metal Linux, native ARM64, Linux minima, outer markings, production clock bounds, impairment or live ISP acceptance. **Next: task 24 only, validate a native Windows 11 ARM64 client.**
+This case does not establish bare-metal Linux, native ARM64, Linux minima, outer markings, production clock bounds, impairment or live ISP acceptance. **Current user selection: dashboard checkpoints below; native ARM work deferred for now.**
+
+## Dashboard completion checkpoints
+
+**Selected together by the user, 2026-10-12.** Implement the remaining dashboard checkpoints sequentially. Native ARM versions/validation are deferred for now, without claiming support or completing tasks 24-25.
+
+### 23a. Add shared per-metric evidence presentation (completed)
+
+**Complete for shared derived presentation and recorded component/script fixtures, 2026-10-12.** Accepted S06: derived versioned policy, bounded independent coverage/basis/count/reason labels, explicit presentation preferences, API/dashboard/replay/export consistency and unchanged measured values/validity gates.
+
+### 23b. Add live client-local phase and counters (completed)
+
+**Complete for common engine/API/dashboard progress and recorded component/script fixtures, 2026-10-12.** F01/S09: run-owned coalesced snapshots, independent accounting/publication, warmup/main separation, strict deadline/cutoff handling, bounded cadence, cancellation/status recovery and provisional UI.
+
+[Checkpoint evidence](WORK_LOG.md#2026-10-12-dashboard-evidence-and-live-progress), [source flow](FLOWCHART.md#evidence-presentation-and-live-progress), [presentation preferences](README.md#evidence-presentation), [live workflow](README.md#live-run-progress).
+
+### 23c. Verify the rendered dashboard
+
+**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b. Script/HTTP fixtures do not complete this gate.
 
 ## Queued validation tasks
 
-All are **pending evidence**. Use [acceptance gates](DESIGN.md#validation-before-supportperformance-claims) and the [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix) for exact cases and provenance. Record one named environment/scenario at a time; split multi-case work into explicit checklist items before execution. Build, loopback, native, impairment and live evidence stay distinct. These tasks do not authorize changing user-owned settings or selecting new reference dependencies.
+All are **pending evidence**. Use [acceptance gates](DESIGN.md#validation-before-supportperformance-claims), the [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix) and [resolved release baselines/policies](CHOICES.md#current-udptcp-release-decisions). Record one named environment/scenario at a time; split multi-case work into explicit checklist items before execution. Build, loopback, native, impairment and live evidence stay distinct. These tasks do not authorize changing user-owned settings or substituting new reference dependencies. The user deferred native ARM work and selected the dashboard checkpoints above.
+
+**Dashboard checkpoint 23a:** implements the accepted [per-metric evidence label policy](PROPOSALS.md#s06-separate-connection-quality-from-measurement-confidence) through shared derived reports/API/dashboard/exports, retaining measured values and mandatory gates. Verify sample/repetition boundaries, partial/missing/clock/marking independence, replay consistency, bounded reasons and secret-free output. The user selected this implementation with live progress on 2026-10-12; checks/evidence are recorded under dashboard completion below. Browser QA and remaining acceptance still gate task 35.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 24 | Native Windows 11 ARM64 client case | Client workflow passes on native ARM64 against a documented Linux server; compilation alone does not complete it |
-| 25 | Native Linux ARM64 server case | Server workflow passes on native ARM64 with recorded OS/kernel, permissions and cleanup |
-| 26 | Establish a Linux support-baseline case | Record and validate a named distribution/version minimum; additional claimed distributions/versions get separate cases |
+| 24 | Native Windows 11 ARM64 client case | Deferred by user; awaiting hardware; complete the [native checklist](#task-24-native-windows-11-arm64-client) against a documented Linux server; compilation alone does not complete it |
+| 25 | Native Linux ARM64 server case | Deferred by user; server workflow must pass on native ARM64 with recorded OS/kernel, permissions and cleanup |
+| 26 | Establish a Linux support-baseline case | Start with the selected Ubuntu 22.04.5 LTS server case; record actual OS/kernel/native workflow and qualify the supported minimum only from evidence; additional claims get separate cases |
 | 27 | Native directional marking and port evidence | Named backend/direction cases distinguish requested/applied/captured DSCP, ECN and actual/NAT ports, including unsupported outcomes |
 | 28 | Validate clock bounds and directional delay | Independently justified timing/error bounds and controlled offset/drift/asymmetry cases support or limit one-way classifications |
 | 29 | Controlled delay/spike case | Known directional delay/spikes reconcile with timestamps, completed samples and deadlines |
 | 30 | Controlled loss/delivery case | Random/burst data loss and lost receipts reconcile separately with complete receiver evidence |
 | 31 | Controlled duplicate/reorder case | Duplicate/reordered/foreign/replayed messages preserve unique counts, identities and valid sample populations |
 | 32 | Stream blockage, MTU and interruption cases | Each named case retains partial writes/skips, bounded resources, observation limits, partial reports and cleanup |
-| 33 | Independent reference overlap cases | Separate UDP/TCP/load-reference cases retain compatible workloads/windows, raw evidence and predeclared comparison bands |
+| 33 | Independent reference overlap cases | Selected IRTT/iperf2/Crusader releases, verified artifacts and the calibration/held-out procedure retain compatible populations, raw evidence and frozen measured bands |
 | 34 | Matched live-path case | Repeated matched trials retain environment, offered workload and uncertainty; incompatible/incomplete results remain inconclusive |
-| 35 | Review first-slice acceptance evidence | Every applicable contract gate is linked to evidence; unresolved required cases keep the full slice incomplete |
+| 35 | Review first-slice acceptance evidence | Every required gate and accepted evidence-label checkpoint is linked to checks; unavailable or unimplemented outcomes keep the full slice incomplete |
 
-F10's [protocol traffic controls](DESIGN.md#protocol-specific-traffic-controls) now have task 19's common editor foundation. Split richer tweak implementation into named adapter/layer outcomes before starting it; T25's schema/fragmentation/header decisions remain open. Task 19 does not implement richer tweaks or change the existing version-1 wire format.
+F10's [protocol traffic controls](DESIGN.md#protocol-specific-traffic-controls) retain task 19's common editor and fixed version-1 framing for this release. T25's richer fragmentation/header/padding mechanisms are deferred beyond it; future work must first select a compatible adapter/layer/schema outcome. The accepted wider F10 intent is preserved.
+
+### Task 24: native Windows 11 ARM64 client
+
+**Deferred by user, incomplete; awaiting hardware, 2026-10-12.** F01/F07/F09, T08/T09/T12. The available host is x86-64 and the user confirmed no ARM64 machine is available. [Prerequisite audit](WORK_LOG.md#2026-10-12-native-arm64-client-prerequisite-audit). Resume only after a later selection when native hardware is available; task 25 is also deferred and has not started.
+
+- [ ] Record physical ARM64 hardware/model, Windows 11 version/build, native ARM64 process/toolchain and product binary hash; document the Linux server's OS/kernel/architecture, permissions and path. Build/emulation evidence cannot replace the native client run.
+- [ ] Use fresh isolated stores, endpoint-local keys, public enrollment/import and explicit profiles/ports; preserve existing services/settings. Validate UDP/TCP exact-plan readiness and explicit wrong-identity/bind-collision failures.
+- [ ] Run finite UDP/TCP completion with authenticated server evidence transfer/reconciliation; retain endpoint manifests, raw evidence and actual Windows/ARM64 identity. Preserve deadline misses and unsupported/unknown clock/outer observations.
+- [ ] Exercise setup/data/grace cancellation and repeated reuse; verify bounded partial reports, unknown remote delivery where evidence is missing, released reservations/ports and joined owned processes.
+- [ ] Replay and export JSON/JSONL/CSV through fresh processes on both endpoints; compare exact summaries/identities and record artifact locations, checks and gaps before marking complete.
+
+The [task 23 fixture](cmd/sneaky-port/cross_endpoint_windows_test.go) currently hardcodes `GOARCH=amd64` for both binaries and replay assertions. Adapt its architecture/build/evidence checks or use an equivalent reviewed native procedure when the actual endpoint is available; an unchanged rerun cannot validate ARM64. No fixture code or runtime behavior changed in this prerequisite audit.
 
 Later carriers, DNS and monitoring keep their existing future status in [PROPOSALS.md](PROPOSALS.md). No release date or acceptance result is inferred from this breakdown.

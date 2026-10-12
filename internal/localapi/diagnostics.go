@@ -50,20 +50,23 @@ type phaseView struct {
 // diagnosticView sends bounded rendering inputs, exact scalar summaries and explicit evidence provenance.
 // Variation samples remain in raw reports; this view never replaces replay/export evidence.
 type diagnosticView struct {
-	ReportID  string          `json:"report_id"`
-	Endpoint  string          `json:"endpoint"`
-	Scope     string          `json:"scope"`
-	Status    string          `json:"status"`
-	Reason    string          `json:"reason"`
-	Integrity string          `json:"integrity"`
-	Complete  bool            `json:"complete"`
-	Cutoff    profile.Decimal `json:"cutoff_ns"`
-	Summary   map[string]any  `json:"summary"`
-	Phases    []phaseView     `json:"phases"`
-	Time      []timeGroup     `json:"time"`
-	RTT       []ecdfGroup     `json:"rtt_ecdf"`
-	Scheduled []ecdfGroup     `json:"scheduled_ecdf"`
-	Label     string          `json:"plot_policy"`
+	ReportID       string                           `json:"report_id"`
+	Endpoint       string                           `json:"endpoint"`
+	Scope          string                           `json:"scope"`
+	Status         string                           `json:"status"`
+	Reason         string                           `json:"reason"`
+	Integrity      string                           `json:"integrity"`
+	Complete       bool                             `json:"complete"`
+	Cutoff         profile.Decimal                  `json:"cutoff_ns"`
+	Summary        map[string]any                   `json:"summary"`
+	Phases         []phaseView                      `json:"phases"`
+	Time           []timeGroup                      `json:"time"`
+	RTT            []ecdfGroup                      `json:"rtt_ecdf"`
+	Scheduled      []ecdfGroup                      `json:"scheduled_ecdf"`
+	Label          string                           `json:"plot_policy"`
+	EvidencePolicy measure.EvidencePolicy           `json:"evidence_policy"`
+	Labels         map[string]measure.EvidenceLabel `json:"evidence_labels"`
+	ContextLabels  map[string]measure.EvidenceLabel `json:"context_evidence_labels"`
 }
 
 // addRange updates exact integer extrema without converting samples to browser floating point.
@@ -98,10 +101,10 @@ func ecdf(values []uint64) []ecdfGroup {
 }
 
 // buildDiagnostic uses the replay ledger's strict cutoff and shared summary population, never remote clocks.
-func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, error) {
+func buildDiagnostic(r *control.ReplayedReport, scope string, policies ...measure.EvidencePolicy) (diagnosticView, error) {
 	v := diagnosticView{Endpoint: r.Manifest.Endpoint, Scope: scope, Status: r.Status, Reason: r.Reason, Integrity: r.Integrity,
 		Complete: r.Evidence.Complete, Cutoff: r.Evidence.ObservationCutoff, Time: []timeGroup{}, Phases: []phaseView{},
-		Label: "At most 128 consecutive-slot groups and 128 sorted-rank groups per metric; exact min/max/count and missing/local markers retained. SVG coordinates are approximate; tables and raw exports retain exact ns. Quantiles use all eligible completed samples. Missing = reached nonlocal slots without eligible receipt; local = skipped slots. Quiet/unreached slots are not missing. Endpoint-only; offline consistency is not authentication. Live counters unavailable."}
+		Label: "At most 128 consecutive-slot groups and 128 sorted-rank groups per metric; exact min/max/count and missing/local markers retained. SVG coordinates are approximate; tables and raw exports retain exact ns. Quantiles use all eligible completed samples. Missing = reached nonlocal slots without eligible receipt; local = skipped slots. Quiet/unreached slots are not missing. Endpoint-only; offline consistency is not authentication. Saved endpoint snapshot; run controls show separate provisional live counters."}
 	if len(r.Manifest.Plan.Phases) > 64 {
 		return v, errors.New("dashboard phase capacity exceeded")
 	}
@@ -120,6 +123,18 @@ func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, e
 		phase = &p
 	}
 	summary := measure.SummarizeSnapshot(r.Evidence.Entries, uint64(v.Cutoff), nil, lifecycle, phase)
+	v.EvidencePolicy = measure.DefaultEvidencePolicy()
+	if len(policies) > 0 {
+		v.EvidencePolicy = policies[0]
+	}
+	if err := v.EvidencePolicy.Validate(); err != nil {
+		return v, err
+	}
+	selected := *r
+	selected.Reconciliation = nil
+	selected.Summary.Local = &control.LocalRun{Summary: summary}
+	v.Labels = control.ReportLabels(&selected, v.EvidencePolicy).Main
+	v.ContextLabels = control.ReportContextLabels(r, v.EvidencePolicy)
 	b, _ := json.Marshal(summary)
 	// Decimal quantities are JSON strings; retain them and nulls in a scalar-only table.
 	v.Summary = map[string]any{}
@@ -135,6 +150,7 @@ func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, e
 	v.Summary["EndpointAccountingErrors"] = profile.Decimal(len(r.Accounting))
 	v.Summary["EndpointDiscardedTailBytes"] = r.TailBytes
 	faults := map[string]profile.Decimal{"EndpointReadErrors": 0, "EndpointInvalidFrames": 0, "EndpointMarkingErrors": 0}
+	var observedRecords profile.Decimal
 	for _, raw := range r.Evidence.Records {
 		var record struct {
 			Kind, Error string
@@ -143,6 +159,7 @@ func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, e
 		if json.Unmarshal(raw, &record) != nil || record.At >= v.Cutoff {
 			continue
 		}
+		observedRecords++
 		switch record.Kind {
 		case "read_error":
 			faults["EndpointReadErrors"]++
@@ -156,6 +173,14 @@ func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, e
 	}
 	for key, count := range faults {
 		v.Summary[key] = count
+	}
+	for _, name := range []string{"EndpointAccountingErrors", "EndpointDiscardedTailBytes", "EndpointReadErrors", "EndpointInvalidFrames", "EndpointMarkingErrors"} {
+		label := measure.EvidenceLabel{Coverage: "complete", Basis: "locally measured", Eligible: observedRecords, Completed: observedRecords, Reasons: []string{}}
+		if !r.Evidence.Complete || len(r.Accounting) > 0 || r.TailBytes > 0 {
+			label.Coverage = "partial"
+			label.Reasons = append(label.Reasons, "partial_observation")
+		}
+		v.Labels[name] = label
 	}
 	offset := r.Manifest.Plan.Warmup
 	for _, ph := range r.Manifest.Plan.Phases {
@@ -213,11 +238,7 @@ func buildDiagnostic(r *control.ReplayedReport, scope string) (diagnosticView, e
 // diagnostics replays one explicit saved endpoint/scope under existing serialized bounded report admission.
 func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request, id, report string) {
 	q, err := url.ParseQuery(r.URL.RawQuery)
-	for key, values := range q {
-		if (key != "endpoint" && key != "scope") || len(values) != 1 {
-			err = errors.New("invalid query")
-		}
-	}
+	policy, policyErr := presentationQuery(q, "endpoint", "scope")
 	endpoint, scope := "local", "main"
 	if q.Has("endpoint") {
 		endpoint = q.Get("endpoint")
@@ -225,7 +246,7 @@ func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request, id, report 
 	if q.Has("scope") {
 		scope = q.Get("scope")
 	}
-	if err != nil || endpoint != "local" && endpoint != "server" {
+	if err != nil || policyErr != nil || endpoint != "local" && endpoint != "server" {
 		reject(w, 400, id, "invalid_request", "query", "explicit endpoint/scope required")
 		return
 	}
@@ -240,7 +261,7 @@ func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request, id, report 
 		s.diskReply(w, id, nil, err)
 		return
 	}
-	v, err := buildDiagnostic(p, scope)
+	v, err := buildDiagnostic(p, scope, policy)
 	v.ReportID = report
 	s.diskReply(w, id, v, err)
 }

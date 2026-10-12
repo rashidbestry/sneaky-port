@@ -16,6 +16,7 @@ import (
 
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/engine"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 )
@@ -23,22 +24,23 @@ import (
 // ReplayedReport retains frozen settings, exact validated envelopes and independently recomputed quantities.
 // Integrity is a local consistency check, never authentication of imported or remote evidence.
 type ReplayedReport struct {
-	Version         int               `json:"schema_version"`
-	Manifest        EvidenceManifest  `json:"manifest"`
-	Summary         EvidenceSummary   `json:"recomputed_summary"`
-	Status          string            `json:"status"`
-	Reason          string            `json:"reason"`
-	Verification    string            `json:"saved_summary_verification"`
-	Events          []json.RawMessage `json:"-"`
-	TailBytes       profile.Decimal   `json:"discarded_tail_bytes"`
-	Integrity       string            `json:"raw_integrity"`
-	Units           string            `json:"units"`
-	Accounting      []string          `json:"accounting_errors"`
-	Evidence        engine.Result     `json:"-"`
-	Reconciliation  *Reconciliation   `json:"reconciliation,omitempty"`
-	ServerReport    *ReplayedReport   `json:"server_report,omitempty"`
-	TransferReceipt *RemoteTransfer   `json:"server_evidence_transfer,omitempty"`
-	Clock           *ClockSnapshot    `json:"clock_sampling,omitempty"`
+	Version         int                `json:"schema_version"`
+	Manifest        EvidenceManifest   `json:"manifest"`
+	Summary         EvidenceSummary    `json:"recomputed_summary"`
+	Status          string             `json:"status"`
+	Reason          string             `json:"reason"`
+	Verification    string             `json:"saved_summary_verification"`
+	Events          []json.RawMessage  `json:"-"`
+	TailBytes       profile.Decimal    `json:"discarded_tail_bytes"`
+	Integrity       string             `json:"raw_integrity"`
+	Units           string             `json:"units"`
+	Accounting      []string           `json:"accounting_errors"`
+	Evidence        engine.Result      `json:"-"`
+	Reconciliation  *Reconciliation    `json:"reconciliation,omitempty"`
+	ServerReport    *ReplayedReport    `json:"server_report,omitempty"`
+	TransferReceipt *RemoteTransfer    `json:"server_evidence_transfer,omitempty"`
+	Clock           *ClockSnapshot     `json:"clock_sampling,omitempty"`
+	Presentation    ReportPresentation `json:"evidence_presentation"`
 }
 
 // decodeReportObject rejects ambiguity, missing/unknown fields and null scalars while allowing saved nil collections.
@@ -309,6 +311,9 @@ func replayReport(dir string, budget *uint64, remote bool, registries ...*adapte
 		if err = replayTransferred(dir, r, &remaining, registries...); err != nil {
 			return nil, err
 		}
+	}
+	if err = ApplyPresentation(r, measure.DefaultEvidencePolicy()); err != nil {
+		return nil, err
 	}
 	return r, nil
 }

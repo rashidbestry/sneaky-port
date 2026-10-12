@@ -22,6 +22,7 @@ import (
 
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
 )
 
@@ -33,16 +34,18 @@ const bodyMax = 4096
 type Runner func(context.Context, profile.Plan) (control.RunResult, error)
 
 // Status distinguishes the API handle from the engine's eventual measurement identity.
-// Executing includes setup/data/finalization; live phase and sample totals are not available yet.
+// Executing includes setup/data/finalization; progress is provisional client-local evidence only.
 type Status struct {
-	ID                 string `json:"control_run_id"`
-	ProfileID          string `json:"profile_id"`
-	Revision           string `json:"profile_revision"`
-	State              string `json:"status"`
-	MeasurementID      string `json:"measurement_run_id"`
-	MeasurementStarted *bool  `json:"measurement_started"`
-	Complete           *bool  `json:"local_complete"`
-	Reason             string `json:"reason"`
+	ID                 string            `json:"control_run_id"`
+	ProfileID          string            `json:"profile_id"`
+	Revision           string            `json:"profile_revision"`
+	State              string            `json:"status"`
+	MeasurementID      string            `json:"measurement_run_id"`
+	MeasurementStarted *bool             `json:"measurement_started"`
+	Complete           *bool             `json:"local_complete"`
+	Reason             string            `json:"reason"`
+	Progress           *measure.Progress `json:"progress,omitempty"`
+	ReportID           string            `json:"report_id,omitempty"`
 }
 
 // command retains immutable acknowledgments so retries never start or cancel a different run.
@@ -53,8 +56,9 @@ type command struct {
 
 // runState owns cancellation until the finite runner returns, including all cleanup.
 type runState struct {
-	status Status
-	cancel context.CancelFunc
+	status   Status
+	cancel   context.CancelFunc
+	progress *measure.ProgressFeed
 }
 
 // Server owns a literal loopback listener, one process token and bounded lifecycle history.
@@ -340,6 +344,9 @@ func (s *Server) status(w http.ResponseWriter, request, run string) {
 	var out Status
 	if ok {
 		out = v.status
+		if v.progress != nil {
+			out.Progress = v.progress.Snapshot()
+		}
 	}
 	s.mu.Unlock()
 	if !ok {
@@ -414,7 +421,9 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 			return
 		}
 		ctx, cancel := context.WithCancel(s.ctx)
-		state = &runState{status: Status{ID: run, ProfileID: p.ID, Revision: revision, State: "executing"}, cancel: cancel}
+		feed := &measure.ProgressFeed{}
+		ctx = measure.WithProgress(ctx, feed)
+		state = &runState{status: Status{ID: run, ProfileID: p.ID, Revision: revision, State: "executing"}, cancel: cancel, progress: feed}
 		s.runs[run], s.active = state, run
 		s.wg.Add(1)
 		go s.execute(ctx, state, p)
@@ -449,6 +458,9 @@ func (s *Server) execute(ctx context.Context, state *runState, frozen profile.Pl
 		state.status.State = "failed"
 	}
 	state.status.MeasurementID = result.Readiness.RunID
+	if result.ReportPath != "" && profile.SafeID(result.Readiness.RunID) {
+		state.status.ReportID = result.Readiness.RunID + "-client"
+	}
 	started := result.Readiness.MeasurementStarted
 	state.status.MeasurementStarted = &started
 	if result.Local != nil {

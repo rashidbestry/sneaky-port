@@ -4,17 +4,17 @@ Recorded: 2026-10-10.
 
 Use this file to track forward: upcoming features, optional ideas, their decisions, and progress. [WORK_LOG.md](WORK_LOG.md) tracks backward: changes actually made, validation, and current implemented behavior. Product details remain in [DESIGN.md](DESIGN.md).
 
-Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
+Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11. On 2026-10-12 the user limited resolution to the current UDP/TCP release: S06 design is accepted; S01-S05/S12 are deferred beyond it and remain future proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run, saved diagnostic/distribution and matched saved-comparison views exist; live counters and full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
+Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run, saved diagnostic/distribution and matched saved-comparison views exist; live client-local counters and S06 evidence presentation are implemented; rendered-browser/full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-22 are complete within scope. Production clock bounds, live views, rendered-browser QA and full acceptance remain pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 are complete within scope; dashboard checkpoints 23a-23b are implemented and browser QA 23c is pending tooling; native ARM work is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
-| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: pairing/SSH/finite CLI, protected API/dashboard and saved diagnostics implemented; four builds and named [Windows-to-Ubuntu x86-64 WSL2 CLI workflow](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation) pass; live counters, native ARM64/Linux minima and full acceptance pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
+| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: pairing/SSH/finite CLI, protected API/dashboard and saved diagnostics implemented; four builds and named [Windows-to-Ubuntu x86-64 WSL2 CLI workflow](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation) pass; live client-local counters implemented; native ARM64 deferred, Linux minima and full acceptance pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
 | F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, queues and shared UDP/TCP phase/accounting pass Windows/WSL fixtures; finite CLI lifecycle implemented; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
@@ -35,7 +35,7 @@ Detailed options/provenance belong in `CHOICES.md`; [WORK_LOG.md](ARCHIVE.md#202
 
 ## Suggestions and accepted additions
 
-S01-S06 remain proposed, with stable IDs. S07-S11 were accepted together on 2026-10-11; S08/S09 have local preflight and saved diagnostic/distribution views; verified clock quality, live counters and other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
+S01-S05/S12 are deferred beyond the current release; S06 release design and derived presentation are implemented, with stable IDs preserved. S07-S11 were accepted together on 2026-10-11; S08/S09 have local preflight and saved diagnostic/distribution views; live client-local counters implemented; verified clock quality, rendered-browser QA and other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
 
 ### Reference review dispositions
 
@@ -45,16 +45,18 @@ Reviewed/answered: 2026-10-11, action 3b. User confirmed IRTT/iperf2/Crusader as
 | --- | --- | --- |
 | S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Accepted future scope by user, 2026-10-11; first-slice checks specified, not implemented or executed |
 | S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: explicit CLI/dashboard local preflight, endpoint fault/local-miss counts and partial-stream/accounting evidence exist; clock source/resolution verification remains pending |
-| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: bounded SVG time/ECDF, exact phase/quantile/count and missing/local views exist; coalesced live counters and rendered-browser QA remain pending |
+| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: bounded SVG time/ECDF, exact phase/quantile/count and missing/local views exist; live client-local counters implemented; rendered-browser QA remains pending |
 | S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Accepted future scope by user, 2026-10-11; checks specified, no fixtures executed |
 | S11 | Explicit continuous monitoring retained for a later slice; retention/windows/reconnect/eligibility remain future choices. | Accepted future scope by user, 2026-10-11; outside first slice, not implemented |
-| S01-S06 | Keep existing proposals open; this review does not accept screening, new burst metrics, a separate coordination path, sweeps, proxy exports or a confidence model. | Proposed; no state change |
+| S01-S06 | Current release disposition: accept S06 per-metric evidence design; defer S01-S05 beyond this release. | Engineering selections under the 2026-10-12 scoped resolution instruction; S06 implemented within recorded component fixtures; future proposals retained |
 
-Reference versions/licenses/native builds and empirical comparison bands remain open under T19/T20. Basic S08/S09 and S07/S10 gates are settled in the first-slice contract; S11 remains later. Current code pins are separate from benchmark pins, and partial foundations do not fulfill runtime acceptance.
+T19/T20 reference release baselines and band-establishment procedure are selected in [current release decisions](CHOICES.md#current-udptcp-release-decisions); actual artifact/license/native verification and numerical bands remain pending evidence. Basic S08/S09 and S07/S10 gates are settled in the first-slice contract; S11 remains later. Current code pins are separate from benchmark pins, and partial foundations do not fulfill runtime acceptance.
 
 ## S01: Staged experiment plan
 
-- [ ] Not implemented; proposed for later consideration.
+- [ ] Deferred beyond the current UDP/TCP release, 2026-10-12; future proposal retained, not implemented.
+
+Current release disposition: keep explicit manually selected matched trials. Automatic screening and candidate promotion require a later budget/stopping policy. Milestone suggestion, 2026-10-12: S06 evidence labels and client-local progress now make later bounded S01 screening easier to audit across many candidates; budgets, stopping/revisit rules and repeated confirmation still need decisions. S01 remains proposed/deferred, with no adoption or implementation.
 
 First check protocol reachability, then compare selected ports and directional priority settings, then run longer confirmation tests on promising combinations. Keep every attempted configuration and failure visible.
 
@@ -64,7 +66,9 @@ Before adoption: define screening rules, budgets, repeated confirmation trials, 
 
 ## S02: Burst-loss and consecutive-deadline-miss metrics
 
-- [ ] Not implemented; proposed for later consideration.
+- [ ] Deferred beyond the current UDP/TCP release, 2026-10-12; future proposal retained, not implemented.
+
+Current release disposition: retain existing deadline counts, gaps, spike/stall episodes and missing/local plot markers. Additional burst-loss/consecutive-miss formulas add a new metric contract and are deferred; no current-release adoption is inferred.
 
 Report consecutive failures, delivery-interruption duration, event frequency, and spacing between failure bursts, alongside the overall loss/deadline-miss percentage.
 
@@ -78,7 +82,9 @@ Task 20 milestone suggestion (still proposed): S02 sequence-based interruption m
 
 2026-10-11 clarification: basic run-plan coordination and maintained one-way clock calibration are now required under F09. Tasks 12-14 now supply baseline endpoint persistence, local replay/export and authenticated post-stop transfer/reconciliation under F07/F09. Additional coordination minimization and recovery behavior remain proposed.
 
-- [ ] Not implemented; proposed for later consideration.
+- [ ] Deferred beyond the current UDP/TCP release, 2026-10-12; future proposal retained, not implemented.
+
+Current release disposition: retain bounded endpoint persistence, post-stop authenticated transfer, offline import/replay and explicit incomplete remote evidence. No old-run retrieval, reconnect/resume or automatic deletion is added. Manual retained-file import establishes offline consistency only; recovery authorization/retention mechanics are future work.
 
 Exchange test plans before probing and collect server records afterward. Keep coordination traffic minimal during measurement, and persist evidence on both endpoints when the connection fails.
 
@@ -92,7 +98,9 @@ Task 15 milestone suggestion (still proposed): audit S03 coordination overhead a
 
 ## S04: Packet-size and packet-rate sweeps
 
-- [ ] Not implemented; proposed for later consideration.
+- [ ] Deferred beyond the current UDP/TCP release, 2026-10-12; future proposal retained, not implemented.
+
+Current release disposition: keep explicit workload/rate/size inputs and manually repeated runs; automatic sweep order, stopping and run budgets are deferred.
 
 Test a range of application payload sizes and offered packet rates to identify where each mode starts degrading. Include asymmetric bidirectional workloads and DNS polling/encoding costs.
 
@@ -102,7 +110,9 @@ Before adoption: define matched profiles, execution order, repetition, and stopp
 
 ## S05: Exportable recommendation profile
 
-- [ ] Not implemented; proposed for later consideration.
+- [ ] Deferred beyond the current UDP/TCP release, 2026-10-12; future proposal retained, not implemented.
+
+Current release disposition: ship existing JSON/JSONL/CSV evidence and descriptive comparisons. Automated recommendation/proxy-consumption contracts are outside this release.
 
 Export the recommended protocol, DNS mode, ports, independent directional markings, workload, and supporting measurements in a machine-readable result. Include date, conditions, confidence, and a schema/version identifier.
 
@@ -112,18 +122,23 @@ Before adoption: decide the format and compatibility contract. Preserve requeste
 
 ## S06: Separate connection quality from measurement confidence
 
-- [ ] Not implemented; proposed for later consideration.
+- [x] Accepted design implemented as versioned derived report/API/dashboard/replay/export presentation, 2026-10-12. User selected per-metric labels/reasons; detailed policies are engineering selections. Rendered-browser and full release acceptance remain separate.
 
-Present quality metrics and evidence confidence separately. Confidence should account for sample count, repeated-run variation, local scheduling errors, missing server records, and unobservable settings.
+Quality/deadline values remain primary. Add independent, bounded evidence fields per metric, without a numeric confidence score, ranking formula or automatic winner:
 
-Purpose: prevent an apparently excellent connection from winning on weak or incomplete evidence, while avoiding classification of a measurement limitation as a network problem.
+| Dimension | Vocabulary / applicability |
+| --- | --- |
+| Coverage | complete / partial / unavailable / incompatible, based on the required original records, identities and observation cutoffs for that metric. Complete evidence can contain poor delivery or losses. |
+| Basis | locally measured / receiver reconciled / estimated / operator declared / unverified. One-way bounds and on-wire marking observations must carry their own status; API application is not captured traffic. |
+| Reasons | Explicit eligible/completed/missing counts, local faults, missing remote records, clock expiry/unverified bounds, unobserved markings, omitted details and incompatible or mixed repetitions. Missing evidence for one metric does not downgrade independently valid metrics. |
 
-Before adoption: choose explainable confidence labels or uncertainty measures. Keep actual poor-delivery outcomes distinct from lack of evidence. Unknown marking observations limit claims about marking preservation; they do not automatically invalidate independently sound delivery measurements.
+**Additional sample/repetition targets are advisory.** Default completed-sample targets are 20 for median, 200 for p95 and 1,000 for p99 (ten expected observations in the upper tail, an engineering display heuristic rather than statistical confidence). Apply them to the actual eligible RTT/completion/variation population; gaps, missing samples and late samples stay explicit under existing cutoff rules. Target three complete compatible A/B pairs for repeated views. The existing two-pair minimum for a repeated description remains mandatory: all-zero deltas tie, same-sign-or-zero ranges are descriptive, opposite signs/missing/incompatible trials remain inconclusive. Falling below the extra targets adds small-sample/few-repeat reasons without hiding valid values or relaxing these gates.
 
-Task 16 milestone suggestion (still proposed): one-way results now retain uncertainty, expiry, missing/inconsistent-clock reasons and explicit detail omissions alongside unchanged local RTT/delivery. These inputs can support descriptive evidence labels such as “clock bounds unverified” or “missing receiver records,” without a combined score or automatic winner. User requested an explanation on 2026-10-11; acceptance remains open. Before later implementation, decide which labels apply per metric, how repeated-run evidence is described, and verify that poor timely-delivery results remain visible beside measurement limitations.
+Use a versioned derived presentation policy outside the frozen measurement plan. Display/export the policy version, selected targets and actual counts; overrides are explicit presentation preferences and do not change traffic, raw evidence or its hash. Per-metric known-reason vocabularies remain bounded and secret-free. Preserve observed outcomes beside limitations; unknown outer markings do not invalidate RTT, and complete receipts do not prove zero underlying packet loss.
 
+The separate implementation checkpoint must verify threshold boundaries, two/three-pair behavior, ties/mixed/partial/missing populations, quantile/gap/cutoff consistency, independent marking/clock limitations, unchanged quality values and secret-free API/dashboard/replay/export behavior. It is implemented and checked within the recorded component fixtures; rendered-browser and remaining release acceptance stay pending. Existing first-slice implementation/validation remains independently recorded.
 
-Task 21 milestone suggestion (still proposed): S06 can now use exact repeated delta ranges, per-trial incompatibility/completeness and phase failures to explain conflicting evidence without obscuring deadline outcomes. The inputs exist; the label vocabulary, per-metric applicability and validation of mixed/incomplete repetitions remain decisions. No confidence score, recommendation threshold or S06 implementation is accepted by this suggestion.
+Earlier task 16/21 suggestions and the initial presentation discussion are preserved in [ARCHIVE.md](ARCHIVE.md#s06-discussion-snapshot-before-release-resolution-2026-10-12); current [release policies](CHOICES.md#current-udptcp-release-decisions) supersede their unresolved status.
 
 ## Reference-tool candidates
 
@@ -163,13 +178,13 @@ Remaining work: integrate the contract's explicit preflight/window limits and ad
 
 ### S09: Distribution and phase comparison views
 
-- [ ] Accepted future scope by user, 2026-10-11; saved time/ECDF and scalar matched phase comparisons implemented; extra histograms/overlays and live views pending. [Evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons).
+- [ ] Accepted future scope by user, 2026-10-11; saved time/ECDF and scalar matched phase comparisons implemented; live client-local counters implemented; extra histograms/overlays and additional live plots remain future scope. [Evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons).
 
 Add optional histograms/CDFs and matched-run overlays alongside phase timelines for completed RTT, scheduling error, deadline outcomes and delivery interruptions. Show direction, workload phase, units, sample counts, missing/late outcomes and measurement boundaries; allow inspection of the underlying records.
 
-Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Saved time/ECDF and matched scalar comparison paths are implemented; live views and overlays remain pending. Complements S02/S06 without adopting their additional metrics or confidence policy.
+Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Saved time/ECDF and matched scalar comparison paths are implemented; live client-local counters are implemented; additional live plots/overlays remain future scope. Complements S02/S06 without adopting their additional metrics or confidence policy.
 
-First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); saved dashboard/report integration is implemented in tasks 20-21; live views remain pending. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
+First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); saved dashboard/report integration is implemented in tasks 20-21 and live counters in checkpoint 23b; additional live plots remain future scope. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
 
 ### S10: Controlled contention scenario catalogue
 
@@ -193,7 +208,7 @@ Before implementation: settle T14 resource/retention limits, window denominators
 
 ### S12: Classified degradation episodes and observed availability
 
-- [ ] Not implemented; proposed for later consideration, 2026-10-11. [Review evidence](ARCHIVE.md#2026-10-11-startrinity-reference-review-recorded).
+- [ ] Deferred beyond the current UDP/TCP release; future proposal retained, not implemented. Original review: 2026-10-11; release disposition: 2026-10-12. [Review evidence](ARCHIVE.md#2026-10-11-startrinity-reference-review-recorded).
 
 Extend accepted S11 monitoring with configurable, versioned criteria for no-arrival gaps, deadline misses, reconciled loss and latency/variation degradation. Record episode start/end, duration, direction, triggering evidence and recovery; display counts, longest episode and the fraction of eligible observed time meeting the chosen criteria. Keep no-arrival episodes separate from degraded-but-delivering periods and expose unknown/unobserved time.
 

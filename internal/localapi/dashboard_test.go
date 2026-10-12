@@ -13,6 +13,7 @@ import (
 
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/testutil/extension"
 )
@@ -128,6 +129,9 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 	var starts atomic.Int32
 	s := fixtureSavedAPI(t, func(ctx context.Context, _ profile.Plan) (control.RunResult, error) { // Hold a synthetic run until explicit cancellation; no network measurement is claimed.
 		starts.Add(1)
+		if feed := measure.ProgressSink(ctx); feed != nil {
+			feed.Publish(measure.Progress{AsOf: 9007199254740993, Cutoff: 9007199254740992, Elapsed: 500, Total: 1000, Stage: "measurement", Phase: "fixture", AccountingValid: true, Main: measure.LiveCounts{Planned: 9007199254740993, DeadlineMisses: 1}, Warmup: measure.LiveCounts{}, PeerReceived: 2})
+		}
 		<-ctx.Done()
 		return control.RunResult{Status: "partial"}, nil
 	})

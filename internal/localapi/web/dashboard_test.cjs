@@ -16,6 +16,8 @@ class Node {
   addEventListener(name, action) { (this.listeners[name] ||= []).push(action); }
   // setAttribute retains native SVG attributes for bounded rendering assertions.
   setAttribute(name, value) { (this.attributes ||= {})[name] = value; }
+  // click records only the explicit temporary export link; no browser download/layout is claimed.
+  click() { downloads.push({ name:this.download, href:this.href }); }
   // firstElementChild exposes the owned label's input for override-field event wiring.
   get firstElementChild() { return this.children[0]; }
   // lastChild exposes the most recently appended label for descriptor/phase event wiring.
@@ -25,6 +27,7 @@ const html = fs.readFileSync(__dirname + "/index.html", "utf8");
 const ids = Object.fromEntries(Array.from(html.matchAll(/id="([^"]+)"/g), function field(match) { /* Build fixed shell nodes from actual HTML IDs, detecting missing script bindings. */ const tag = new RegExp("<(\\w+)[^>]*id=\"" + match[1] + "\"").exec(html)[1]; return [match[1], new Node(tag)]; }));
 const timers = new Map(); let timerID = 0; let dropStartReply = true; let currentRun = "";
 const requests = [];
+const downloads = [];
 // descendants recursively collects owned fields so disabling reflects the complete dynamic editor.
 function descendants(node) { return [node, ...node.children.flatMap(descendants)]; }
 const context = vm.createContext({ document: {
@@ -36,7 +39,12 @@ const context = vm.createContext({ document: {
   createElementNS(namespace, tag) { assert.equal(namespace, "http://www.w3.org/2000/svg"); return new Node(tag); },
   // querySelectorAll returns all owned workspace controls for operation/dirty-state gating.
   querySelectorAll() { return Object.values(ids).flatMap(descendants); }
-}, crypto: webcrypto, TextEncoder, AbortSignal,
+}, crypto: webcrypto, TextEncoder, AbortSignal, Blob, URL: {
+  // createObjectURL models page-owned exported bytes without exposing the token in a URL.
+  createObjectURL(blob) { assert.ok(blob.size>0); return "blob:fixture"; },
+  // revokeObjectURL verifies release after each explicit download.
+  revokeObjectURL(url) { assert.equal(url,"blob:fixture"); }
+},
   // setTimeout retains declared cadence without background polling races in the scripted fixture.
   setTimeout(action, delay) { assert.equal(delay, 1000); timers.set(++timerID, action); return timerID; },
   // clearTimeout cancels the previous provisional read, never a measurement command.
@@ -67,6 +75,14 @@ async function main() {
   ids.token.value = process.env.DASHBOARD_TEST_TOKEN; await click("connect"); assert.equal(ids.workspace.hidden, false); assert.equal(ids.token.value, ""); assert.equal(ids.start.disabled, true);
   await click("refresh-reports"); ids.reports.value = "diagnostic"; ids["report-endpoint"].value = "local"; ids["report-scope"].value = "main";
   await click("read-report"); assert.equal(ids.notice.dataset.error, "false"); assert.ok(ids["diagnostic-status"].textContent.includes("complete=false"));
+  assert.ok(ids["evidence-policy"].textContent.includes('"p99_target":"1000"'));
+  assert.ok(descendants(ids["diagnostic-table"]).some(function evidenceCell(node) { /* Independent missing receiver evidence remains explicitly labeled. */ return node.textContent.includes("small sample"); }));
+  const frozenWorkload=evaluate("JSON.stringify(state.draft)");
+  ids["target-p95"].value="0"; const beforeInvalid=requests.length; await click("read-report"); assert.equal(ids.notice.dataset.error,"true"); assert.equal(requests.length,beforeInvalid);
+  ids["target-median"].value="1"; ids["target-p95"].value="1"; ids["target-p99"].value="1";
+  await click("read-report"); assert.ok(ids["evidence-policy"].textContent.includes('"p99_target":"1"')); assert.equal(evaluate("JSON.stringify(state.draft)"),frozenWorkload);
+  for (const format of ["json","jsonl","csv"]) { ids["report-format"].value=format; await click("export-report"); assert.equal(ids.notice.dataset.error,"false"); assert.equal(downloads.at(-1).name,"diagnostic."+format); }
+  ids["target-median"].value="20"; ids["target-p95"].value="200"; ids["target-p99"].value="1000";
   assert.equal(ids["time-plot"].children[0].tagName, "svg"); assert.ok(descendants(ids["diagnostic-table"]).some(function unavailableCell(node) { /* Null evidence must stay visibly unavailable. */ return node.textContent === "unavailable"; }));
   const emptyView = evaluate("JSON.stringify(diagnosticsState.view)");
   evaluate('diagnosticsState.view.cutoff_ns = "9007199254741993"; diagnosticsState.view.summary.RTTSamples = "2"; diagnosticsState.view.summary.RTTP99 = "9007199254740993"; diagnosticsState.view.time = [{start_ns:"1",end_ns:"2",slots:"3",missing:"1",local:"0",rtt:{count:"2",min_ns:"0",max_ns:"9007199254740993"},scheduled:{count:"2",min_ns:"1",max_ns:"9007199254740994"}}]; diagnosticsState.view.rtt_ecdf = [{count:"2",min_ns:"0",max_ns:"9007199254740993",first_rank:"1",last_rank:"2"}]; diagnosticsState.view.scheduled_ecdf = [{count:"2",min_ns:"1",max_ns:"9007199254740994",first_rank:"1",last_rank:"2"}]; renderDiagnostic()');
@@ -113,6 +129,8 @@ async function main() {
   await click("disconnect"); assert.equal(evaluate("state.token"), ""); assert.equal(evaluate("state.session"), ""); assert.equal(timers.size, 0);
   assert.equal(evaluate("comparisonState.view"), null); assert.equal(ids["comparison-status"].children.length, 0);
   ids.token.value = process.env.DASHBOARD_TEST_TOKEN; await click("connect"); await click("retry"); assert.equal(ids.retry.hidden, true); assert.equal(evaluate("state.run.control_run_id"), currentRun);
+  await click("status"); assert.ok(ids["live-status"].textContent.includes("Provisional")); assert.equal(ids["live-progress"].value,500);
+  assert.ok(descendants(ids["live-counters"]).some(function exactLive(node) { /* Provisional counters retain >2^53 integer text. */ return node.textContent==="9007199254740993"; }));
   const starts = requests.filter(function startRequest(r) { /* Compare original and retried start correlation exactly. */ return r.path === "/api/v1/runs"; }); assert.equal(starts.length, 2); assert.equal(starts[0].body.request_id, pendingID); assert.deepEqual(starts[0].body, starts[1].body);
   const frozen = ids.frozen.textContent; evaluate('state.draft.phases[0].client.content_bytes += 1; controls()'); assert.equal(ids.start.disabled, true); await click("save"); assert.equal(ids.frozen.textContent, frozen);
   evaluate('state.selected.profile_revision = "stale"; state.draft.phases[0].client.content_bytes += 1; controls()'); await click("save"); assert.equal(ids.notice.dataset.error, "true"); assert.equal(evaluate("dirty()"), true); assert.equal(ids.frozen.textContent, frozen);

@@ -164,6 +164,8 @@ func reportUnit(path string) string {
 		return "count"
 	case "time_ns":
 		return "ns"
+	case "eligible", "completed", "missing", "local_misses", "gaps", "advisory_target", "median_target", "p95_target", "p99_target", "repeat_target":
+		return "count"
 	case "sequence", "event_id", "clock_epoch_id", "phase", "Phase", "lifecycle", "Lifecycle", "calibration_id", "client_epoch", "server_epoch":
 		return "identity"
 	case "rate_numerator":

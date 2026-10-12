@@ -24,38 +24,45 @@ type TrialPair struct {
 
 // ComparisonRequest selects bounded saved trials, predeclared axes and one originating scope.
 type ComparisonRequest struct {
-	Pairs    []TrialPair `json:"pairs"`
-	Axes     []string    `json:"axes"`
-	Endpoint string      `json:"endpoint"`
-	Scope    string      `json:"scope"`
+	Pairs          []TrialPair             `json:"pairs"`
+	Axes           []string                `json:"axes"`
+	Endpoint       string                  `json:"endpoint"`
+	Scope          string                  `json:"scope"`
+	EvidencePolicy *measure.EvidencePolicy `json:"evidence_policy,omitempty"`
 }
 
 // ComparisonTrial retains settings/provenance and scalar populations without retaining raw replay heaps.
 type ComparisonTrial struct {
-	ReportID     string                     `json:"report_id"`
-	Manifest     EvidenceManifest           `json:"manifest"`
-	Status       string                     `json:"status"`
-	Integrity    string                     `json:"integrity"`
-	Reason       string                     `json:"reason"`
-	Complete     bool                       `json:"complete"`
-	Cutoff       profile.Decimal            `json:"cutoff_ns"`
-	Generation   profile.Decimal            `json:"generation_cutoff_ns"`
-	Markings     []PhaseMarking             `json:"phase_markings"`
-	Metrics      []*string                  `json:"metrics"`
-	PhaseMetrics [][]*string                `json:"phase_metrics"`
-	Limitations  []string                   `json:"limitations"`
-	PeerPlatform []string                   `json:"peer_platform"`
-	Faults       map[string]profile.Decimal `json:"endpoint_faults"`
+	ReportID      string                             `json:"report_id"`
+	Manifest      EvidenceManifest                   `json:"manifest"`
+	Status        string                             `json:"status"`
+	Integrity     string                             `json:"integrity"`
+	Reason        string                             `json:"reason"`
+	Complete      bool                               `json:"complete"`
+	Cutoff        profile.Decimal                    `json:"cutoff_ns"`
+	Generation    profile.Decimal                    `json:"generation_cutoff_ns"`
+	Markings      []PhaseMarking                     `json:"phase_markings"`
+	Metrics       []*string                          `json:"metrics"`
+	PhaseMetrics  [][]*string                        `json:"phase_metrics"`
+	Limitations   []string                           `json:"limitations"`
+	PeerPlatform  []string                           `json:"peer_platform"`
+	Faults        map[string]profile.Decimal         `json:"endpoint_faults"`
+	Labels        map[string]measure.EvidenceLabel   `json:"evidence_labels"`
+	PhaseLabels   []map[string]measure.EvidenceLabel `json:"phase_evidence_labels"`
+	ContextLabels map[string]measure.EvidenceLabel   `json:"context_evidence_labels"`
 }
 
 // MetricDelta is exact B minus A, with rational fractions and unavailable values kept distinct.
 type MetricDelta struct {
-	Metric string  `json:"metric"`
-	Unit   string  `json:"unit"`
-	A      *string `json:"a"`
-	B      *string `json:"b"`
-	Delta  *string `json:"delta"`
-	State  string  `json:"state"`
+	Metric    string                 `json:"metric"`
+	Unit      string                 `json:"unit"`
+	A         *string                `json:"a"`
+	B         *string                `json:"b"`
+	Delta     *string                `json:"delta"`
+	State     string                 `json:"state"`
+	EvidenceA *measure.EvidenceLabel `json:"evidence_a,omitempty"`
+	EvidenceB *measure.EvidenceLabel `json:"evidence_b,omitempty"`
+	Evidence  measure.EvidenceLabel  `json:"evidence"`
 }
 
 // PairComparison preserves incompatible/partial populations rather than dropping unsuccessful trials.
@@ -70,22 +77,24 @@ type PairComparison struct {
 
 // RepeatedDelta describes per-trial delta extrema, never a pooled quantile or confidence estimate.
 type RepeatedDelta struct {
-	Metric string  `json:"metric"`
-	Unit   string  `json:"unit"`
-	State  string  `json:"state"`
-	Min    *string `json:"min_delta"`
-	Max    *string `json:"max_delta"`
-	Trials int     `json:"trials"`
+	Metric   string                `json:"metric"`
+	Unit     string                `json:"unit"`
+	State    string                `json:"state"`
+	Min      *string               `json:"min_delta"`
+	Max      *string               `json:"max_delta"`
+	Trials   int                   `json:"trials"`
+	Evidence measure.EvidenceLabel `json:"evidence"`
 }
 
 // Comparison contains no winner; repeated main and phase outcomes remain independently descriptive.
 type Comparison struct {
-	Version   int               `json:"schema_version"`
-	Selection ComparisonRequest `json:"selection"`
-	Pairs     []PairComparison  `json:"pairs"`
-	Repeated  []RepeatedDelta   `json:"repeated"`
-	Phases    [][]RepeatedDelta `json:"phases"`
-	Policy    string            `json:"policy"`
+	Version        int                    `json:"schema_version"`
+	Selection      ComparisonRequest      `json:"selection"`
+	Pairs          []PairComparison       `json:"pairs"`
+	Repeated       []RepeatedDelta        `json:"repeated"`
+	Phases         [][]RepeatedDelta      `json:"phases"`
+	Policy         string                 `json:"policy"`
+	EvidencePolicy measure.EvidencePolicy `json:"evidence_policy"`
 }
 
 var comparisonNames = []string{"DeadlineMisses", "DeadlineMissFraction", "Planned", "LocalMisses", "AcceptedMisses", "Pending", "OnTime", "Late", "Unresolved", "RTTP95", "RTTP99", "RTTSamples", "VariationP95", "VariationP99", "VariationSamples", "VariationGaps", "Received", "MissingAtReceiver", "Skipped", "Accepted", "Attempted", "Written", "WriteFailed", "ScheduledP95", "ScheduledP99", "TransportPacketLoss", "SpikeEpisodes", "ReceiptStallEpisodes", "SpikePeak", "ReceiptStallMax"}
@@ -154,6 +163,11 @@ func comparisonValues(s measure.Summary) []*string {
 
 // Validate rejects ambiguous selections before any report is read; limits are engineering caps.
 func (q ComparisonRequest) Validate() error {
+	if q.EvidencePolicy != nil {
+		if err := q.EvidencePolicy.Validate(); err != nil {
+			return err
+		}
+	}
 	if len(q.Pairs) < 1 || len(q.Pairs) > 8 || q.Axes == nil || q.Endpoint != "local" && q.Endpoint != "server" {
 		return errors.New("select 1-8 pairs, explicit axes and local/server endpoint")
 	}
@@ -250,12 +264,35 @@ func comparisonTrial(id string, r *ReplayedReport, q ComparisonRequest) (Compari
 		selectedPhase = &index
 	}
 	t.Metrics = append(comparisonValues(summary), comparisonEpisodes(r, lifecycle, selectedPhase)...)
+	t.Labels = measure.LabelSummary(summary, t.Complete, comparisonEvidencePolicy(q))
+	t.ContextLabels = ReportContextLabels(r, comparisonEvidencePolicy(q))
 	for i, phase := range local.Phases {
 		index := uint32(i)
 		t.PhaseMetrics = append(t.PhaseMetrics, append(comparisonValues(phase), comparisonEpisodes(r, 2, &index)...))
+		t.PhaseLabels = append(t.PhaseLabels, measure.LabelSummary(phase, t.Complete, comparisonEvidencePolicy(q)))
 	}
 	if strings.TrimSpace(r.Manifest.Plan.MatchedMetadata["environment"]) == "" {
 		t.Limitations = append(t.Limitations, "Missing matched_metadata.environment; descriptive matching remains inconclusive.")
+	}
+	for _, labels := range append([]map[string]measure.EvidenceLabel{t.Labels}, t.PhaseLabels...) {
+		for name, label := range labels {
+			label.Reasons = append([]string{}, label.Reasons...)
+			if label.Basis == "locally measured" || label.Basis == "estimated" {
+				if t.Faults["read_errors"] > 0 {
+					label.Reasons = append(label.Reasons, "local_read_faults")
+				}
+				if t.Faults["invalid_frames"] > 0 {
+					label.Reasons = append(label.Reasons, "invalid_frames_observed")
+				}
+			}
+			if len(r.Accounting) > 0 {
+				label.Reasons = append(label.Reasons, "accounting_errors")
+			}
+			if r.TailBytes > 0 {
+				label.Reasons = append(label.Reasons, "discarded_tail")
+			}
+			labels[name] = label
+		}
 	}
 	return t, nil
 }
@@ -284,10 +321,14 @@ func comparisonDelivery(t *ComparisonTrial, r *ReplayedReport, q ComparisonReque
 	}
 	v := comparisonValues(s)
 	t.Metrics[16], t.Metrics[17] = v[16], v[17]
+	labels := measure.LabelSummary(s, t.Complete, comparisonEvidencePolicy(q))
+	t.Labels["Received"], t.Labels["MissingAtReceiver"] = labels["Received"], labels["MissingAtReceiver"]
 	for i, p := range l.Phases {
 		if i < len(t.PhaseMetrics) {
 			v = comparisonValues(p)
 			t.PhaseMetrics[i][16], t.PhaseMetrics[i][17] = v[16], v[17]
+			labels := measure.LabelSummary(p, t.Complete, comparisonEvidencePolicy(q))
+			t.PhaseLabels[i]["Received"], t.PhaseLabels[i]["MissingAtReceiver"] = labels["Received"], labels["MissingAtReceiver"]
 		}
 	}
 }
@@ -535,6 +576,7 @@ func (s *Store) CompareSavedReports(ctx context.Context, q ComparisonRequest) (C
 		}
 	}
 	out := compareTrials(q, trials)
+	labelComparison(&out)
 	b, err := json.Marshal(out)
 	if err != nil || len(b) > 16<<20 {
 		return Comparison{}, errors.New("comparison exceeds serialized response budget")

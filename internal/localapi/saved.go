@@ -338,7 +338,8 @@ func (b *boundedExport) Write(p []byte) (int, error) {
 func (s *Server) reportExport(w http.ResponseWriter, r *http.Request, id, target string) {
 	q, err := url.ParseQuery(r.URL.RawQuery)
 	format := q.Get("format")
-	if err != nil || len(q) != 1 || len(q["format"]) != 1 || format != "json" && format != "jsonl" && format != "csv" {
+	policy, policyErr := presentationQuery(q, "format")
+	if err != nil || policyErr != nil || len(q["format"]) != 1 || format != "json" && format != "jsonl" && format != "csv" {
 		reject(w, 400, id, "invalid_request", "format", "one explicit json, jsonl or csv format required")
 		return
 	}
@@ -348,6 +349,10 @@ func (s *Server) reportExport(w http.ResponseWriter, r *http.Request, id, target
 		return
 	}
 	var b boundedExport
+	if err = control.ApplyPresentation(out, policy); err != nil {
+		s.diskReply(w, id, nil, err)
+		return
+	}
 	if err = control.ExportReport(&b, out, format); err != nil {
 		s.diskReply(w, id, nil, err)
 		return

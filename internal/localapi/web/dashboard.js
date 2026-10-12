@@ -191,7 +191,18 @@ function readyDraft() { if (state.invalid.size) throw new Error("Resolve invalid
 // showRun presents actual API states and nulls; final completeness is never inferred from HTTP success.
 function showRun(run) {
   state.run = run; element("run-id").value = run.control_run_id; element("run-state").textContent = "Run " + run.control_run_id + " · " + run.status;
-  element("run-detail").textContent = JSON.stringify(run, null, 2); controls();
+  element("run-detail").textContent = JSON.stringify(run, null, 2); renderLive(run); controls();
+}
+
+// renderLive presents exact provisional local counters; its progress bar alone uses a bounded display ratio.
+function renderLive(run) {
+  const p = run.progress;
+  if (!p) { element("live-status").textContent = "Run " + run.status + ": waiting for client-local measurement progress."; element("live-progress").value = 0; element("live-counters").replaceChildren(); return; }
+  const terminal = !["executing", "cancelling"].includes(run.status);
+  element("live-status").textContent = (terminal ? "Last provisional snapshot; load the saved report. " : "Provisional ") + (run.status === "cancelling" ? "cancelling / " : "") + p.stage + (p.phase_id ? " / " + p.phase_id : "") + " · elapsed " + p.elapsed_ns + " / " + p.total_ns + " ns · counts through " + p.counts_cutoff_ns + " ns · " + (p.accounting_valid ? "accounting active" : "accounting incomplete") + " · incoming peer data observed " + p.peer_data_received + (run.report_id ? " · saved report " + run.report_id : "");
+  const total = BigInt(p.total_ns); element("live-progress").value = total > 0n ? Number(BigInt(p.elapsed_ns) * 1000n / total) : 0;
+  const names = ["deadline_misses", "planned", "local_misses", "pending", "on_time", "late", "completed", "attempted", "written", "write_failed"];
+  tablePage("live-counters", ["Provisional metric", "Main", "Warmup"], names.map(function liveRow(name) { /* Main/warmup are independent reached-slot populations, with no remote-loss inference. */ return [name, p.main[name], p.warmup[name]]; }), 0);
 }
 // schedulePoll coalesces one status read per second only while an observed run is executing/cancelling.
 function schedulePoll() {

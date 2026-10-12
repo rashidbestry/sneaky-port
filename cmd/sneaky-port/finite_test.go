@@ -280,9 +280,15 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 			if state["status"] != "completed" || state["local_complete"] != true || state["measurement_started"] != true {
 				t.Fatal("API finite run missing", state)
 			}
+			if _, ok := state["progress"].(map[string]any); !ok {
+				t.Fatal("real finite API progress missing")
+			}
 			id, ok := state["measurement_run_id"].(string)
 			if !ok || len(id) != 32 {
 				t.Fatal("measurement identity absent")
+			}
+			if state["report_id"] != id+"-client" {
+				t.Fatal("safe report identity missing")
 			}
 			report, err := control.ReplayReport(filepath.Join(store.Root, "reports", id+"-client"), 4<<20)
 			if err != nil || report.Verification != "matched" {

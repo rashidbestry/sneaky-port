@@ -707,3 +707,25 @@ Preserve current required identity/authentication and the fixed version-1 framin
 - Keep stable T identifiers, options/recommendations, dependencies, explicit state and dated answer provenance. Silence or recommendations do not mean acceptance; choices do not authorize implementation.
 - Retain a short superseded-choice reference and log significant changes in `WORK_LOG.md`; update affected design/proposal status using F/S links. Selection does not mean implemented or validated.
 - Keep current answers concise, link detailed research instead of duplicating it, and log significant compaction. Preserve unresolved questions and evidence.
+
+
+## S06 discussion snapshot before release resolution, 2026-10-12
+
+Preserved active proposal/discussion text before the scoped current-release resolution. This is historical planning, not current instructions or implementation evidence.
+
+## S06: Separate connection quality from measurement confidence
+
+- [ ] Proposed feature; per-metric label/reason presentation confirmed by user, 2026-10-12. Criteria remain in discussion; not implemented.
+
+Present quality metrics and evidence confidence separately. Confidence should account for sample count, repeated-run variation, local scheduling errors, missing server records, and unobservable settings.
+
+Purpose: prevent an apparently excellent connection from winning on weak or incomplete evidence, while avoiding classification of a measurement limitation as a network problem.
+
+Presentation decision, 2026-10-12: user selected option A, per-metric evidence labels with specific reasons, instead of a numeric confidence score. Relevant inputs are RTT sample/window/missing counts, compatible receiver evidence, one-way status/uncertainty, marking observations and repeated compatible trial agreement. Existing quality quantities stay visible. Label vocabulary, per-metric applicability, sample/repetition targets and whether additional targets are advisory or comparison eligibility gates remain open; selecting the presentation does not authorize implementation or settle full feature adoption.
+
+Keep actual poor-delivery outcomes distinct from lack of evidence. Unknown marking observations limit claims about marking preservation; they do not automatically invalidate independently sound delivery measurements. Existing missing/invalid/incompatible evidence gates remain in force independently of any new sample targets.
+
+Task 16 milestone suggestion (still proposed): one-way results now retain uncertainty, expiry, missing/inconsistent-clock reasons and explicit detail omissions alongside unchanged local RTT/delivery. These inputs can support descriptive evidence labels such as “clock bounds unverified” or “missing receiver records,” without a combined score or automatic winner. User requested an explanation on 2026-10-11; acceptance remains open. Before later implementation, decide which labels apply per metric, how repeated-run evidence is described, and verify that poor timely-delivery results remain visible beside measurement limitations.
+
+
+Task 21 milestone suggestion (still proposed): S06 can now use exact repeated delta ranges, per-trial incompatibility/completeness and phase failures to explain conflicting evidence without obscuring deadline outcomes. The inputs exist; the label vocabulary, per-metric applicability and validation of mixed/incomplete repetitions remain decisions. No confidence score, recommendation threshold or S06 implementation is accepted by this suggestion.

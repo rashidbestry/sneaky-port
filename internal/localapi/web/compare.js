@@ -8,11 +8,11 @@ function comparisonRows() {
   const chosen = element("comparison-detail").value;
   const rows = [];
   if (chosen === "repeated") {
-    const append = function repeatedRows(scope, metrics) { /* Retain trial population beside exact delta ranges. */ for (const m of metrics) rows.push([scope, m.metric, m.unit, m.trials + " pairs", m.min_delta, m.max_delta, m.state]); };
+    const append = function repeatedRows(scope, metrics) { /* Retain trial population beside exact delta ranges. */ for (const m of metrics) rows.push([scope, m.metric, m.unit, m.trials + " pairs", m.min_delta, m.max_delta, m.state, evidenceText(m.evidence)]); };
     append(view.selection.scope, view.repeated); view.phases.forEach(function phaseRows(metrics, i) { /* Main originating phases remain visible independently. */ append("phase " + i, metrics); });
   } else {
     const pair = view.pairs[Number(chosen)]; if (!pair) return [];
-    const append = function pairedRows(scope, metrics) { /* Preserve unavailable values, exact B-A and descriptive state. */ for (const m of metrics) rows.push([scope, m.metric, m.unit, m.a, m.b, m.delta, m.state]); };
+    const append = function pairedRows(scope, metrics) { /* Preserve unavailable values, exact B-A and descriptive state. */ for (const m of metrics) rows.push([scope, m.metric, m.unit, m.a, m.b, m.delta, m.state, evidenceText(m.evidence) + " / A: " + evidenceText(m.evidence_a) + " / B: " + evidenceText(m.evidence_b)]); };
     append(view.selection.scope, pair.metrics); pair.phases.forEach(function phaseRows(metrics, i) { /* Aggregate tails cannot conceal a phase failure. */ append("phase " + i, metrics); });
   }
   return rows;
@@ -21,10 +21,10 @@ function comparisonRows() {
 function renderComparison() {
   const view = comparisonState.view; if (!view) return;
   element("comparison-status").textContent = "Loaded selection: " + JSON.stringify(view.selection) + " · " + view.pairs.map(function pairStatus(p, i) { /* Do not discard failed/incompatible pairs. */ return "pair " + i + ": " + p.state + (p.reasons.length ? " (" + p.reasons.join("; ") + ")" : ""); }).join(" · ");
-  element("comparison-policy").textContent = view.policy;
+  element("comparison-policy").textContent = view.policy + " Evidence policy: " + JSON.stringify(view.evidence_policy);
   const repeated = element("comparison-detail").value === "repeated";
   comparisonState.rows = comparisonRows();
-  tablePage("comparison-table", repeated ? ["Scope", "Metric", "Unit", "Available trials", "Minimum B-A", "Maximum B-A", "State"] : ["Scope", "Metric", "Unit", "A", "B", "B-A", "State"], comparisonState.rows, comparisonState.page);
+  tablePage("comparison-table", repeated ? ["Scope", "Metric", "Unit", "Available trials", "Minimum B-A", "Maximum B-A", "State", "Evidence / reasons"] : ["Scope", "Metric", "Unit", "A", "B", "B-A", "State", "Evidence / reasons"], comparisonState.rows, comparisonState.page);
   element("comparison-page").textContent = "Page " + (comparisonState.page + 1) + " / " + Math.max(1, Math.ceil(comparisonState.rows.length / 20));
   const pair = view.pairs[Number(element("comparison-detail").value)];
   element("comparison-provenance").textContent = pair ? JSON.stringify({ a: pair.a, b: pair.b }, null, 2) : "Choose a pair to inspect frozen settings, exact populations, time labels, bindings, marking evidence and limitations. Repeated ranges describe per-trial deltas, not pooled p95/p99.";
@@ -44,7 +44,7 @@ async function readComparison() {
   if (lines.length < 1 || lines.length > 8) throw new Error("Select one to eight A/B pairs, one pair per line.");
   const pairs = lines.map(function pairLine(line) { /* Safe IDs only; no file paths or repeated evidence. */ const ids = line.trim().split(/\s+/); if (ids.length !== 2) throw new Error("Each line must contain A-report-ID B-report-ID."); return { a: safeID(ids[0]), b: safeID(ids[1]) }; });
   const axes = ["adapter", "port", "client_dscp", "server_dscp"].filter(function selectedAxis(axis) { /* Selection must match each report's frozen comparison_axes. */ return element("axis-" + axis).checked; });
-  const view = await api("/api/v1/reports/compare", "POST", { pairs, axes, endpoint: element("comparison-endpoint").value, scope: element("comparison-scope").value });
+  const view = await api("/api/v1/reports/compare", "POST", { pairs, axes, endpoint: element("comparison-endpoint").value, scope: element("comparison-scope").value, evidence_policy:evidencePolicy() });
   comparisonState.view = view; comparisonState.page = 0;
   element("comparison-detail").replaceChildren();
   const option = document.createElement("option"); option.value = "repeated"; option.textContent = "Repeated delta ranges"; element("comparison-detail").append(option);

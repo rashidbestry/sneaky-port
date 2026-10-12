@@ -93,6 +93,10 @@ type Collector struct {
 	bytes                       uint64
 	generation, observation     uint64
 	err                         error
+	live                        *measure.LiveAccounting
+	peerReceived                profile.Decimal
+	lastProgress                uint64
+	progressPublished           bool
 }
 
 // NewCollector freezes the plan/windows and checks epoch-relative overflow before I/O ownership.
@@ -212,7 +216,11 @@ func (c *Collector) Apply(e worker.Event) error {
 	if err := c.keep(record(e)); err != nil {
 		return err
 	}
-	return c.apply(e, true)
+	err := c.apply(e, true)
+	if err == nil {
+		c.trackProgress(e)
+	}
+	return err
 }
 
 // apply shares accounting transitions with offline replay; only live events own completion channels.
@@ -363,10 +371,11 @@ func (c *Collector) Finish(workerErr error, observed uint64) (Result, error) {
 // Endpoint connects a caller-owned prepared/start-anchored worker to one accounting owner.
 // The caller stops after its chosen observation window; no CLI/control lifecycle is started.
 type Endpoint struct {
-	worker *worker.Endpoint
-	done   chan struct{}
-	result Result
-	err    error
+	worker   *worker.Endpoint
+	done     chan struct{}
+	result   Result
+	err      error
+	progress *measure.ProgressFeed
 }
 
 // newEndpoint validates the frozen plan digest and connects shared multi-phase accounting.
@@ -382,6 +391,9 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 	c, err := NewCollector(p, cfg.Direction, uint64(start), cfg.Registry)
 	if err != nil {
 		return nil, err
+	}
+	if measure.ProgressSink(parent) != nil {
+		c.live = measure.NewLiveAccounting()
 	}
 	if len(persistence) > 0 {
 		c.persistence = persistence[0]
@@ -401,7 +413,7 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 	if err != nil {
 		return nil, err
 	}
-	run := &Endpoint{worker: u, done: make(chan struct{})}
+	run := &Endpoint{worker: u, done: make(chan struct{}), progress: measure.ProgressSink(parent)}
 	go run.collect(c, cfg)
 	return run, nil
 }
@@ -409,6 +421,14 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 // collect drains until joined worker shutdown, recording the first accounting failure as partial.
 func (u *Endpoint) collect(c *Collector, cfg worker.Config) {
 	defer close(u.done)
+	feed := u.progress
+	var tick <-chan time.Time
+	if feed != nil {
+		timer := time.NewTicker(250 * time.Millisecond)
+		defer timer.Stop()
+		tick = timer.C
+		c.publishProgress(feed, cfg, false)
+	}
 	var failed <-chan struct{}
 	if c.persistence != nil {
 		failed = c.persistence.Failed()
@@ -417,6 +437,9 @@ events:
 	for {
 		var e worker.Event
 		select {
+		case <-tick:
+			c.publishProgress(feed, cfg, false)
+			continue
 		case <-failed:
 			c.err = errors.New("local evidence storage failed")
 			failed = nil
@@ -445,6 +468,19 @@ events:
 	}
 	err := u.worker.Wait(context.Background())
 	u.result, u.err = c.Finish(err, uint64(time.Since(cfg.EpochStart)))
+	if c.live != nil {
+		c.live = measure.NewLiveAccounting()
+		for _, entry := range u.result.Entries {
+			c.ledger.TrackProgress(c.live, entry.Identity, uint64(u.result.ObservationCutoff))
+		}
+		c.peerReceived = 0
+		for _, at := range u.result.Receiver.Arrivals {
+			if at < uint64(u.result.ObservationCutoff) {
+				c.peerReceived++
+			}
+		}
+	}
+	c.publishProgress(feed, cfg, true)
 	u.result.Run, u.result.Session, u.result.Epoch, u.result.PeerEpoch = cfg.Run, cfg.Session, cfg.Epoch, cfg.PeerEpoch
 }
 
