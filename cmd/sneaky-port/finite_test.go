@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/testutil"
 )
@@ -179,7 +180,9 @@ func TestFiniteCLI(t *testing.T) {
 // These are same-host IPv4 UDP/SSH runs, distinct from deployment/native/live acceptance.
 func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	// Four completed comparison trials, replay/export and cancellation share this fixture lifetime.
+	// Each individual run still has its five-second deadline and unchanged engine limits.
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	reader, writer := io.Pipe()
 	done := make(chan error, 1)
@@ -213,7 +216,9 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	if bootstrap.Version != 1 || len(bootstrap.Token) != 64 {
 		t.Fatal("invalid API bootstrap")
 	}
-	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}
+	// Multi-report replay and reconciliation are CPU-heavy under race instrumentation.
+	// This test-client budget does not alter the product HTTP or measurement timeouts.
+	client := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{Proxy: nil}}
 	defer client.CloseIdleConnections()
 	shell, err := client.Get(bootstrap.URL + "/")
 	if err != nil {
@@ -238,6 +243,7 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 		t.Fatal(err)
 	}
 	p.ID = "api-saved"
+	p.MatchedMetadata["environment"] = "owned same-host CLI/API fixture; sequential trials; no independent live-path claim"
 	profileBody, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": "save", "profile_revision": "", "profile": p})
 	saved := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "PUT", "/api/v1/profiles/api-saved", "save", string(profileBody))
 	bootstrap.ProfileID, bootstrap.Revision = p.ID, saved["profile_revision"].(string)
@@ -283,6 +289,7 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 				t.Fatal("API run evidence failed offline replay", err)
 			}
 			exerciseReportAPI(t, client, bootstrap.URL, bootstrap.Token, store, id+"-client", report)
+			exerciseComparisonAPI(t, client, bootstrap.URL, bootstrap.Token, store, id+"-client", bootstrap.ProfileID, bootstrap.Revision)
 		}
 		// A retry after terminal publication must return the original start handle without a new run.
 		retry := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs", requestID, string(body))
@@ -358,6 +365,68 @@ func exerciseReportAPI(t *testing.T, client *http.Client, base, token string, st
 		t.Fatal("import changed recomputed report")
 	}
 	apiCLIRequest(t, client, base, token, "GET", "/api/v1/reports/imported", "read-import", "")
+}
+
+// exerciseComparisonAPI runs four sequential owned SSH/UDP trials and checks both directional saved comparisons.
+// This fixture proves adapter/control integration, not alternating live-path or native-platform acceptance.
+func exerciseComparisonAPI(t *testing.T, client *http.Client, base, token string, store *control.Store, first, profileID, revision string) {
+	t.Helper()
+	ids := []string{first}
+	for n := 1; n <= 3; n++ {
+		command := fmt.Sprintf("compare-run-%d", n)
+		body, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": command, "profile_id": profileID, "profile_revision": revision})
+		state := apiCLIRequest(t, client, base, token, "POST", "/api/v1/runs", command, string(body))
+		handle := state["control_run_id"].(string)
+		deadline := time.Now().Add(5 * time.Second)
+		for state["status"] == "executing" || state["status"] == "cancelling" {
+			if time.Now().After(deadline) {
+				t.Fatal("comparison trial did not finalize")
+			}
+			time.Sleep(5 * time.Millisecond)
+			state = apiCLIRequest(t, client, base, token, "GET", "/api/v1/runs/"+handle, "compare-poll", "")
+		}
+		if state["status"] != "completed" {
+			t.Fatal("comparison fixture incomplete", state["status"])
+		}
+		ids = append(ids, state["measurement_run_id"].(string)+"-client")
+	}
+	for _, endpoint := range []string{"local", "server"} {
+		for _, scope := range []string{"main", "warmup", "0"} {
+			body, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": "compare", "pairs": []control.TrialPair{{A: ids[0], B: ids[1]}, {A: ids[2], B: ids[3]}}, "axes": []string{}, "endpoint": endpoint, "scope": scope})
+			result := apiCLIRequest(t, client, base, token, "POST", "/api/v1/reports/compare", "compare", string(body))
+			pairs := result["pairs"].([]any)
+			for i, raw := range pairs {
+				pair := raw.(map[string]any)
+				if pair["state"] != "descriptive" && pair["state"] != "tie" {
+					t.Fatal("real saved trial incompatible", pair["reasons"])
+				}
+				values := []measure.Summary{}
+				for _, id := range ids[2*i : 2*i+2] {
+					r, err := store.SavedReport(id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if endpoint == "server" {
+						r = r.ServerReport
+					}
+					if r == nil {
+						t.Fatal("server fixture missing")
+					}
+					s := r.Evidence.Summary
+					if scope == "warmup" {
+						s = r.Evidence.Warmup
+					} else if scope == "0" {
+						s = r.Evidence.Phases[0]
+					}
+					values = append(values, s)
+				}
+				metric := pair["metrics"].([]any)[0].(map[string]any)
+				if metric["a"] != fmt.Sprint(values[0].DeadlineMisses) || metric["b"] != fmt.Sprint(values[1].DeadlineMisses) || metric["delta"] != fmt.Sprint(int64(values[1].DeadlineMisses)-int64(values[0].DeadlineMisses)) {
+					t.Fatal("real directional/scope population changed", metric)
+				}
+			}
+		}
+	}
 }
 
 // apiCLIRequest exercises actual authenticated HTTP while keeping bootstrap credentials out of diagnostics.

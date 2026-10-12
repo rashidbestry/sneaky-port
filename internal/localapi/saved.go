@@ -94,6 +94,8 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return true
 	}
 	switch {
+	case ns == "reports" && len(parts) == 2 && parts[1] == "compare" && r.Method == "POST":
+		s.compareReports(w, r, id)
 	case ns == "profiles" && len(parts) == 2 && parts[1] == "validate" && r.Method == "POST":
 		s.profileWrite(w, r, id, "")
 	case ns == "profiles" && len(parts) == 2 && r.Method == "PUT":

@@ -30,11 +30,17 @@ type Analysis struct {
 // Analyze groups spikes by original sequence and stalls by local completion order.
 // Warmup and optional phase filters use the same eligible population as summaries.
 func (l *Ledger) Analyze(cutoff, threshold uint64, lifecycle byte, phase *uint32) Analysis {
+	return AnalyzeSnapshot(l.Snapshot(), cutoff, threshold, lifecycle, phase)
+}
+
+// AnalyzeSnapshot applies the same episode rules to immutable replayed entries for saved comparisons.
+// It preserves original sequence order and host-local cutoff semantics; it does not establish network outages.
+func AnalyzeSnapshot(snapshot []Entry, cutoff, threshold uint64, lifecycle byte, phase *uint32) Analysis {
 	out := Analysis{Threshold: profile.Decimal(threshold)}
 	entries := []Entry{}
 	byID := map[Identity]Entry{}
 	rtts := []uint64{}
-	for _, e := range l.Snapshot() {
+	for _, e := range snapshot {
 		if uint64(e.Scheduled) < cutoff && e.Identity.Lifecycle == lifecycle && (phase == nil || e.Identity.Phase == *phase) {
 			entries = append(entries, e)
 			byID[e.Identity] = e

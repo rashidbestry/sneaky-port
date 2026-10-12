@@ -10,7 +10,7 @@ import (
 
 // dashboardAssets contains only public static code; session credentials/settings are never interpolated.
 //
-//go:embed web/index.html web/dashboard.js web/dashboard.css web/diagnostics.js
+//go:embed web/index.html web/dashboard.js web/dashboard.css web/diagnostics.js web/compare.js
 var dashboardAssets embed.FS
 
 // dashboard serves exact public shell paths after peer/Host/Origin guards, without weakening API auth.
@@ -26,6 +26,8 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) bool {
 		file, media = "dashboard.css", "text/css; charset=utf-8"
 	case "/diagnostics.js":
 		file, media = "diagnostics.js", "text/javascript; charset=utf-8"
+	case "/compare.js":
+		file, media = "compare.js", "text/javascript; charset=utf-8"
 	default:
 		return false
 	}

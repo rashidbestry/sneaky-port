@@ -6,11 +6,11 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11; S01-S06/S12 remain proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run and saved diagnostic/distribution views exist; live counters, comparisons and full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
+Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run, saved diagnostic/distribution and matched saved-comparison views exist; live counters and full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-18 are complete within scope. Production clock bounds, UI/live views, comparisons and full acceptance remain pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-21 are complete within scope. Production clock bounds, live views, rendered-browser QA and full acceptance remain pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
@@ -18,9 +18,9 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 | F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, queues and shared UDP/TCP phase/accounting pass Windows/WSL fixtures; finite CLI lifecycle implemented; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
-| F05 | Server/destination ports, optional source ports, selected-port comparisons | Partial: explicit socket controls, server port policy and effective readiness bindings; matched-run comparisons/live NAT evidence pending | [Ports](DESIGN.md#port-selection) |
+| F05 | Server/destination ports, optional source ports, selected-port comparisons | Partial: explicit socket controls, server port policy and effective readiness bindings; matched saved-port comparisons implemented; live NAT evidence pending | [Ports](DESIGN.md#port-selection) |
 | F06 | Independent directional packet priority with outer-packet evidence | Partial: role-specific readiness probes requested markings; Linux DSCP/ECN readback tested, Windows baseline unknown/qWave compiles; writer-owned physical-phase transitions implemented; outer capture/native nonzero qWave gates pending | [Priority](DESIGN.md#independent-packet-priority) |
-| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; bounded local files/replay/exports and authenticated remote reconciliation implemented; comparisons pending | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
+| F07 | FPS workloads, correct timing/delivery metrics, reproducible reports, evidence-based comparisons | Partial: UDP/TCP phases, deadline/cutoff/ticket accounting, bounded local observations and RTT/variation/spike/stall analysis; bounded local files/replay/exports and authenticated remote reconciliation and descriptive matched saved comparisons implemented | [Measurements](DESIGN.md#timing-and-scheduling-correctness) |
 | F08 | Extensible protocol adapters with shared measurement, capability-driven configuration/dashboard, and compatible results | Partial registry/descriptor/factory, protected API descriptors, saved validation/replay and registry-driven dashboard options, test-only option extension; common engine/UI/report extension gate pending | [Extensibility](DESIGN.md#protocol-extensibility) |
 | F09 | Authenticated run-plan coordination and maintained clock calibration for directional one-way measurements with uncertainty | Partial: trust/readiness/leases, finite lifecycle, authenticated reconciliation, live SSH captures and causal one-way intervals/replay/export implemented. Synthetic envelope gates pass; independently verified production bounds and clock-change/native/live acceptance pending | [Control and calibration](DESIGN.md#control-connection-and-clock-calibration) |
 | F10 | Capability-driven dashboard traffic tweaks, including supported fragmentation and header/framing/payload size controls | Partial: payload and common dashboard editor/registered options implemented; richer fragmentation/header controls and schema/mechanisms pending ([evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement)) | [Traffic controls](DESIGN.md#protocol-specific-traffic-controls) |
@@ -122,6 +122,9 @@ Before adoption: choose explainable confidence labels or uncertainty measures. K
 
 Task 16 milestone suggestion (still proposed): one-way results now retain uncertainty, expiry, missing/inconsistent-clock reasons and explicit detail omissions alongside unchanged local RTT/delivery. These inputs can support descriptive evidence labels such as “clock bounds unverified” or “missing receiver records,” without a combined score or automatic winner. User requested an explanation on 2026-10-11; acceptance remains open. Before later implementation, decide which labels apply per metric, how repeated-run evidence is described, and verify that poor timely-delivery results remain visible beside measurement limitations.
 
+
+Task 21 milestone suggestion (still proposed): S06 can now use exact repeated delta ranges, per-trial incompatibility/completeness and phase failures to explain conflicting evidence without obscuring deadline outcomes. The inputs exist; the label vocabulary, per-metric applicability and validation of mixed/incomplete repetitions remain decisions. No confidence score, recommendation threshold or S06 implementation is accepted by this suggestion.
+
 ## Reference-tool candidates
 
 Recorded: 2026-10-11 during action 3a. This initial inventory captures useful ideas, not a completed source audit or proven integration. The later [action 3b decisions](#reference-review-dispositions) and [source review](ARCHIVE.md#selective-source-review-and-dispositions) provide current dispositions. Prefer improvements that preserve our shared measurement contract across authentic adapters. Existing requirements below remain F01-F07; they are not claims of implementation. [Planning evidence](ARCHIVE.md#2026-10-11-reference-tool-planning-recorded).
@@ -150,7 +153,7 @@ Before execution: use the settled [reference matrix](DESIGN.md#reference-compari
 
 ### S08: Timing preflight and diagnostic report
 
-- [ ] Accepted future scope by user, 2026-10-11; partial local preflight only, full diagnostics pending. [Implementation evidence](ARCHIVE.md#2026-10-11-first-implementation-foundations).
+- [ ] Accepted future scope by user, 2026-10-11; local preflight and saved diagnostics implemented; live diagnostics and full timing evidence pending. [Evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views).
 
 Offer an optional local preflight that measures timer wake-up error, scheduling lag and submission overhead, plus a diagnostic view during runs. Keep these observations separate from network RTT, receiver processing and adapter queues; identify CPU pressure and unsupported observations.
 
@@ -160,13 +163,13 @@ Remaining work: integrate the contract's explicit preflight/window limits and ad
 
 ### S09: Distribution and phase comparison views
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; saved time/ECDF and scalar matched phase comparisons implemented; extra histograms/overlays and live views pending. [Evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons).
 
 Add optional histograms/CDFs and matched-run overlays alongside phase timelines for completed RTT, scheduling error, deadline outcomes and delivery interruptions. Show direction, workload phase, units, sample counts, missing/late outcomes and measurement boundaries; allow inspection of the underlying records.
 
-Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Those UI/report paths remain pending. Complements S02/S06 without adopting their additional metrics or confidence policy.
+Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Saved time/ECDF and matched scalar comparison paths are implemented; live views and overlays remain pending. Complements S02/S06 without adopting their additional metrics or confidence policy.
 
-First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); dashboard/report integration remains pending. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
+First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); saved dashboard/report integration is implemented in tasks 20-21; live views remain pending. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
 
 ### S10: Controlled contention scenario catalogue
 

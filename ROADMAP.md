@@ -118,15 +118,20 @@ The former task 5 bundled implementation and all acceptance gates. On the user's
 
 **Complete for saved diagnostic/distribution and local-preflight component implementation and recorded fixtures, 2026-10-12.** F01/F07, T13/T14, basic S08/S09. Protected bounded replay supplies endpoint/main/warmup/phase counts, exact full-population tails, phase boundaries and local fault evidence. Native SVG time/ECDF range groups preserve extrema/counts/missing/local markers; tables paginate and explicit local timer preflight reports lag/missed slots with unverified clock quality. Windows tests/vet/build, affected race checks, actual-script and real HTTP/SSH/UDP fixtures, Ubuntu/CentOS WSL API/CLI checks and four target builds pass. Rendered-browser QA, live phase/counters, verified clock quality and full acceptance remain pending. [Evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views), [source flow](FLOWCHART.md#diagnostic-and-distribution-views), [operator workflow](README.md#diagnostic-and-distribution-views).
 
-**Next: task 21 only, compare matched saved runs.** No comparison or automatic winner is implemented.
+Task 21 below supplies matched saved-run comparisons. Live counters and full slice acceptance remain incomplete.
+
+## 21. Compare matched saved runs (completed)
+
+**Complete for protected saved comparison/API/dashboard implementation and recorded fixtures, 2026-10-12.** F05/F07, T10/T18/T14. Selected distinct A/B pairs replay under one aggregate read budget; frozen workloads, environment and platform provenance match outside predeclared adapter/port/directional DSCP axes. Exact deadline-first counts/fractions, full-population tails/variation, delivery and shared spike/stall episodes retain main/warmup/phase populations, per-trial deltas, ties and incompatible/incomplete/inconclusive results. Repeated ranges never pool quantiles or select winners. Windows ordinary/race, script, real sequential HTTP/SSH/UDP fixtures, WSL checks and four builds are recorded in [evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons); [source flow](FLOWCHART.md#matched-saved-run-comparisons), [operator workflow](README.md#compare-matched-saved-runs). Environment/order/outer-path claims, calibrated one-way comparisons, rendered-browser QA and full acceptance remain unverified.
+
+**Next: task 22 only, complete the adapter extension gate.**
 
 ## Queued implementation tasks
 
-Every row is a separate task, currently **not started**; task 21 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
+Every row is a separate task, currently **not started**; task 22 is next. These outcomes extend the finite engine using existing primitives; they do not accept additional features.
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 21 | Compare matched saved runs | Selected repeated trials show compatible deltas/ties/inconclusive states without inventing winners |
 | 22 | Complete the adapter extension gate | One test adapter uses common configuration, lifecycle, accounting, UI and reports without protocol switches in shared code |
 
 ## Queued validation tasks

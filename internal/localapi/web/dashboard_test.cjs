@@ -52,6 +52,7 @@ const context = vm.createContext({ document: {
 });
 vm.runInContext(fs.readFileSync(__dirname + "/dashboard.js", "utf8"), context);
 vm.runInContext(fs.readFileSync(__dirname + "/diagnostics.js", "utf8"), context);
+vm.runInContext(fs.readFileSync(__dirname + "/compare.js", "utf8"), context);
 // evaluate inspects the actual script's lexical model instead of mirroring its implementation.
 function evaluate(code) { return vm.runInContext(code, context); }
 // click executes the bound UI handler and waits for its serialized asynchronous operation to finish.
@@ -78,6 +79,15 @@ async function main() {
   ids["report-endpoint"].value = "server"; await click("read-report"); assert.equal(ids.notice.dataset.error, "true"); assert.equal(evaluate("diagnosticsState.view.endpoint"), "client");
   ids["preflight-duration"].value = "1000000"; ids["preflight-interval"].value = "100000"; await click("preflight"); assert.ok(ids["preflight-status"].textContent.includes("source/resolution unverified")); assert.equal(ids["wakes-prev"].disabled, true);
   ids["preflight-duration"].value = "1000000001"; await click("preflight"); assert.equal(ids.notice.dataset.error, "true");
+  ids["comparison-pairs"].value = "diagnostic comparison"; ids["comparison-endpoint"].value = "local"; ids["comparison-scope"].value = "main";
+  await click("compare-reports"); assert.equal(ids.notice.dataset.error, "false"); assert.ok(ids["comparison-status"].textContent.includes("inconclusive")); assert.equal(ids["comparison-prev"].disabled, true);
+  await click("comparison-next"); assert.ok(ids["comparison-page"].textContent.includes("Page 2")); await click("comparison-prev");
+  ids["comparison-detail"].value = "0"; evaluate("renderComparison()"); assert.ok(ids["comparison-provenance"].textContent.includes("Offline consistency is not authentication"));
+  const savedComparison = evaluate("JSON.stringify(comparisonState.view)");
+  evaluate('comparisonState.view.pairs[0].metrics[9].a = "9007199254740993"; comparisonState.view.pairs[0].metrics[9].b = "9007199254740994"; comparisonState.view.pairs[0].metrics[9].delta = "1"; renderComparison()');
+  assert.ok(descendants(ids["comparison-table"]).some(function exactComparison(node) { /* Actual rendering must preserve exact large values. */ return node.textContent === "9007199254740993"; }));
+  ids["comparison-pairs"].value = "diagnostic diagnostic"; await click("compare-reports"); assert.equal(ids.notice.dataset.error, "true"); assert.ok(ids["comparison-status"].textContent.includes("diagnostic"));
+  evaluate("comparisonState.view = " + savedComparison + "; renderComparison()");
   ids["client-id"].value = "dashboard-client"; await click("create-key"); assert.ok(ids.enrollment.textContent.includes("public_key")); assert.ok(!ids.enrollment.textContent.includes("key_ref")); assert.equal(ids["create-key"].disabled, true);
   ids["pairing-id"].value = "dashboard-peer"; ids.bundle.value = process.env.DASHBOARD_TEST_BUNDLE; await click("import-pairing"); assert.ok(ids["pairing-preview"].textContent.includes("host_key_fingerprint"));
   await click("import-pairing"); assert.equal(ids.notice.dataset.error, "true"); ids.replace.checked = true; await click("import-pairing"); assert.equal(ids.notice.dataset.error, "false"); assert.equal(ids.replace.checked, false);
@@ -96,6 +106,7 @@ async function main() {
   await click("validate"); assert.equal(ids.notice.dataset.error, "false"); await click("save"); assert.equal(ids.start.disabled, false);
   await click("start"); assert.equal(ids.retry.hidden, false); assert.equal(ids.start.disabled, true); const pendingID = evaluate("state.pending.id");
   await click("disconnect"); assert.equal(evaluate("state.token"), ""); assert.equal(evaluate("state.session"), ""); assert.equal(timers.size, 0);
+  assert.equal(evaluate("comparisonState.view"), null); assert.equal(ids["comparison-status"].children.length, 0);
   ids.token.value = process.env.DASHBOARD_TEST_TOKEN; await click("connect"); await click("retry"); assert.equal(ids.retry.hidden, true); assert.equal(evaluate("state.run.control_run_id"), currentRun);
   const starts = requests.filter(function startRequest(r) { /* Compare original and retried start correlation exactly. */ return r.path === "/api/v1/runs"; }); assert.equal(starts.length, 2); assert.equal(starts[0].body.request_id, pendingID); assert.deepEqual(starts[0].body, starts[1].body);
   const frozen = ids.frozen.textContent; evaluate('state.draft.phases[0].client.content_bytes += 1; controls()'); assert.equal(ids.start.disabled, true); await click("save"); assert.equal(ids.frozen.textContent, frozen);

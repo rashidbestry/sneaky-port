@@ -18,7 +18,7 @@ import (
 // TestDashboardShellGuards permits public static code only; private bootstrap/API reads remain guarded.
 func TestDashboardShellGuards(t *testing.T) {
 	s := fixtureAPI(t, stoppedRunner)
-	for _, path := range []string{"/", "/dashboard.js", "/dashboard.css", "/diagnostics.js"} {
+	for _, path := range []string{"/", "/dashboard.js", "/dashboard.css", "/diagnostics.js", "/compare.js"} {
 		r := request(s, "GET", path, "shell", "")
 		r.Header.Del("Authorization")
 		r.Header.Del("X-Request-ID")
@@ -130,6 +130,7 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 		return control.RunResult{Status: "partial"}, nil
 	})
 	importDiagnosticFixture(t, s)
+	importComparisonFixture(t, s)
 	pub, err := control.GenerateKey(t.TempDir() + "/host")
 	if err != nil {
 		t.Fatal(err)
