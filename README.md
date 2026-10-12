@@ -125,6 +125,21 @@ Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_re
 
 `reconciliation.one_way` matches original attempts and complete receiver arrivals, then applies the clock revision available at client send time upstream or client arrival downstream. The report records raw-file hashes and retained results' identities, model/sample IDs, age, signed lower/upper/midpoint/uncertainty and clock-local units. Application serialization/submission/buffering are included. Production bounds are unverified, so values remain `estimate` or `unavailable`; source labels cannot enable `calibrated`. Later samples never upgrade old results. Detail bytes are capped at the smaller of the profile event budget and 256 KiB; exact status counts and omitted-model/result counts remain visible, with raw evidence retained. [One-way flow](FLOWCHART.md#uncertainty-gated-one-way-results).
 
+### Cross-endpoint CLI validation
+
+Task 23 validates native Windows x86-64 CLI processes against an isolated Ubuntu x86-64 WSL2 server over its private virtual network. Pairing, UDP/TCP readiness/completion/console interruption, endpoint replay/exports and owned-resource cleanup pass; this is not native ARM64, bare-metal Linux or live ISP acceptance. [Recorded environment and results](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation).
+
+To rerun the [opt-in fixture](cmd/sneaky-port/cross_endpoint_windows_test.go), select an existing WSL distribution with `python3` and a reachable non-loopback IPv4 address:
+
+```powershell
+$env:GOCACHE = "$PWD\.cache\go-build"
+$env:SNEAKY_PORT_TASK23_WSL = "Ubuntu"
+go test ./cmd/sneaky-port -run '^TestWindowsLinuxCLI$' -count=1 -v -timeout 5m
+Remove-Item Env:SNEAKY_PORT_TASK23_WSL
+```
+
+The fixture builds both current binaries and creates fresh stores/ports; it leaves existing services and identities intact. Local outputs stay under ignored `test-output/task23-*`; Linux keys/reports stay in its private `/var/tmp/sneaky-port-task23-*` directory, surviving idle WSL restarts. Cancellation exports local partial evidence without server transfer or delivery claims. Ordinary tests skip this fixture unless explicitly enabled.
+
 ## Protected local run API
 
 ### Dashboard setup and run controls

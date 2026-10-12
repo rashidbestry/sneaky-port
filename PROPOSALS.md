@@ -14,7 +14,7 @@ This index tracks scope and partial progress, not a release schedule. [ROADMAP.m
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
-| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: persistent pairing, key-only SSH, finite CLI, protected configuration/run/report API and dashboard setup/run controls; four builds; saved diagnostics/distributions implemented; live counters and native ARM64/Linux minima pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
+| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: pairing/SSH/finite CLI, protected API/dashboard and saved diagnostics implemented; four builds and named [Windows-to-Ubuntu x86-64 WSL2 CLI workflow](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation) pass; live counters, native ARM64/Linux minima and full acceptance pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
 | F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, queues and shared UDP/TCP phase/accounting pass Windows/WSL fixtures; finite CLI lifecycle implemented; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |

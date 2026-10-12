@@ -172,6 +172,8 @@ Sources: [run.go](internal/control/run.go) (`Run`, `executeRun`, `durationSum`),
 
 Anchors/epochs are local to each run, with no shared-clock claim. Marking follows the current physical phase for queued data and receipts; original identities still determine measurement attribution. Quiet phases update on the next outgoing frame, and grace retains the last setting. Frames spanning boundaries and API success do not prove packet markings. A stopped generation cutoff is separate from observation/drain; late timer callbacks or read errors at/after the elapsed cutoff cannot relabel a full window as truncated. Early failures remain partial and server run heartbeats expose them. A server cutoff interrupts local I/O without early peer EOF; final socket cleanup belongs to control. The exclusive client lock is never stolen after a crash. The snapshot is also saved in task 12 local summaries; local replay/export and authenticated server reconciliation are implemented separately from endpoint-only snapshots. [Evidence](WORK_LOG.md#2026-10-11-finite-run-lifecycle).
 
+Task 23's [real-process fixture](cmd/sneaky-port/cross_endpoint_windows_test.go) follows this path from a native Windows x86-64 CLI to an isolated Ubuntu x86-64 WSL2 server: public pairing → UDP/TCP readiness → finite completion or targeted console interrupt → endpoint replay/export → owned-process/port cleanup. Completed runs transfer server evidence; interruption returns local partial evidence and unknown remote lifecycle/delivery, with server reports checked independently. [Named environment and limits](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation); other native/impairment/live acceptance remains pending.
+
 ## Profiles and planned slots
 
 ```mermaid

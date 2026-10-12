@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-12. Planning steps 1-4 and implementation milestones 5-22 are complete within their stated scopes. **Next: task 23 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
+Updated: 2026-10-12. Planning steps 1-4 and milestones 5-23 are complete within their stated scopes. **Next: task 24 only.** The full first slice remains incomplete. Requirements are in [DESIGN.md](DESIGN.md), answers in [CHOICES.md](CHOICES.md), feature status in [PROPOSALS.md](PROPOSALS.md), and evidence in [WORK_LOG.md](WORK_LOG.md).
 
 Work one selected task at a time. Each task has a bounded outcome and completion check; update its status/evidence before moving on. Split any task that expands into several outcomes before implementation. Starting one task does not mean continuing through the rest in the same conversation.
 
@@ -130,7 +130,17 @@ Task 21 below supplies matched saved-run comparisons. Live counters and full sli
 
 **Complete for the common workflow extension gate and recorded fixtures, 2026-10-12.** F08, T06/T14/T21. One startup registry connects configuration/capability validation, authenticated coordination, finite lifecycle, shared workers/accounting and dashboard/report operations. Descriptor frame limits and fixed framing-byte costs replace finite protocol-name dispatch. A test-only TCP-backed adapter retains its distinct identity/options through both-family completion, cancellation, reconciliation, replay/import/JSON/JSONL/CSV export, diagnostics/comparison and actual dashboard script controls. Production defaults remain UDP/TCP. Windows ordinary/race checks and four builds pass; native/later-carrier/outer/live/full acceptance remains pending. [Boundary](README.md#adapter-extension-gate), [source flow](FLOWCHART.md#adapter-extension-gate), [evidence](WORK_LOG.md#2026-10-12-adapter-extension-gate).
 
-**Next: task 23 only, validate the Windows x86-64 client to Linux x86-64 CLI workflow.**
+## 23. Validate the Windows x86-64 client to Linux x86-64 CLI workflow (completed)
+
+**Complete for the named Windows 11 x86-64 to Ubuntu 24.04.4 x86-64 WSL2 virtual-network case, 2026-10-12.** F01/F07/F09, T08/T09/T12. [Opt-in real-process fixture](cmd/sneaky-port/cross_endpoint_windows_test.go), [rerun instructions](README.md#cross-endpoint-cli-validation), [evidence](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation).
+
+- [x] Fresh endpoint-local keys, public enrollment/import and UDP/TCP exact-plan readiness.
+- [x] UDP and TCP finite completion, authenticated server transfer and compatible reconciliation.
+- [x] Real Windows console interrupt during UDP/TCP data; bounded nonzero exit and saved partial endpoint reports, with remote delivery unknown.
+- [x] Fresh CLI replay and JSON/JSONL/CSV export on both endpoints, saved-summary/identity/platform checks.
+- [x] Client reservations, server data ports and owned SSH server released; sandbox access resolved through narrow review without changing user services/settings.
+
+This case does not establish bare-metal Linux, native ARM64, Linux minima, outer markings, production clock bounds, impairment or live ISP acceptance. **Next: task 24 only, validate a native Windows 11 ARM64 client.**
 
 ## Queued validation tasks
 
@@ -138,7 +148,6 @@ All are **pending evidence**. Use [acceptance gates](DESIGN.md#validation-before
 
 | Task | Bounded outcome | Completion check |
 | --- | --- | --- |
-| 23 | Windows x86-64 client to Linux x86-64 CLI workflow | Real pairing/readiness/run/cancel/export completes across endpoints; current access restriction resolved or recorded as outstanding |
 | 24 | Native Windows 11 ARM64 client case | Client workflow passes on native ARM64 against a documented Linux server; compilation alone does not complete it |
 | 25 | Native Linux ARM64 server case | Server workflow passes on native ARM64 with recorded OS/kernel, permissions and cleanup |
 | 26 | Establish a Linux support-baseline case | Record and validate a named distribution/version minimum; additional claimed distributions/versions get separate cases |
