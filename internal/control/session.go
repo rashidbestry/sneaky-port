@@ -743,7 +743,7 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 	setup, cancel := context.WithTimeout(ctx, time.Duration(p.Limits.SetupTimeout))
 	defer cancel()
 	address := net.JoinHostPort(bundle.ControlAddress, strconv.Itoa(bundle.ControlPort))
-	raw, err := (&net.Dialer{}).DialContext(setup, "tcp", address)
+	raw, err := dialControl(setup, "tcp", address)
 	if err != nil {
 		return result, err
 	}

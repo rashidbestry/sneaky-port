@@ -63,23 +63,25 @@ type runState struct {
 
 // Server owns a literal loopback listener, one process token and bounded lifecycle history.
 type Server struct {
-	listener net.Listener
-	http     *http.Server
-	token    string
-	host     string
-	plan     profile.Plan
-	revision string
-	runner   Runner
-	ctx      context.Context
-	cancel   context.CancelFunc
-	mu       sync.Mutex
-	runs     map[string]*runState
-	commands map[string]command
-	active   string
-	closed   bool
-	wg       sync.WaitGroup
-	store    *control.Store
-	savedMu  sync.Mutex
+	listener   net.Listener
+	http       *http.Server
+	token      string
+	host       string
+	plan       profile.Plan
+	revision   string
+	runner     Runner
+	ctx        context.Context
+	cancel     context.CancelFunc
+	mu         sync.Mutex
+	runs       map[string]*runState
+	commands   map[string]command
+	active     string
+	closed     bool
+	wg         sync.WaitGroup
+	store      *control.Store
+	savedMu    sync.Mutex
+	ssh        *control.SSHDashboard
+	connecting bool
 }
 
 // adapterRegistry keeps discovery and validation on the same startup registry as the store/runner.
@@ -156,7 +158,7 @@ func randomID(n int) (string, error) {
 // URL is the sole accepted HTTP authority/origin; aliases and proxy forwarding are not trusted.
 func (s *Server) URL() string { return "http://" + s.host }
 
-// Token exposes bootstrap credentials only to the local launcher, never through HTTP.
+// Token supplies the local launcher; the exact-origin dashboard grant also returns this page-memory bearer.
 func (s *Server) Token() string { return s.token }
 
 // Revision exposes the selected launch ID's current saved hash, or its transient fallback hash.
@@ -203,6 +205,9 @@ func (s *Server) Close(ctx context.Context) error {
 	s.listener.Close()
 	done := make(chan struct{})
 	go func() { // Join all admitted runs; the runner must obey its existing bounded cleanup contract.
+		if s.ssh != nil {
+			s.ssh.Close()
+		}
 		s.wg.Wait()
 		close(done)
 	}()
@@ -242,7 +247,7 @@ func reject(w http.ResponseWriter, code int, id, kind, field, reason string) {
 }
 
 // handle applies peer/authority/origin guards to every route and token guards to all API reads/mutations.
-// Only the exact public static dashboard shell/assets bypass credentials; they contain no session settings.
+// Public static assets and the exact-origin dashboard grant are the only credential bootstrap routes.
 func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -261,6 +266,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if s.dashboard(w, r) {
 		return
 	}
+	if s.bootstrap(w, r) {
+		return
+	}
 	auth := r.Header.Values("Authorization")
 	if len(auth) != 1 || subtle.ConstantTimeCompare([]byte(auth[0]), []byte("Bearer "+s.token)) != 1 {
 		reject(w, 401, "", "unauthorized", "authorization", "session bearer token required")
@@ -273,6 +281,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.URL.EscapedPath() != r.URL.Path || r.URL.RawPath != "" || r.URL.RawQuery != "" && !queryRoute(r.URL.Path) {
 		reject(w, 400, id, "invalid_request", "url", "encoded paths and unexpected queries rejected")
+		return
+	}
+	if s.sshConnection(w, r, id) {
 		return
 	}
 	if r.Method == http.MethodGet && r.URL.Path == "/api/v1/adapters" {
@@ -402,6 +413,10 @@ func (s *Server) mutate(w http.ResponseWriter, r *http.Request, id, target strin
 	}
 	var state *runState
 	if target == "" {
+		if s.connecting {
+			reject(w, 409, id, "conflict", "connection", "connect an SSH server before running")
+			return
+		}
 		p, revision, err := s.selectedProfile(m.ProfileID)
 		if err != nil || revision != m.Revision {
 			reject(w, 409, id, "conflict", "profile_revision", "selected profile revision unavailable or stale")

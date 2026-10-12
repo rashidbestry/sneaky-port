@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -15,13 +16,14 @@ import (
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
+	"sneaky-port/internal/testutil"
 	"sneaky-port/internal/testutil/extension"
 )
 
 // TestDashboardShellGuards permits public static code only; private bootstrap/API reads remain guarded.
 func TestDashboardShellGuards(t *testing.T) {
 	s := fixtureAPI(t, stoppedRunner)
-	for _, path := range []string{"/", "/dashboard.js", "/dashboard.css", "/diagnostics.js", "/compare.js"} {
+	for _, path := range []string{"/", "/navigation.js", "/dashboard.js", "/dashboard.css", "/diagnostics.js", "/compare.js"} {
 		r := request(s, "GET", path, "shell", "")
 		r.Header.Del("Authorization")
 		r.Header.Del("X-Request-ID")
@@ -135,6 +137,8 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 		<-ctx.Done()
 		return control.RunResult{Status: "partial"}, nil
 	})
+	sshFixture := testutil.StartSSH(t, control.DashboardServer)
+	s.EnableSSH(control.NewSSHDashboard(s.store))
 	s.store.Adapters = adapter.Default()
 	if err := extension.Register(s.store.Adapters); err != nil {
 		t.Fatal(err)
@@ -160,7 +164,7 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 	commandCtx, stop := context.WithTimeout(context.Background(), 25*time.Second)
 	defer stop()
 	command := exec.CommandContext(commandCtx, node, "web/dashboard_test.cjs")
-	command.Env = append(os.Environ(), "DASHBOARD_TEST_URL="+s.URL(), "DASHBOARD_TEST_TOKEN="+s.Token(), "DASHBOARD_TEST_BUNDLE="+string(bundle))
+	command.Env = append(os.Environ(), "DASHBOARD_TEST_URL="+s.URL(), "DASHBOARD_TEST_SSH_PORT="+strconv.Itoa(sshFixture.Port), "DASHBOARD_TEST_BUNDLE="+string(bundle))
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("dashboard script fixture: %v\n%s", err, out)
 	}

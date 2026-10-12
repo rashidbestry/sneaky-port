@@ -6,6 +6,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -53,7 +54,11 @@ func clientAPI(ctx context.Context, args []string, out io.Writer) error {
 	} else if !os.IsNotExist(err) {
 		return err
 	}
+	remote := control.NewSSHDashboard(store, signer)
 	api, err := localapi.ListenWithStore(*listen, p, store, func(runCtx context.Context, frozen profile.Plan) (control.RunResult, error) { // Reuse SSH trust/reservation, independent timing, persistence and reconciliation.
+		if remote.Status().State == "connected" || strings.HasPrefix(frozen.PairingRef, "ssh-") {
+			return remote.Run(runCtx, frozen)
+		}
 		key := signer
 		if key == nil {
 			identity, e := store.Client()
@@ -70,6 +75,7 @@ func clientAPI(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	api.EnableSSH(remote)
 	if err = writeJSON(out, struct {
 		Version   int    `json:"schema_version"`
 		URL       string `json:"api_url"`

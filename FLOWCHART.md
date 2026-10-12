@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-12. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Production clock bounds, live counters and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-12. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Live client-local counters and section navigation are implemented; production clock bounds, rendered-browser QA and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Adapter extension gate
 
@@ -60,6 +60,7 @@ flowchart TD
     D --> S{Loopback peer and exact Host/Origin?}
     S -->|no| X[Structured rejection; no lifecycle mutation]
     S -->|exact public asset| T[Static credential-free dashboard shell]
+    S -->|bootstrap POST| U[Exact Origin and same-origin fetch metadata plus custom header grant page-memory bearer]
     S -->|API| E{Valid bearer and request ID?}
     E -->|no| X
     E -->|yes| F{Versioned route and bounded request?}
@@ -80,7 +81,7 @@ flowchart TD
     D --> P[Process shutdown: stop admissions and HTTP; cancel and bounded join]
 ```
 
-Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; saved diagnostic views are implemented below; live counters remain pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
+Sources: [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [API](internal/localapi/server.go) (`Listen`, `ListenWithStore`, `handle`, `adapters`, `mutate`, `status`, `execute`, `Serve`, `Close`), [saved selection](internal/localapi/saved.go) (`selectedProfile`), [finite runner](internal/control/run.go) (`Run`), [security/lifecycle fixtures](internal/localapi/server_test.go), [real HTTP/SSH/UDP CLI fixture](cmd/sneaky-port/finite_test.go). HTTP contexts never schedule/cancel owned traffic. API handles differ from eventual measurement IDs; unknown readiness/completeness remain null until runner return. Tokens stay out of URLs/HTTP output. Active state has no fabricated phase/live samples. [Saved operations](#saved-configuration-and-report-api) are implemented; saved diagnostic views are implemented below; live client-local counters are implemented below; rendered-browser QA remains pending. The [operator contract](README.md#protected-local-run-api) records exact bounds.
 
 ## Saved configuration and report API
 
@@ -405,22 +406,22 @@ Sources: [replay.go](internal/control/replay.go) (`ReplayReport`, `reportFile`, 
 
 ## Remaining connections
 
-Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved API and [dashboard setup/run controls](#dashboard-setup-and-run-controls) are implemented; saved diagnostic/SVG views are implemented below; matched saved comparisons are implemented below; live counters and full acceptance remain pending.
+Raw clock captures replay independently of measurement accounting and feed [one-way derivation](#uncertainty-gated-one-way-results). Protected saved API and [dashboard setup/run controls](#dashboard-setup-and-run-controls) are implemented; saved diagnostic/SVG views are implemented below; matched saved comparisons are implemented below; live client-local counters are implemented below; rendered-browser QA and full acceptance remain pending.
 
 ## Dashboard setup and run controls
 
 ```mermaid
 flowchart TD
     A[client-api prints exact loopback URL and process token] --> B[Public embedded shell after peer Host Origin guards]
-    B --> C[Operator pastes token; memory only]
+    B --> C[Automatic exact-origin grant; token in page memory only]
     C --> D[Protected setup read and bounded sequential catalogs]
-    D --> E[Preview public trust; explicit pairing import or replacement]
-    D --> F[Explicit managed client key creation or public enrollment read]
+    D --> E[Normal SSH IP port username password; explicit host trust]
+    D --> F[Automatic managed identity and owned helper enrollment]
     D --> G[Separate loaded revision and unsaved editable profile]
     G --> H[Registry adapter options; common ordered phase and directional controls]
     H --> I[Shared profile and adapter validation; no save]
     I --> J[Explicit revision-checked save; conflict retains edits]
-    J --> K[Start clean saved revision; retain exact command identity]
+    J --> K[Run Test validates and saves edited revision; retain exact command identity]
     K --> L[Finite runner owns frozen settings and timing]
     K -->|acknowledgment lost| M[Explicit retry of same command in same API process]
     M --> K
@@ -429,10 +430,10 @@ flowchart TD
     O --> P[Explicit handle-scoped cancel; independent cleanup]
     G --> Q[Later edits and saves leave displayed frozen start intact]
     N -->|read failure| R[Stop polling visibly; explicit status recovery]
-    C --> S[Disconnect forgets token and stops polls; run continues]
+    C --> S[Disconnect server closes owned SSH/helper after active work is resolved]
 ```
 
-Sources: [dashboard.go](internal/localapi/dashboard.go) (`dashboard`, `setup`), [router](internal/localapi/server.go) (`handle`, `mutate`, `status`, `execute`), [saved operations](internal/localapi/saved.go) (`saved`, `profileWrite`, `pairingImport`, `keyCreate`), [HTML](internal/localapi/web/index.html), [CSS](internal/localapi/web/dashboard.css), [script](internal/localapi/web/dashboard.js) (`api`, `renderEditor`, `adapterOptions`, `renderPhases`, `selectProfile`, `catalog`, `transmitPending`, `schedulePoll`, `disconnect`), [HTTP/security fixtures](internal/localapi/dashboard_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs). Static assets contain no token/settings; private reads/mutations retain bearer/identity guards. Exact decimals and malformed inputs stay explicit. The 64-phase editor limit is separate from existing CLI bounds. Pending start/cancel commands survive disconnect in page memory with only a process fingerprint, never a retained token; reload loses retry state. This path has synthetic HTTP/script and CLI evidence, not rendered-browser, live phase/counter, native ARM64 or full-network acceptance. Saved SVG/diagnostic views are implemented below; live counters remain pending.
+Sources: [dashboard.go](internal/localapi/dashboard.go) (`dashboard`, `setup`), [router](internal/localapi/server.go) (`handle`, `mutate`, `status`, `execute`), [saved operations](internal/localapi/saved.go) (`saved`, `profileWrite`, `pairingImport`, `keyCreate`), [HTML](internal/localapi/web/index.html), [CSS](internal/localapi/web/dashboard.css), [script](internal/localapi/web/dashboard.js) (`api`, `renderEditor`, `adapterOptions`, `renderPhases`, `selectProfile`, `catalog`, `transmitPending`, `schedulePoll`, `disconnect`), [HTTP/security fixtures](internal/localapi/dashboard_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs). Static assets contain no token/settings; private reads/mutations retain bearer/identity guards. Exact decimals and malformed inputs stay explicit. The 64-phase editor limit is separate from existing CLI bounds. Pending start/cancel commands retain the exact process fingerprint/revision/target in page memory; SSH disconnect is blocked until they are resolved, and reload loses retry state. Automatic local bootstrap and password SSH setup are described below. This path has synthetic HTTP/script and CLI evidence, not rendered-browser, native ARM64 or full-network acceptance. Saved SVG/diagnostic views are implemented below; live client-local counters are implemented below; rendered-browser QA remains pending.
 
 ## Authenticated server evidence transfer and reconciliation
 
@@ -559,7 +560,7 @@ flowchart TD
     I --> J[Check fixed A/B configurations across repetitions]
     J --> K[Exact B-A integers/rational fractions; ties or unavailable deltas]
     K --> L[Repeated delta ranges; missing/partial/conflicting trials inconclusive]
-    L --> M[16 MiB result cap; deadline-first twenty-row dashboard pages]
+    L --> M[16 MiB result cap; deadline-first viewport-bounded dashboard pages]
     M --> N[Pair provenance; no winner or calibrated/priority-effect claim]
     C -->|invalid or busy| O[Fixed protected error; keep labeled last successful view]
     E -->|invalid or budget exhausted| O
@@ -588,3 +589,49 @@ flowchart TD
 ```
 
 Sources: [policy/count labels](internal/measure/evidence.go) (`EvidencePolicy.Validate`, `LabelSummary`), [report presentation](internal/control/presentation.go) (`ReportLabels`, `ReportContextLabels`, `ApplyPresentation`), [comparison labels](internal/control/compare_labels.go), [strict preferences](internal/localapi/presentation.go), [diagnostics](internal/localapi/diagnostics.go), [exports](internal/control/export.go), [live accounting/feed](internal/measure/progress.go) (`liveContribution`, `Ledger.TrackProgress`, `LiveAccounting.Counts`, `Limit`, `ProgressFeed.Publish`, `Snapshot`), [engine](internal/engine/progress.go) (`trackProgress`, `publishProgress`), [collector](internal/engine/endpoint.go) (`Apply`, `collect`), [run ownership/status](internal/localapi/server.go), [live UI](internal/localapi/web/dashboard.js) (`renderLive`), [labels/downloads](internal/localapi/web/diagnostics.js), [comparison UI](internal/localapi/web/compare.js), [count/concurrency fixtures](internal/measure/progress_test.go), [real UDP/TCP progress](internal/engine/progress_test.go), [policy/export fixtures](internal/control/presentation_test.go), [guards/preferences](internal/localapi/presentation_test.go), [actual-script fixture](internal/localapi/web/dashboard_test.cjs), [real HTTP/SSH fixture](cmd/sneaky-port/finite_test.go). [Operator evidence policy](README.md#evidence-presentation) and [live behavior](README.md#live-run-progress) are canonical. UI preferences never alter raw/saved measurement schema, plan hash, quantiles, mandatory validity gates or traffic. Counts are client-local and provisional; output reads never drive scheduling. Native ARM work is deferred, and browser/native/clock/marking/impairment/live/full evidence remains distinct.
+
+## Dashboard section navigation
+
+```mermaid
+flowchart TD
+    A[Embedded credential-free shell] --> B[Connection / Workload / Run / Results / Compare]
+    B --> C[Section-specific vertical subtabs]
+    C --> D[Exactly one visible view]
+    D --> E[Reuse draft input nodes across field pages]
+    D --> F[Viewport-bounded table pages; exact values]
+    D --> G[Complete public detail text in reader pages]
+    E --> H[Phase timing / upstream / downstream tabs]
+    D --> I[Explicit protected actions use existing API]
+    I --> J[Frozen start or same retained retry command]
+    K[Resize / tab / page changes] --> D
+    L[Disconnect] --> M[Clear public readers and protected navigation]
+```
+
+Sources: [navigation](internal/localapi/web/navigation.js) (`navigate`, `tabKeys`, `navigationControls`, `pageFields`, `drawFields`, `pager`, `readText`, `drawReader`, `refreshReaders`, `clearReaders`, `tablePageSize`, `livePageSize`), [editor/run controls](internal/localapi/web/dashboard.js) (`controls`, `renderEditor`, `renderPhases`, `showPhase`, `transmitPending`, `renderLive`, `disconnect`), [diagnostics](internal/localapi/web/diagnostics.js) (`tablePage`, `renderDiagnostic`, `renderMetricEvidence`), [comparisons](internal/localapi/web/compare.js) (`renderComparison`, `selectedComparisonEvidence`, `renderComparisonEvidence`), [HTML](internal/localapi/web/index.html), [viewport CSS](internal/localapi/web/dashboard.css), [asset/security guards](internal/localapi/dashboard_test.go), [actual-script/API fixture](internal/localapi/web/dashboard_test.cjs) (`navigationCheck`). Navigation/page/resize changes issue no API commands, preserve malformed input nodes and never mutate frozen settings. Compact table reasons have complete independently labeled evidence in dedicated detail views; no quantiles or deltas are recalculated. Main page vertical scrolling is disabled; JSON editors retain internal scrolling and narrow tables retain horizontal scrolling. HTTP/script fixtures validate navigation, keyboard focus, retained edits, exact values, full reader reachability and retry/status/cancellation. Browser geometry, focus rendering, accessibility and responsive acceptance remain checkpoint 23c.
+
+## Dashboard password SSH workflow
+
+```mermaid
+flowchart TD
+    A[Open exact local dashboard URL] --> B[Guarded same-origin bootstrap; automatic page-memory bearer]
+    B --> C[Protected setup; no manual token field]
+    C --> D[IP / normal SSH port / sneak username / password]
+    D --> E{Host pin verified before password?}
+    E -->|new or changed| F[Display fingerprint; explicit trust or replacement]
+    F --> E
+    E -->|verified| G[Normal Linux SSH password authentication]
+    G --> H[Exec installed matching dashboard-server helper]
+    H --> I[Disposable private store and automatic public enrollment]
+    I --> J[Private keyed listener; verify forwarded control discovery]
+    J --> K[Configure shared protocol / ordered phases / independent tweaks]
+    K --> L[Run Test validates and revision-saves edited settings]
+    L --> M[Freeze exact plan; prepare/hash/effective settings/data binding]
+    M -->|agreed| N[Independent direct UDP/TCP measurement]
+    M -->|unsupported or mismatched| O[Reject before measurement]
+    N --> P[Existing calibration/control/reports over owned SSH; exact retry/cancel]
+    Q[Resolved work plus Disconnect server or API shutdown] --> R[Close owned helper and SSH; join and delete disposable store]
+```
+
+Sources: [bootstrap](internal/localapi/bootstrap.go) (`bootstrap`), [connection API](internal/localapi/ssh.go) (`EnableSSH`, `sshConnection`), [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [normal SSH](internal/control/ssh_dashboard.go) (`Connect`, `Status`, `Close`, `hostPath`, `verifyHelper`, `clientSigner`, `Run`, `bridgeControl`, `controlBridge.Close`), [Linux command](cmd/sneaky-port/dashboard_server.go) (`dashboardServer`), [owned helper](internal/control/dashboard_server.go) (`DashboardServer`, `WithControlDialer`, `dialControl`), [existing plan negotiation](internal/control/session.go) (`clientSession`, `control`, `checkEffective`), [browser workflow](internal/localapi/web/dashboard.js) (`bootstrapSession`, `connectServer`, `showConnection`, `transmitPending`), [bootstrap/route guards](internal/localapi/bootstrap_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs), [SSH/helper/direct-data fixtures](internal/control/ssh_dashboard_test.go), [ordinary SSH fixture](internal/testutil/ssh.go).
+
+Normal SSH login/helper/forwarding overhead is separate from measured direct traffic and inner application-control counters. The password never enters profiles, pins, saved reports or reflected errors. First trust/replacement precedes authentication; ordinary host pins are separate from the authenticated helper's auto-imported public key. Control forwarding is confined to the owned loopback listener; deadline-aware native pipes bound/join SSH copy loops. Startup takes at most 20 seconds, with a 25-second HTTP reply budget; lost acknowledgments recover through public connection status, never an automatic duplicate Connect. Existing CLI keyed stores/services remain intact. Windows loopback SSH fixtures emulate ordinary exec/forwarding and validate real UDP/TCP negotiation/report transfer/cancellation; they do not establish native Linux sshd deployment, browser rendering, live paths or full acceptance.

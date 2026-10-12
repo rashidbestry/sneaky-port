@@ -156,9 +156,17 @@ This case does not establish bare-metal Linux, native ARM64, Linux minima, outer
 
 [Checkpoint evidence](WORK_LOG.md#2026-10-12-dashboard-evidence-and-live-progress), [source flow](FLOWCHART.md#evidence-presentation-and-live-progress), [presentation preferences](README.md#evidence-presentation), [live workflow](README.md#live-run-progress).
 
+### 23d. Replace the stacked dashboard with section navigation (completed)
+
+**Complete for embedded implementation and functional/static fixtures, 2026-10-12.** User-approved fixed left sidebar, section-specific vertical subtabs and one visible view; paginated fields/tables/full details, clearer labels and phase timing/upstream/downstream tabs. Switching preserves malformed edits, frozen runs and retry identities without API requests. [Evidence](WORK_LOG.md#2026-10-12-dashboard-section-navigation), [source flow](FLOWCHART.md#dashboard-section-navigation). Rendered-browser evidence remains checkpoint 23c.
+
+### 23e. Open directly, connect over Linux SSH and run the edited plan (completed)
+
+**Complete for implementation and recorded HTTP/script/SSH/UDP/TCP fixtures, 2026-10-12.** User-selected automatic local access, normal Linux SSH IP/port/password login (editable default username `sneak`), explicit host verification, disposable matching helper and Run Test validation/save/exact settings negotiation. Passwords remain transient; keyed CLI, original stores/services and state/retry/accounting boundaries remain intact. Matching Linux tool in PATH and SSH control forwarding are prerequisites. [Evidence](WORK_LOG.md#2026-10-12-dashboard-password-ssh-workflow), [source flow](FLOWCHART.md#dashboard-password-ssh-workflow). ARM and rendered-browser/native sshd/deployment acceptance remain separate.
+
 ### 23c. Verify the rendered dashboard
 
-**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b. Script/HTTP fixtures do not complete this gate.
+**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b/23d-23e. Script/HTTP fixtures do not complete this gate.
 
 ## Queued validation tasks
 

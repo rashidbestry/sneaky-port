@@ -8,9 +8,9 @@ import (
 	"sneaky-port/internal/control"
 )
 
-// dashboardAssets contains only public static code; session credentials/settings are never interpolated.
+// dashboardAssets contains only public static code; credentials/settings are fetched separately, never interpolated.
 //
-//go:embed web/index.html web/dashboard.js web/dashboard.css web/diagnostics.js web/compare.js
+//go:embed web/index.html web/navigation.js web/dashboard.js web/dashboard.css web/diagnostics.js web/compare.js
 var dashboardAssets embed.FS
 
 // dashboard serves exact public shell paths after peer/Host/Origin guards, without weakening API auth.
@@ -22,6 +22,8 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) bool {
 		file, media = "index.html", "text/html; charset=utf-8"
 	case "/dashboard.js":
 		file, media = "dashboard.js", "text/javascript; charset=utf-8"
+	case "/navigation.js":
+		file, media = "navigation.js", "text/javascript; charset=utf-8"
 	case "/dashboard.css":
 		file, media = "dashboard.css", "text/css; charset=utf-8"
 	case "/diagnostics.js":
@@ -70,8 +72,18 @@ func (s *Server) setup(w http.ResponseWriter, id string) {
 		}
 	}
 	reply(w, 200, id, struct {
-		Profile control.SavedProfile `json:"selected_profile"`
-		Saved   bool                 `json:"saved"`
-		Client  *control.Enrollment  `json:"client_enrollment"`
-	}{control.SavedProfile{Plan: p, Revision: revision}, saved, client}, nil)
+		Profile    control.SavedProfile        `json:"selected_profile"`
+		Saved      bool                        `json:"saved"`
+		Client     *control.Enrollment         `json:"client_enrollment"`
+		SSHEnabled bool                        `json:"ssh_enabled"`
+		Connection control.SSHConnectionStatus `json:"connection"`
+	}{control.SavedProfile{Plan: p, Revision: revision}, saved, client, s.ssh != nil, s.connectionStatus()}, nil)
+}
+
+// connectionStatus exposes only public SSH state alongside the protected setup snapshot.
+func (s *Server) connectionStatus() control.SSHConnectionStatus {
+	if s.ssh == nil {
+		return control.SSHConnectionStatus{State: "unavailable"}
+	}
+	return s.ssh.Status()
 }

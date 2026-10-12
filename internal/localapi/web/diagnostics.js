@@ -6,11 +6,11 @@ const diagnosticsState = { view: null, page: 0, phasePage: 0, preflight: null, w
 function textNode(tag, text) { const node = document.createElement(tag); node.textContent = text; return node; }
 // exactValue preserves decimal strings and explicitly labels unavailable evidence.
 function exactValue(value) { return value === null || value === undefined ? "unavailable" : String(value); }
-// tablePage renders at most twenty rows; page controls never reload raw evidence.
-function tablePage(target, headers, rows, page) {
+// tablePage renders a viewport-bounded page; page controls never reload raw evidence.
+function tablePage(target, headers, rows, page, size=tablePageSize()) {
   const table = document.createElement("table"), head = document.createElement("tr");
   for (const label of headers) { const cell=textNode("th",label); cell.setAttribute("scope","col"); head.append(cell); } table.append(head);
-  for (const row of rows.slice(page * 20, (page + 1) * 20)) { const tr = document.createElement("tr"); for (const value of row) tr.append(textNode("td", exactValue(value))); table.append(tr); }
+  for (const row of rows.slice(page * size, (page + 1) * size)) { const tr = document.createElement("tr"); for (const value of row) tr.append(textNode("td", exactValue(value))); table.append(tr); }
   element(target).replaceChildren(table);
 }
 // svgNode creates native SVG with fixed attribute names and safe textual tooltips.
@@ -62,33 +62,43 @@ function renderDiagnostic() {
   // Deadline misses and their populations precede tails; no ranking or combined score.
   const first = ["DeadlineMisses", "Planned", "LocalMisses", "AcceptedMisses", "Pending", "Skipped", "OnTime", "Late", "Unresolved", "RTTSamples", "RTTP95", "RTTP99"];
   const keys = [...first, ...Object.keys(view.summary).filter(function remaining(key) { /* Retain remaining scalar fields once. */ return !first.includes(key); }).sort()];
-  const rows = keys.map(function summaryRow(key) { /* State timing units; never conceal a small sample or convert null to zero. */ return [key + (/Median|P95|P99|Min|Max/.test(key) ? " (ns)" : ""), view.summary[key], evidenceText(view.evidence_labels && view.evidence_labels[key])]; });
+  const rows = keys.map(function summaryRow(key) { /* Preserve exact values and keep complete evidence in its detail tab. */ return [metricName(key) + (/Median|P95|P99|Min|Max/.test(key) ? " (ns)" : ""), view.summary[key], evidenceBrief(view.evidence_labels && view.evidence_labels[key])]; });
+  diagnosticsState.page=Math.min(diagnosticsState.page,Math.max(0,Math.ceil(rows.length/tablePageSize())-1)); diagnosticsState.phasePage=Math.min(diagnosticsState.phasePage,Math.max(0,Math.ceil(view.phases.length/tablePageSize())-1));
   tablePage("diagnostic-table", ["Metric", "Exact value", "Evidence / reasons"], rows, diagnosticsState.page);
   element("evidence-policy").textContent = "Loaded diagnostic policy: " + JSON.stringify(view.evidence_policy);
-  element("context-evidence").textContent = JSON.stringify(view.context_evidence_labels, null, 2);
-  element("metric-page").textContent = "Page " + (diagnosticsState.page + 1) + " / " + Math.ceil(rows.length / 20);
-  element("metrics-prev").disabled = diagnosticsState.page === 0; element("metrics-next").disabled = (diagnosticsState.page + 1) * 20 >= rows.length;
-  const metric = element("plot-metric").value || "rtt"; plot("time-plot", view, metric, false); plot("ecdf-plot", view, metric, true);
+  readText("context-evidence",JSON.stringify({evidence:view.context_evidence_labels,plot_policy:view.plot_policy},null,2));
+  const previous=element("metric-evidence-select").value; element("metric-evidence-select").replaceChildren();
+  for(const key of keys) { const option=document.createElement("option"); option.value=key; option.textContent=metricName(key); element("metric-evidence-select").append(option); } if(keys.includes(previous)) element("metric-evidence-select").value=previous; renderMetricEvidence();
+  element("metric-page").textContent = "Page " + (diagnosticsState.page + 1) + " / " + Math.ceil(rows.length / tablePageSize());
+  element("metrics-prev").disabled = diagnosticsState.page === 0; element("metrics-next").disabled = (diagnosticsState.page + 1) * tablePageSize() >= rows.length;
+  plot("time-plot", view, element("plot-metric").value || "rtt", false); plot("ecdf-plot", view, element("distribution-metric").value || "rtt", true);
   tablePage("phase-table", ["Index / phase", "Start ns", "End ns (exclusive)"], view.phases.map(function phaseRow(phase, index) { /* Display exact phase boundaries. */ return [index + " / " + phase.phase_id, phase.start_ns, phase.end_ns]; }), diagnosticsState.phasePage);
-  element("phase-page").textContent = "Page " + (diagnosticsState.phasePage + 1) + " / " + Math.max(1, Math.ceil(view.phases.length / 20));
-  element("phases-prev").disabled = diagnosticsState.phasePage === 0; element("phases-next").disabled = (diagnosticsState.phasePage + 1) * 20 >= view.phases.length;
+  element("phase-page").textContent = "Page " + (diagnosticsState.phasePage + 1) + " / " + Math.max(1, Math.ceil(view.phases.length / tablePageSize()));
+  element("phases-prev").disabled = diagnosticsState.phasePage === 0; element("phases-next").disabled = (diagnosticsState.phasePage + 1) * tablePageSize() >= view.phases.length;
 }
 // readDiagnostic loads one endpoint/originating scope and freezes it for local pagination/rendering.
 async function readDiagnostic() {
   const report = safeID(element("reports").value), scope = element("report-scope").value;
   if (!/^(main|warmup|0|[1-9][0-9]*)$/.test(scope)) throw new Error("Choose main, warmup, or a zero-based originating phase index.");
   const view = await api("/api/v1/reports/" + report + "/diagnostics?endpoint=" + element("report-endpoint").value + "&scope=" + scope + evidenceQuery());
-  diagnosticsState.view = view; diagnosticsState.page = 0; diagnosticsState.phasePage = 0; renderDiagnostic(); notice("Validated saved evidence loaded. Counts and quantiles retain exact values.");
+  diagnosticsState.view = view; diagnosticsState.page = 0; diagnosticsState.phasePage = 0; renderDiagnostic(); navigate("results","metrics"); notice("Saved results loaded. Exact values remain available beside their evidence.");
 }
 // renderPreflight paginates wake evidence with unverified clock quality and exact lag tails.
 function renderPreflight() {
   const result = diagnosticsState.preflight; if (!result) return;
+  diagnosticsState.wakePage=Math.min(diagnosticsState.wakePage,Math.max(0,Math.ceil(result.wakes.length/tablePageSize())-1));
+  element("wake-page").textContent="Page "+(diagnosticsState.wakePage+1)+" / "+Math.max(1,Math.ceil(result.wakes.length/tablePageSize()));
   element("preflight-status").textContent = result.status + " · wakes=" + result.wakes.length + " · missed slots=" + result.missed_slots + " · lag p95/p99 ns=" + exactValue(result.lag_p95_ns) + "/" + exactValue(result.lag_p99_ns) + " · " + result.clock;
   tablePage("preflight-table", ["Scheduled ns", "Actual ns", "Lag ns", "Earlier due slots"], result.wakes.map(function wakeRow(wake) { /* Preserve exact times and missed counts. */ return [wake.scheduled_ns, wake.actual_ns, wake.lag_ns, wake.earlier_due_slots]; }), diagnosticsState.wakePage);
-  element("wakes-prev").disabled = diagnosticsState.wakePage === 0; element("wakes-next").disabled = (diagnosticsState.wakePage + 1) * 20 >= result.wakes.length;
+  element("wakes-prev").disabled = diagnosticsState.wakePage === 0; element("wakes-next").disabled = (diagnosticsState.wakePage + 1) * tablePageSize() >= result.wakes.length;
 }
+// renderMetricEvidence keeps the entire selected label/value accessible outside the compact metric table.
+function renderMetricEvidence() { const view=diagnosticsState.view; if(!view) return; const key=element("metric-evidence-select").value; readText("metric-evidence-detail",JSON.stringify({metric:key,value:view.summary[key],evidence:view.evidence_labels[key],policy:view.evidence_policy},null,2)); }
+// evidenceBrief avoids long wrapped rows while complete counts/reasons remain in Metric evidence.
+function evidenceBrief(label) { if(!label) return "See context"; return label.coverage+(label.reasons.length ? " · "+label.reasons[0].replaceAll("_"," ") : " · "+label.basis); }
+element("metric-evidence-select").addEventListener("change",renderMetricEvidence);
 // clearDiagnostics clears provenance on session changes so earlier evidence cannot appear current.
-function clearDiagnostics() { diagnosticsState.view = null; diagnosticsState.preflight = null; for (const id of ["diagnostic-status", "plot-policy", "diagnostic-table", "time-plot", "ecdf-plot", "phase-table", "preflight-status", "preflight-table", "metric-page", "phase-page", "evidence-policy", "context-evidence", "live-status", "live-counters"]) element(id).replaceChildren(); element("live-progress").value=0; }
+function clearDiagnostics() { diagnosticsState.view = null; diagnosticsState.preflight = null; for (const id of ["diagnostic-status", "plot-policy", "diagnostic-table", "time-plot", "ecdf-plot", "phase-table", "preflight-status", "preflight-table", "metric-page", "phase-page", "wake-page", "evidence-policy", "context-evidence", "metric-evidence-select", "live-status", "live-counters", "live-page"]) element(id).replaceChildren(); element("live-progress").value=0; }
 
 // evidencePolicy validates explicit page-local advisory targets without editing a workload or its hash.
 function evidencePolicy() {
@@ -122,25 +132,26 @@ bind("export-report",downloadReport);
 function diagnosticControls() {
   const blocked = state.busy || !state.token, view = diagnosticsState.view, flight = diagnosticsState.preflight;
   element("metrics-prev").disabled = blocked || !view || diagnosticsState.page === 0;
-  element("metrics-next").disabled = blocked || !view || (diagnosticsState.page + 1) * 20 >= Object.keys(view.summary).length;
+  element("metrics-next").disabled = blocked || !view || (diagnosticsState.page + 1) * tablePageSize() >= Object.keys(view.summary).length;
   element("phases-prev").disabled = blocked || !view || diagnosticsState.phasePage === 0;
-  element("phases-next").disabled = blocked || !view || (diagnosticsState.phasePage + 1) * 20 >= view.phases.length;
+  element("phases-next").disabled = blocked || !view || (diagnosticsState.phasePage + 1) * tablePageSize() >= view.phases.length;
   element("wakes-prev").disabled = blocked || !flight || diagnosticsState.wakePage === 0;
-  element("wakes-next").disabled = blocked || !flight || (diagnosticsState.wakePage + 1) * 20 >= flight.wakes.length;
+  element("wakes-next").disabled = blocked || !flight || (diagnosticsState.wakePage + 1) * tablePageSize() >= flight.wakes.length;
 }
 
 bind("refresh-reports", async function refreshReports() { /* Explicit catalog refresh does not schedule a replay. */ fillSelect("reports", await catalog("reports")); notice("Saved report list refreshed."); });
 bind("read-report", readDiagnostic);
 bind("metrics-prev", function previousMetrics() { /* Bound local scalar pagination. */ if (diagnosticsState.page > 0) diagnosticsState.page--; renderDiagnostic(); });
-bind("metrics-next", function nextMetrics() { /* Advance within the fixed scalar summary. */ if (diagnosticsState.view && (diagnosticsState.page + 1) * 20 < Object.keys(diagnosticsState.view.summary).length) diagnosticsState.page++; renderDiagnostic(); });
+bind("metrics-next", function nextMetrics() { /* Advance within the fixed scalar summary. */ if (diagnosticsState.view && (diagnosticsState.page + 1) * tablePageSize() < Object.keys(diagnosticsState.view.summary).length) diagnosticsState.page++; renderDiagnostic(); });
 bind("phases-prev", function previousPhases() { /* Page boundaries without replaying files. */ if (diagnosticsState.phasePage > 0) diagnosticsState.phasePage--; renderDiagnostic(); });
-bind("phases-next", function nextPhases() { /* Retain the phase capacity. */ if (diagnosticsState.view && (diagnosticsState.phasePage + 1) * 20 < diagnosticsState.view.phases.length) diagnosticsState.phasePage++; renderDiagnostic(); });
+bind("phases-next", function nextPhases() { /* Retain the phase capacity. */ if (diagnosticsState.view && (diagnosticsState.phasePage + 1) * tablePageSize() < diagnosticsState.view.phases.length) diagnosticsState.phasePage++; renderDiagnostic(); });
 element("plot-metric").addEventListener("change", renderDiagnostic);
+element("distribution-metric").addEventListener("change", renderDiagnostic);
 bind("preflight", async function startPreflight() { /* Observe operator-supplied local timing without changing the workload or starting traffic. */
   const duration = element("preflight-duration").value, interval = element("preflight-interval").value;
   if (!/^[1-9][0-9]*$/.test(duration) || !/^[1-9][0-9]*$/.test(interval)) throw new Error("Provide positive canonical nanosecond strings.");
   diagnosticsState.preflight = await api("/api/v1/preflight", "POST", { duration_ns: duration, interval_ns: interval }); diagnosticsState.wakePage = 0; renderPreflight(); notice("Local preflight observed; it does not establish network or calibration quality.");
 });
 bind("wakes-prev", function previousWakes() { /* Page bounded preflight samples. */ if (diagnosticsState.wakePage > 0) diagnosticsState.wakePage--; renderPreflight(); });
-bind("wakes-next", function nextWakes() { /* Advance within the admitted snapshot. */ if (diagnosticsState.preflight && (diagnosticsState.wakePage + 1) * 20 < diagnosticsState.preflight.wakes.length) diagnosticsState.wakePage++; renderPreflight(); });
+bind("wakes-next", function nextWakes() { /* Advance within the admitted snapshot. */ if (diagnosticsState.preflight && (diagnosticsState.wakePage + 1) * tablePageSize() < diagnosticsState.preflight.wakes.length) diagnosticsState.wakePage++; renderPreflight(); });
 diagnosticControls();
