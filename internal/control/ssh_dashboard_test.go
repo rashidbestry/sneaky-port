@@ -21,23 +21,25 @@ func TestSSHDashboardWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := NewSSHDashboard(store)
+	if err = d.SetHelperBinary(testutil.DashboardPayload()); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(d.Close)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	q := SSHConnectRequest{Version: 1, Address: f.IP, Port: f.Port, User: "sneak", Password: "fixture-password"}
-	status, err := d.Connect(ctx, q)
-	if err != nil || status.State != "trust_required" || status.Fingerprint != f.Fingerprint || f.Authentications.Load() != 0 {
-		t.Fatal("host trust must precede password delivery", err, status.State)
-	}
 	q.Trust = "SHA256:wrong"
-	status, err = d.Connect(ctx, q)
+	status, err := d.Connect(ctx, q)
 	if err != nil || status.State != "trust_required" || f.Authentications.Load() != 0 {
 		t.Fatal("wrong fingerprint accepted")
 	}
-	q.Trust = f.Fingerprint
+	q.Trust = ""
 	status, err = d.Connect(ctx, q)
 	if err != nil || status.State != "connected" {
-		t.Fatal("SSH helper connection failed", err)
+		t.Fatal("automatically trusted SSH helper connection failed", err)
+	}
+	if status.Fingerprint != f.Fingerprint || len(status.HelperHash) != 64 || status.Executable != "" {
+		t.Fatal("managed helper identity was not reported without a path")
 	}
 	for _, protocol := range []string{"udp", "tcp"} {
 		p := testutil.Plan()
@@ -141,6 +143,9 @@ func TestSSHDashboardAuthenticationFailures(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := NewSSHDashboard(store)
+	if err = d.SetHelperBinary(testutil.DashboardPayload()); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(d.Close)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -165,6 +170,9 @@ func TestSSHDashboardChangedHostRequiresReplacement(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := NewSSHDashboard(store)
+	if err = d.SetHelperBinary(testutil.DashboardPayload()); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(d.Close)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -212,6 +220,9 @@ func TestSSHDashboardCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := NewSSHDashboard(store)
+	if err = d.SetHelperBinary(testutil.DashboardPayload()); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(d.Close)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

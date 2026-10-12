@@ -226,7 +226,7 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	}
 	shellBody, readErr := io.ReadAll(shell.Body)
 	shell.Body.Close()
-	if readErr != nil || shell.StatusCode != 200 || !bytes.Contains(shellBody, []byte("Local session")) || bytes.Contains(shellBody, []byte(bootstrap.Token)) {
+	if readErr != nil || shell.StatusCode != 200 || !bytes.Contains(shellBody, []byte("connection-bar")) || bytes.Contains(shellBody, []byte("nav-connection")) || bytes.Contains(shellBody, []byte(bootstrap.Token)) {
 		t.Fatal("CLI dashboard public shell boundary failed")
 	}
 	setup := apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/setup", "setup", "")

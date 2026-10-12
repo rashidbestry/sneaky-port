@@ -10,7 +10,7 @@ import (
 
 // dashboardAssets contains only public static code; credentials/settings are fetched separately, never interpolated.
 //
-//go:embed web/index.html web/navigation.js web/dashboard.js web/dashboard.css web/diagnostics.js web/compare.js
+//go:embed web/index.html web/navigation.js web/dashboard.js web/dashboard.css web/diagnostics.js web/compare.js web/workspace.js
 var dashboardAssets embed.FS
 
 // dashboard serves exact public shell paths after peer/Host/Origin guards, without weakening API auth.
@@ -30,6 +30,8 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) bool {
 		file, media = "diagnostics.js", "text/javascript; charset=utf-8"
 	case "/compare.js":
 		file, media = "compare.js", "text/javascript; charset=utf-8"
+	case "/workspace.js":
+		file, media = "workspace.js", "text/javascript; charset=utf-8"
 	default:
 		return false
 	}
@@ -77,7 +79,24 @@ func (s *Server) setup(w http.ResponseWriter, id string) {
 		Client     *control.Enrollment         `json:"client_enrollment"`
 		SSHEnabled bool                        `json:"ssh_enabled"`
 		Connection control.SSHConnectionStatus `json:"connection"`
-	}{control.SavedProfile{Plan: p, Revision: revision}, saved, client, s.ssh != nil, s.connectionStatus()}, nil)
+		Active     *Status                     `json:"active_run,omitempty"`
+	}{control.SavedProfile{Plan: p, Revision: revision}, saved, client, s.ssh != nil, s.connectionStatus(), s.activeSnapshot()}, nil)
+}
+
+// activeSnapshot recovers the one admitted run after page reload without requiring an operator to paste its handle.
+// Only immutable public lifecycle/progress state is returned; the draft never replaces frozen run settings.
+func (s *Server) activeSnapshot() *Status {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current := s.runs[s.active]
+	if current == nil {
+		return nil
+	}
+	copy := current.status
+	if current.progress != nil {
+		copy.Progress = current.progress.Snapshot()
+	}
+	return &copy
 }
 
 // connectionStatus exposes only public SSH state alongside the protected setup snapshot.

@@ -26,7 +26,7 @@ func (s *Server) sshConnection(w http.ResponseWriter, r *http.Request, id string
 		reject(w, 400, id, "invalid_request", "method", "GET, POST or DELETE required")
 		return true
 	}
-	http.NewResponseController(w).SetWriteDeadline(time.Now().Add(25 * time.Second))
+	http.NewResponseController(w).SetWriteDeadline(time.Now().Add(130 * time.Second))
 	s.mu.Lock()
 	if s.closed || s.connecting || s.active != "" {
 		s.mu.Unlock()

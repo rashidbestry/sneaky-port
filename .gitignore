@@ -2,6 +2,7 @@
 /.cache/
 /build/
 /test-output/
+/internal/control/helper-linux-amd64.gz
 /client-data/
 /server-data/
 *.exe

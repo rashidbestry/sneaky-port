@@ -10,7 +10,7 @@ Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticat
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 are complete within scope; dashboard checkpoints 23a-23b/23d-23e are implemented and browser QA 23c is pending tooling; native ARM work is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23m are implemented within recorded scopes. Latest 23l/23m keeps Test only and repairs long-run capacity/current results; 23c browser QA is pending tooling and native ARM is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |

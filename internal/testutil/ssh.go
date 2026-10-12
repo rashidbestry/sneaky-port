@@ -4,11 +4,15 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"net"
+	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -23,8 +27,46 @@ type SSHFixture struct {
 	Authentications atomic.Int32
 }
 
+// DashboardPayload supplies a bounded synthetic ELF header for channel fixtures, never a native executable.
+func DashboardPayload() []byte {
+	value := make([]byte, 256)
+	copy(value, []byte{0x7f, 'E', 'L', 'F', 2, 1, 1})
+	value[18] = 62
+	return value
+}
+
 // StartSSH runs isolated real SSH authentication and channels around the actual helper callback.
 func StartSSH(t *testing.T, helper func(context.Context, io.ReadCloser, io.Writer) error) *SSHFixture {
+	if helper == nil {
+		return StartSSHCommand(t, nil)
+	}
+	return StartSSHCommand(t, func(ctx context.Context, command string, ch ssh.Channel) error { /* Model upload framing/digest and invoke the actual helper; native tests execute the shell separately. */
+		if strings.Contains(command, "upload_ready") {
+			sizeMatch := regexp.MustCompile(`head -c ([0-9]+) >`).FindStringSubmatch(command)
+			hashMatch := regexp.MustCompile(`= '([a-f0-9]{64})'`).FindStringSubmatch(command)
+			if len(sizeMatch) != 2 || len(hashMatch) != 2 {
+				return errors.New("invalid fixture upload command")
+			}
+			size, err := strconv.ParseInt(sizeMatch[1], 10, 64)
+			if err != nil || size < 64 || size > 64<<20 {
+				return errors.New("invalid fixture upload size")
+			}
+			io.WriteString(ch, "{\"schema_version\":1,\"upload_ready\":true}\n")
+			hash := sha256.New()
+			if _, err = io.CopyN(hash, ch, size); err != nil {
+				return err
+			}
+			if hex.EncodeToString(hash.Sum(nil)) != hashMatch[1] {
+				io.WriteString(ch, "{\"schema_version\":1,\"startup_error\":\"upload_checksum_failed\"}\n")
+				return errors.New("fixture upload checksum failed")
+			}
+		}
+		return helper(ctx, ch, ch)
+	})
+}
+
+// StartSSHCommand permits fixture-owned exec responses around real SSH/password/forwarding channels.
+func StartSSHCommand(t *testing.T, execHelper func(context.Context, string, ssh.Channel) error) *SSHFixture {
 	t.Helper()
 	_, key, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -55,7 +97,7 @@ func StartSSH(t *testing.T, helper func(context.Context, io.ReadCloser, io.Write
 			wg.Add(1)
 			go func() { /* Each authenticated fixture owns its socket and helper channels. */
 				defer wg.Done()
-				serveSSHFixture(ctx, raw, signer, f, helper)
+				serveSSHFixture(ctx, raw, signer, f, execHelper)
 			}()
 		}
 	}()
@@ -72,7 +114,7 @@ func StartSSH(t *testing.T, helper func(context.Context, io.ReadCloser, io.Write
 }
 
 // serveSSHFixture accepts the one declared account/password and only helper exec or loopback forwarding.
-func serveSSHFixture(ctx context.Context, raw net.Conn, signer ssh.Signer, f *SSHFixture, helper func(context.Context, io.ReadCloser, io.Writer) error) {
+func serveSSHFixture(ctx context.Context, raw net.Conn, signer ssh.Signer, f *SSHFixture, helper func(context.Context, string, ssh.Channel) error) {
 	defer raw.Close()
 	stop := context.AfterFunc(ctx, func() { /* Unblock handshake/channel reads when the isolated fixture ends. */ raw.Close() })
 	defer stop()
@@ -105,7 +147,7 @@ func serveSSHFixture(ctx context.Context, raw net.Conn, signer ssh.Signer, f *SS
 }
 
 // fixtureSSHChannel implements normal SSH exec plus direct-tcpip for the private measurement listener.
-func fixtureSSHChannel(ctx context.Context, newChannel ssh.NewChannel, helper func(context.Context, io.ReadCloser, io.Writer) error) {
+func fixtureSSHChannel(ctx context.Context, newChannel ssh.NewChannel, helper func(context.Context, string, ssh.Channel) error) {
 	if newChannel.ChannelType() == "direct-tcpip" {
 		var target struct {
 			Host       string
@@ -156,10 +198,10 @@ func fixtureSSHChannel(ctx context.Context, newChannel ssh.NewChannel, helper fu
 	defer ch.Close()
 	for request := range requests {
 		var command struct{ Command string }
-		accepted := request.Type == "exec" && ssh.Unmarshal(request.Payload, &command) == nil && command.Command == "exec sneaky-port dashboard-server" && helper != nil
+		accepted := request.Type == "exec" && ssh.Unmarshal(request.Payload, &command) == nil && strings.HasPrefix(command.Command, "# sneaky-port dashboard launcher v1\n") && helper != nil
 		request.Reply(accepted, nil)
 		if accepted {
-			helper(ctx, ch, ch)
+			helper(ctx, command.Command, ch)
 			return
 		}
 	}

@@ -1,6 +1,7 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -21,14 +22,15 @@ import (
 
 // SSHConnectRequest contains an ephemeral password, never part of a measurement profile/report.
 type SSHConnectRequest struct {
-	Version   int    `json:"schema_version"`
-	RequestID string `json:"request_id"`
-	Address   string `json:"server_ip"`
-	Port      int    `json:"ssh_port"`
-	User      string `json:"ssh_username"`
-	Password  string `json:"ssh_password"`
-	Trust     string `json:"trust_fingerprint,omitempty"`
-	Replace   bool   `json:"replace_host_key,omitempty"`
+	Version    int    `json:"schema_version"`
+	RequestID  string `json:"request_id"`
+	Address    string `json:"server_ip"`
+	Port       int    `json:"ssh_port"`
+	User       string `json:"ssh_username"`
+	Password   string `json:"ssh_password"`
+	Trust      string `json:"trust_fingerprint,omitempty"`
+	Replace    bool   `json:"replace_host_key,omitempty"`
+	Executable string `json:"server_executable,omitempty"`
 }
 
 // SSHConnectionStatus contains public endpoint/trust/helper state only.
@@ -41,6 +43,9 @@ type SSHConnectionStatus struct {
 	Previous    string        `json:"previous_fingerprint,omitempty"`
 	PairingRef  string        `json:"pairing_ref,omitempty"`
 	Policy      *ServerPolicy `json:"server_policy,omitempty"`
+	Executable  string        `json:"server_executable,omitempty"`
+	HelperHash  string        `json:"helper_sha256,omitempty"`
+	Stage       string        `json:"stage,omitempty"`
 }
 
 // sshHostPin lives in the application store, separately from system SSH and measurement pairing.
@@ -68,11 +73,13 @@ type SSHDashboard struct {
 	mu      sync.Mutex
 	gate    sync.Mutex
 	current *sshDashboardSession
+	binary  []byte
+	pending *SSHConnectionStatus
 }
 
 // NewSSHDashboard binds password-based setup to this client's application-owned identities.
 func NewSSHDashboard(store *Store, signers ...ssh.Signer) *SSHDashboard {
-	d := &SSHDashboard{store: store}
+	d := &SSHDashboard{store: store, binary: bundledHelper()}
 	if len(signers) > 0 {
 		d.signer = signers[0]
 	}
@@ -83,6 +90,9 @@ func NewSSHDashboard(store *Store, signers ...ssh.Signer) *SSHDashboard {
 func (d *SSHDashboard) Status() SSHConnectionStatus {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if d.pending != nil {
+		return *d.pending
+	}
 	if d.current == nil {
 		return SSHConnectionStatus{State: "disconnected"}
 	}
@@ -124,14 +134,25 @@ func (d *SSHDashboard) hostPath(address string, create bool) (string, error) {
 	return filepath.Join(dir, hex.EncodeToString(hash[:])+".json"), nil
 }
 
-// Connect verifies host identity before sending the password, then starts the installed Linux helper.
-// First/changed identities return trust_required; only the displayed fingerprint can be accepted.
+// Connect automatically trusts first-use SSH identity, authenticates and starts the bundled Linux helper.
+// A changed saved key requires its displayed fingerprint plus explicit replacement before password delivery.
 func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHConnectionStatus, error) {
 	d.gate.Lock()
 	defer d.gate.Unlock()
 	out := SSHConnectionStatus{State: "disconnected", Address: q.Address, Port: q.Port, User: q.User}
 	if net.ParseIP(q.Address) == nil || net.ParseIP(q.Address).IsUnspecified() || q.Port < 1 || q.Port > 65535 || !profile.SafeID(q.User) || len(q.Password) < 1 || len(q.Password) > 1024 {
 		return out, errors.New("server IP, SSH port, username and password are required")
+	}
+	var launch string
+	var err error
+	managed := q.Executable == ""
+	if managed {
+		launch, err = helperUploadCommand(d.binary)
+	} else {
+		launch, err = helperLaunchCommand(q.Executable)
+	}
+	if err != nil {
+		return out, err
 	}
 	d.mu.Lock()
 	currentPrevious := d.current
@@ -143,6 +164,14 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 			return out, errors.New("disconnect the existing server first")
 		}
 	}
+	d.mu.Lock()
+	d.pending = &SSHConnectionStatus{State: "connecting", Address: q.Address, Port: q.Port, User: q.User, Stage: "authenticating"}
+	d.mu.Unlock()
+	defer func() { /* Public recovery never reports disconnected while setup still owns the admission gate. */
+		d.mu.Lock()
+		d.pending = nil
+		d.mu.Unlock()
+	}()
 	address := net.JoinHostPort(q.Address, strconv.Itoa(q.Port))
 	path, err := d.hostPath(address, false)
 	var previous sshHostPin
@@ -160,7 +189,7 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 	}
 	var observed sshHostPin
 	trustNeeded := false
-	setup, stop := context.WithTimeout(ctx, 20*time.Second)
+	setup, stop := context.WithTimeout(ctx, 120*time.Second)
 	defer stop()
 	raw, err := (&net.Dialer{}).DialContext(setup, "tcp", address)
 	if err != nil {
@@ -175,9 +204,12 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 	defer interrupt()
 	deadline, _ := setup.Deadline()
 	raw.SetDeadline(deadline)
-	config := &ssh.ClientConfig{User: q.User, Auth: []ssh.AuthMethod{ssh.Password(q.Password)}, HostKeyCallback: func(_ string, _ net.Addr, key ssh.PublicKey) error { // Pin before authentication; a refused/changed identity receives no password.
+	config := &ssh.ClientConfig{User: q.User, Auth: []ssh.AuthMethod{ssh.Password(q.Password)}, HostKeyCallback: func(_ string, _ net.Addr, key ssh.PublicKey) error { // Automatically trust first use; changed saved identities receive no password without explicit replacement.
 		observed = sshHostPin{1, address, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))), ssh.FingerprintSHA256(key)}
 		if previous.Key == observed.Key && previous.Key != "" {
+			return nil
+		}
+		if previous.Key == "" && q.Trust == "" {
 			return nil
 		}
 		if q.Trust == observed.Fingerprint && (previous.Key == "" || q.Replace) {
@@ -204,6 +236,9 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 			client.Close()
 		}
 	}()
+	if err = d.rememberSSHHost(previous, observed); err != nil {
+		return out, err
+	}
 	identity, err := d.store.Client()
 	if os.IsNotExist(err) {
 		_, err = d.store.InitClient("dashboard-client", "")
@@ -218,7 +253,8 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 	if err != nil {
 		return out, errors.New("SSH exec session unavailable")
 	}
-	session.Stderr = io.Discard
+	diagnostics := &helperDiagnostics{}
+	session.Stderr = diagnostics
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		session.Close()
@@ -229,45 +265,66 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 		session.Close()
 		return out, errors.New("SSH helper output unavailable")
 	}
-	if err = session.Start("exec sneaky-port dashboard-server"); err != nil {
-		session.Close()
-		return out, errors.New("matching Linux sneaky-port must be installed in the SSH account's PATH")
+	if managed {
+		d.connectionStage("uploading")
+	} else {
+		d.connectionStage("starting")
 	}
-	if err = json.NewEncoder(stdin).Encode(DashboardServerRequest{1, q.Address, identity.Enrollment}); err != nil {
+	if err = session.Start(launch); err != nil {
 		session.Close()
-		return out, errors.New("SSH helper enrollment failed")
+		return out, errors.New("SSH exec request was rejected; check permission to run remote commands")
 	}
+	decoder := json.NewDecoder(io.LimitReader(stdout, FrameMax))
+	if managed {
+		var readyJSON json.RawMessage
+		if err = decoder.Decode(&readyJSON); err != nil {
+			session.Close()
+			session.Wait()
+			return out, helperStartupFailure(diagnostics.Text(), err)
+		}
+		if err = helperLaunchFailure(readyJSON); err != nil {
+			session.Close()
+			return out, err
+		}
+		var ready struct {
+			Version int  `json:"schema_version"`
+			Upload  bool `json:"upload_ready"`
+		}
+		if DecodeObject(readyJSON, &ready) != nil || ready.Version != 1 || !ready.Upload {
+			session.Close()
+			return out, errors.New("server did not accept the managed helper upload")
+		}
+		if _, err = io.Copy(stdin, bytes.NewReader(d.binary)); err != nil {
+			stdin.Close()
+			session.Close()
+			return out, errors.New("SSH helper upload failed; reconnect to retry")
+		}
+	}
+	d.connectionStage("starting")
+	enrollmentErr := json.NewEncoder(stdin).Encode(DashboardServerRequest{1, q.Address, identity.Enrollment})
 	var hello DashboardServerReply
 	var helloJSON json.RawMessage
-	if err = json.NewDecoder(io.LimitReader(stdout, FrameMax)).Decode(&helloJSON); err != nil || DecodeObject(helloJSON, &hello) != nil || hello.Version != 1 || hello.Bundle.Validate() != nil || hello.Policy.Validate() != nil || hello.Bundle.ControlAddress != q.Address || hello.Policy.ControlListen != net.JoinHostPort("127.0.0.1", strconv.Itoa(hello.Bundle.ControlPort)) {
+	if err = decoder.Decode(&helloJSON); err != nil {
 		session.Close()
-		return out, errors.New("matching Linux sneaky-port helper did not return a valid startup response")
+		session.Wait() // Join stderr draining before classifying fixed safe diagnostics.
+		return out, helperStartupFailure(diagnostics.Text(), err)
 	}
-	if err = d.verifyHelper(setup, client, hello.Bundle, identity); err != nil {
+	if err = helperLaunchFailure(helloJSON); err != nil {
 		session.Close()
 		return out, err
 	}
-	path, err = d.hostPath(address, true)
-	if err != nil {
+	if DecodeObject(helloJSON, &hello) != nil || hello.Version != 1 || hello.Bundle.Validate() != nil || hello.Policy.Validate() != nil || hello.Bundle.ControlAddress != q.Address || hello.Policy.ControlListen != net.JoinHostPort("127.0.0.1", strconv.Itoa(hello.Bundle.ControlPort)) {
 		session.Close()
-		return out, errors.New("SSH host trust could not be saved")
+		return out, errors.New("server helper returned incompatible startup data; use the matching Linux build")
 	}
-	lock, err := d.store.lock()
-	if err != nil {
+	if enrollmentErr != nil {
 		session.Close()
-		return out, errors.New("local trust store is busy")
+		return out, errors.New("SSH helper enrollment failed")
 	}
-	var latest sshHostPin
-	latestErr := readObject(path, &latest)
-	if latestErr != nil && !os.IsNotExist(latestErr) || latestErr == nil && latest.Key != previous.Key && latest.Key != observed.Key {
-		err = errors.New("SSH host identity changed during connection")
-	} else {
-		err = d.store.writeAtomic(path, observed)
-	}
-	d.store.unlock(lock)
-	if err != nil {
+	d.connectionStage("verifying")
+	if err = d.verifyHelper(setup, client, hello.Bundle, identity); err != nil {
 		session.Close()
-		return out, errors.New("SSH host trust could not be saved")
+		return out, err
 	}
 	hash := sha256.Sum256([]byte(address + "/" + q.User))
 	ref := "ssh-" + hex.EncodeToString(hash[:12])
@@ -280,7 +337,11 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 		return out, errors.New("SSH startup deadline could not be cleared")
 	}
 	owned, cancel := context.WithCancel(ctx)
-	out = SSHConnectionStatus{State: "connected", Address: q.Address, Port: q.Port, User: q.User, Fingerprint: observed.Fingerprint, PairingRef: ref, Policy: &hello.Policy}
+	out = SSHConnectionStatus{State: "connected", Address: q.Address, Port: q.Port, User: q.User, Fingerprint: observed.Fingerprint, PairingRef: ref, Policy: &hello.Policy, Executable: q.Executable}
+	if managed {
+		hash := sha256.Sum256(d.binary)
+		out.HelperHash = hex.EncodeToString(hash[:])
+	}
 	current := &sshDashboardSession{client: client, session: session, stdin: stdin, cancel: cancel, done: make(chan struct{}), status: out}
 	d.mu.Lock()
 	d.current = current
@@ -314,6 +375,37 @@ func (d *SSHDashboard) Connect(ctx context.Context, q SSHConnectRequest) (SSHCon
 	}()
 	success = true
 	return out, nil
+}
+
+// connectionStage publishes only fixed setup progress, independently of the finite measurement lifecycle.
+func (d *SSHDashboard) connectionStage(stage string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.pending != nil {
+		d.pending.Stage = stage
+	}
+}
+
+// rememberSSHHost persists accepted authenticated SSH trust even when executable/helper setup later fails.
+func (d *SSHDashboard) rememberSSHHost(previous, observed sshHostPin) error {
+	path, err := d.hostPath(observed.Address, true)
+	if err != nil {
+		return errors.New("SSH host trust could not be saved")
+	}
+	lock, err := d.store.lock()
+	if err != nil {
+		return errors.New("local trust store is busy")
+	}
+	defer d.store.unlock(lock)
+	var latest sshHostPin
+	latestErr := readObject(path, &latest)
+	if latestErr != nil && !os.IsNotExist(latestErr) || latestErr == nil && latest.Key != previous.Key && latest.Key != observed.Key {
+		return errors.New("SSH host identity changed during connection")
+	}
+	if err = d.store.writeAtomic(path, observed); err != nil {
+		return errors.New("SSH host trust could not be saved")
+	}
+	return nil
 }
 
 // Run binds a frozen plan to the connected server and reuses exact keyed plan/readiness negotiation.

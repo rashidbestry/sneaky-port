@@ -114,6 +114,12 @@ type evidenceFile interface {
 	Close() error
 }
 
+// evidenceQueueCapacity bounds storage buffering independently of the physical send queue.
+// The frozen ledger limit supplies record capacity; active writes also count, and event_bytes bounds queued bytes.
+func evidenceQueueCapacity(p profile.Plan) int {
+	return min(8192, max(128, p.Limits.LedgerMessages))
+}
+
 // newEvidence creates exclusive restricted per-run files and syncs public settings before measurement.
 // Final publication space, including simultaneously present temporary files, is reserved up front.
 func newEvidence(store *Store, p profile.Plan, ready ReadyResult, endpoint string) (*evidenceWriter, error) {
@@ -193,7 +199,7 @@ func newEvidence(store *Store, p profile.Plan, ready ReadyResult, endpoint strin
 		f.Close()
 		return nil, err
 	}
-	w := &evidenceWriter{queue: make(chan []byte, p.Limits.QueueMessages), done: make(chan struct{}), failed: make(chan struct{}), queueBytes: uint64(p.Limits.EventBytes), rawLimit: uint64(p.Limits.FileBytes) - reserve, manifestReserve: manifestReserve, summaryReserve: summaryReserve, file: f, digest: sha256.New(), path: dir, manifest: m, timeout: time.Duration(p.Limits.ShutdownTimeout)}
+	w := &evidenceWriter{queue: make(chan []byte, evidenceQueueCapacity(p)), done: make(chan struct{}), failed: make(chan struct{}), queueBytes: uint64(p.Limits.EventBytes), rawLimit: uint64(p.Limits.FileBytes) - reserve, manifestReserve: manifestReserve, summaryReserve: summaryReserve, file: f, digest: sha256.New(), path: dir, manifest: m, timeout: time.Duration(p.Limits.ShutdownTimeout)}
 	w.clockLimit = clockReserve
 	go w.writeLoop()
 	return w, nil

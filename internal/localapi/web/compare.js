@@ -43,7 +43,7 @@ function renderComparisonEvidence() { const row=selectedComparisonEvidence()[Num
 element("comparison-evidence-select").addEventListener("change",renderComparisonEvidence);
 // comparisonControls bounds local pagination after common session/action gating.
 function comparisonControls() {
-  const blocked = state.busy || !state.token;
+  const blocked = state.busy || !state.token || typeof workspace!=="undefined" && !!workspace.loading;
   element("comparison-prev").disabled = blocked || !comparisonState.view || comparisonState.page === 0;
   element("comparison-next").disabled = blocked || !comparisonState.view || (comparisonState.page + 1) * tablePageSize() >= comparisonState.rows.length;
 }

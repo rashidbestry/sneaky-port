@@ -398,6 +398,44 @@ func stringTestBool(value bool) string {
 	return "partial"
 }
 
+// TestEvidenceQueueIndependence absorbs a disk pause without changing a small physical send-queue setting.
+// It also proves that an active write still consumes the derived record capacity and saturation is explicit.
+func TestEvidenceQueueIndependence(t *testing.T) {
+	store, p, ready := evidenceFixture(t)
+	p.Limits.QueueMessages = 2
+	p.Limits.ReceiptReserve = 1
+	p.Limits.LedgerMessages = 256
+	capacity := evidenceQueueCapacity(p)
+	if capacity <= p.Limits.QueueMessages || capacity > 8192 {
+		t.Fatal("storage capacity still depends on the physical queue")
+	}
+	hash, _ := p.Hash()
+	ready.PlanHash = hex.EncodeToString(hash[:])
+	owned, err := newEvidence(store, p, ready, "client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual := cap(owned.queue)
+	if err = owned.Finalize(engine.Result{}); err != nil || actual != capacity {
+		t.Fatal("real storage constructor ignored independent capacity", actual, err)
+	}
+	w := &evidenceWriter{queue: make(chan []byte, capacity), queueBytes: 1 << 20, rawLimit: 1 << 20, failed: make(chan struct{}), manifest: EvidenceManifest{RunID: strings.Repeat("a", 32), SessionID: strings.Repeat("b", 32), Endpoint: "client"}}
+	raw, _ := json.Marshal(engine.Record{Kind: "invalid", At: 1})
+	for index := 0; index < capacity; index++ {
+		if err := w.Append(raw); err != nil {
+			t.Fatal("bounded disk-pause buffer rejected early", index, err)
+		}
+	}
+	<-w.queue // Popping a record models an active disk call, not a completed write.
+	if err := w.Append(raw); err == nil || w.pending != uint64(capacity) || p.Limits.QueueMessages != 2 {
+		t.Fatal("active-inclusive storage cap or physical queue setting changed")
+	}
+	p.Limits.LedgerMessages = 1 << 20
+	if evidenceQueueCapacity(p) != 8192 {
+		t.Fatal("large ledger made storage record count unbounded")
+	}
+}
+
 // TestEvidenceAdmissionBounds proves active-inclusive count/byte limits and exact envelope-byte file charging.
 // No disk goroutine is started, making saturation deterministic instead of depending on disk speed.
 func TestEvidenceAdmissionBounds(t *testing.T) {

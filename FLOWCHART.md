@@ -415,7 +415,7 @@ flowchart TD
     A[client-api prints exact loopback URL and process token] --> B[Public embedded shell after peer Host Origin guards]
     B --> C[Automatic exact-origin grant; token in page memory only]
     C --> D[Protected setup read and bounded sequential catalogs]
-    D --> E[Normal SSH IP port username password; explicit host trust]
+    D --> E[Top SSH controls; automatic first trust; explicit changed-key replacement]
     D --> F[Automatic managed identity and owned helper enrollment]
     D --> G[Separate loaded revision and unsaved editable profile]
     G --> H[Registry adapter options; common ordered phase and directional controls]
@@ -543,7 +543,7 @@ flowchart TD
     L --> O[Request cancellation or API close interrupts waits]
 ```
 
-Sources: [diagnostics.go](internal/localapi/diagnostics.go) (`diagnostics`, `buildDiagnostic`, `addRange`, `ecdf`, `preflight`), [protected routes](internal/localapi/saved.go) (`saved`, `queryRoute`), [replay](internal/control/replay.go), [shared summaries](internal/measure/ledger.go) (`SummarizeSnapshot`, `Percentile`), [timer](internal/measure/preflight.go), [SVG/tables](internal/localapi/web/diagnostics.js) (`readDiagnostic`, `renderDiagnostic`, `plot`, `ratio`, `tablePage`, `renderPreflight`, `diagnosticControls`, `clearDiagnostics`), [fixtures](internal/localapi/diagnostics_test.go), [actual-script fixture](internal/localapi/web/dashboard_test.cjs), [real endpoint HTTP/SSH/UDP fixture](cmd/sneaky-port/finite_test.go). [Operator workflow/bounds](README.md#diagnostic-and-distribution-views) is canonical. Time groups retain absent/local outcomes; ECDF rank envelopes include late eligible completions and never supply final quantiles. Both endpoints keep separate clock origins. Partial/offline evidence cannot establish remote authentication, packet loss, calibrated one-way timing or ISP causation. Plotting/preflight never schedule probes. Live client-local phase/counters and derived evidence labels are implemented below; rendered-browser/visual QA and full acceptance remain pending.
+Sources: [diagnostics.go](internal/localapi/diagnostics.go) (`diagnostics`, `buildDiagnostic`, `addRange`, `ecdf`, `preflight`), [protected routes](internal/localapi/saved.go) (`saved`, `queryRoute`), [replay](internal/control/replay.go), [shared summaries](internal/measure/ledger.go) (`SummarizeSnapshot`, `Percentile`), [timer](internal/measure/preflight.go), [SVG/tables](internal/localapi/web/diagnostics.js) (`plot`, `ratio`, `tablePage`, `renderPreflight`, `diagnosticControls`, `clearDiagnostics`), [fixtures](internal/localapi/diagnostics_test.go), [actual-script fixture](internal/localapi/web/dashboard_test.cjs), [real endpoint HTTP/SSH/UDP fixture](cmd/sneaky-port/finite_test.go). [Operator workflow/bounds](README.md#diagnostic-and-distribution-views) is canonical. Time groups retain absent/local outcomes; ECDF rank envelopes include late eligible completions and never supply final quantiles. Both endpoints keep separate clock origins. Partial/offline evidence cannot establish remote authentication, packet loss, calibrated one-way timing or ISP causation. Plotting/preflight never schedule probes. Live client-local phase/counters and derived evidence labels are implemented below; rendered-browser/visual QA and full acceptance remain pending.
 
 ## Matched saved-run comparisons
 
@@ -594,44 +594,96 @@ Sources: [policy/count labels](internal/measure/evidence.go) (`EvidencePolicy.Va
 
 ```mermaid
 flowchart TD
-    A[Embedded credential-free shell] --> B[Connection / Workload / Run / Results / Compare]
-    B --> C[Section-specific vertical subtabs]
+    A[Embedded credential-free shell] --> B[Test only; no activity/history sidebar]
+    B --> C[Conditional main-page settings and current-run results]
     C --> D[Exactly one visible view]
     D --> E[Reuse draft input nodes across field pages]
     D --> F[Viewport-bounded table pages; exact values]
     D --> G[Complete public detail text in reader pages]
-    E --> H[Phase timing / upstream / downstream tabs]
+    E --> H[Selected phase; independent upstream / downstream choices]
     D --> I[Explicit protected actions use existing API]
     I --> J[Frozen start or same retained retry command]
-    K[Resize / tab / page changes] --> D
+    K[Resize / group / page changes] --> D
     L[Disconnect] --> M[Clear public readers and protected navigation]
 ```
 
-Sources: [navigation](internal/localapi/web/navigation.js) (`navigate`, `tabKeys`, `navigationControls`, `pageFields`, `drawFields`, `pager`, `readText`, `drawReader`, `refreshReaders`, `clearReaders`, `tablePageSize`, `livePageSize`), [editor/run controls](internal/localapi/web/dashboard.js) (`controls`, `renderEditor`, `renderPhases`, `showPhase`, `transmitPending`, `renderLive`, `disconnect`), [diagnostics](internal/localapi/web/diagnostics.js) (`tablePage`, `renderDiagnostic`, `renderMetricEvidence`), [comparisons](internal/localapi/web/compare.js) (`renderComparison`, `selectedComparisonEvidence`, `renderComparisonEvidence`), [HTML](internal/localapi/web/index.html), [viewport CSS](internal/localapi/web/dashboard.css), [asset/security guards](internal/localapi/dashboard_test.go), [actual-script/API fixture](internal/localapi/web/dashboard_test.cjs) (`navigationCheck`). Navigation/page/resize changes issue no API commands, preserve malformed input nodes and never mutate frozen settings. Compact table reasons have complete independently labeled evidence in dedicated detail views; no quantiles or deltas are recalculated. Main page vertical scrolling is disabled; JSON editors retain internal scrolling and narrow tables retain horizontal scrolling. HTTP/script fixtures validate navigation, keyboard focus, retained edits, exact values, full reader reachability and retry/status/cancellation. Browser geometry, focus rendering, accessibility and responsive acceptance remain checkpoint 23c.
+Sources: [navigation](internal/localapi/web/navigation.js) (`navigate`, `tabKeys`, `navigationControls`, `pageFields`, `drawFields`, `pager`, `readText`, `drawReader`, `refreshReaders`, `clearReaders`, `tablePageSize`, `livePageSize`), [editor/run controls](internal/localapi/web/dashboard.js) (`controls`, `renderEditor`, `renderPhases`, `showPhase`, `transmitPending`, `renderLive`, `disconnect`), [current plots/local timer](internal/localapi/web/diagnostics.js) (`plot`, `tablePage`, `renderPreflight`), [HTML](internal/localapi/web/index.html), [viewport CSS](internal/localapi/web/dashboard.css), [asset/security guards](internal/localapi/dashboard_test.go), [actual-script/API fixture](internal/localapi/web/dashboard_test.cjs) (`navigationCheck`). Navigation/page/resize changes issue no API commands, preserve malformed input nodes and never mutate frozen settings. Compact table reasons have complete independently labeled evidence in dedicated detail views; no quantiles or deltas are recalculated. Main page vertical scrolling is disabled; JSON editors retain internal scrolling and narrow tables retain horizontal scrolling. HTTP/script fixtures validate navigation, keyboard focus, retained edits, exact values, full reader reachability and retry/status/cancellation. Browser geometry, focus rendering, accessibility and responsive acceptance remain checkpoint 23c.
 
 ## Dashboard password SSH workflow
 
+The latest top-bar/automatic-first-trust and bundled-upload path is shown [below](#bundled-helper-and-top-connection-bar). The exact-origin [bootstrap](internal/localapi/bootstrap.go) still grants only the page-memory bearer; literal-loopback/Host/Origin/peer/request identity guards remain. [SSH ownership](internal/control/ssh_dashboard.go) forwards only helper control/calibration/reports; measured UDP/TCP traffic is direct. [Run Test](internal/localapi/web/dashboard.js) validates/saves the edited revision and retains existing exact plan/effective-setting/bind agreement. Original keyed CLI stores/services remain supported.
+
+## Copied helper startup and trust recovery
+
+The initial path-based repair remains as a legacy explicit-path API branch in [launcher/diagnostics](internal/control/helper_launch.go), with [quoted-path/host-trust recovery tests](internal/control/helper_launch_test.go) and [native shell tests](internal/control/helper_launch_shell_test.go). The dashboard no longer exposes an executable field or performs PATH lookup. Accepted authenticated SSH host pins remain saved independently of helper failure. Private stderr retention is capped at 8 KiB and mapped to fixed messages; raw remote text is never reflected. [Dated evidence](WORK_LOG.md#2026-10-12-copied-helper-startup-repair).
+
+## Bundled helper and top connection bar
+
 ```mermaid
 flowchart TD
-    A[Open exact local dashboard URL] --> B[Guarded same-origin bootstrap; automatic page-memory bearer]
-    B --> C[Protected setup; no manual token field]
-    C --> D[IP / normal SSH port / sneak username / password]
-    D --> E{Host pin verified before password?}
-    E -->|new or changed| F[Display fingerprint; explicit trust or replacement]
-    F --> E
-    E -->|verified| G[Normal Linux SSH password authentication]
-    G --> H[Exec installed matching dashboard-server helper]
-    H --> I[Disposable private store and automatic public enrollment]
-    I --> J[Private keyed listener; verify forwarded control discovery]
-    J --> K[Configure shared protocol / ordered phases / independent tweaks]
-    K --> L[Run Test validates and revision-saves edited settings]
-    L --> M[Freeze exact plan; prepare/hash/effective settings/data binding]
-    M -->|agreed| N[Independent direct UDP/TCP measurement]
-    M -->|unsupported or mismatched| O[Reject before measurement]
-    N --> P[Existing calibration/control/reports over owned SSH; exact retry/cancel]
-    Q[Resolved work plus Disconnect server or API shutdown] --> R[Close owned helper and SSH; join and delete disposable store]
+    A[Persistent top IP / SSH port / username / password / status] --> B[Read application-owned normal SSH pin]
+    B --> C{Observed host identity}
+    C -->|first key or saved match| D[Authenticate password; save public pin]
+    C -->|saved key changed| E[Stop before password; inline explicit replacement]
+    E -->|displayed key and replacement accepted| D
+    D --> F[Owned SSH exec checks Linux x86-64 and standard tools]
+    F --> G[Create exclusive private temporary directory; signal upload ready]
+    G --> H[Transfer bounded bundled binary with exact byte count]
+    H --> I{SHA-256 matches?}
+    I -->|no| J[Fixed fault; remove owned upload folder]
+    I -->|yes| K[Make owned file executable; start disposable helper]
+    K --> L[Enroll managed public client; verify keyed loopback discovery]
+    L --> M[Public connected state; helper digest; password cleared]
+    M --> N[Run Test freezes exact saved plan and negotiates both roles]
+    M --> O[Disconnect / API shutdown / SSH EOF]
+    O --> P[Join helper; remove owned store and uploaded executable folder]
 ```
 
-Sources: [bootstrap](internal/localapi/bootstrap.go) (`bootstrap`), [connection API](internal/localapi/ssh.go) (`EnableSSH`, `sshConnection`), [launcher](cmd/sneaky-port/api.go) (`clientAPI`), [normal SSH](internal/control/ssh_dashboard.go) (`Connect`, `Status`, `Close`, `hostPath`, `verifyHelper`, `clientSigner`, `Run`, `bridgeControl`, `controlBridge.Close`), [Linux command](cmd/sneaky-port/dashboard_server.go) (`dashboardServer`), [owned helper](internal/control/dashboard_server.go) (`DashboardServer`, `WithControlDialer`, `dialControl`), [existing plan negotiation](internal/control/session.go) (`clientSession`, `control`, `checkEffective`), [browser workflow](internal/localapi/web/dashboard.js) (`bootstrapSession`, `connectServer`, `showConnection`, `transmitPending`), [bootstrap/route guards](internal/localapi/bootstrap_test.go), [actual-script API fixture](internal/localapi/web/dashboard_test.cjs), [SSH/helper/direct-data fixtures](internal/control/ssh_dashboard_test.go), [ordinary SSH fixture](internal/testutil/ssh.go).
+Sources: [packaging](build-dashboard.ps1), [tagged bundle](internal/control/helper_bundle_packaged.go) (`bundledHelper`), [upload](internal/control/helper_upload.go) (`validateHelperBinary`, `SetHelperBinary`, `helperUploadCommand`), [SSH](internal/control/ssh_dashboard.go) (`Connect`, `connectionStage`, `Status`, `rememberSSHHost`), [protected route](internal/localapi/ssh.go), [top bar/dialog](internal/localapi/web/index.html), [connection script](internal/localapi/web/dashboard.js) (`connectServer`, `showConnection`), [navigation](internal/localapi/web/navigation.js) (`navigate`, `showUtility`, `closeUtility`). Connection controls stay above the main console; advanced public pairing/identity readers remain in the top Details dialog. Setup has a 120-second connection budget / 130-second HTTP write budget / 135-second browser budget. Public connecting stages permit recovery without a duplicate Connect. Upload bytes and normal SSH work remain outside measured traffic/counters and frozen profiles.
 
-Normal SSH login/helper/forwarding overhead is separate from measured direct traffic and inner application-control counters. The password never enters profiles, pins, saved reports or reflected errors. First trust/replacement precedes authentication; ordinary host pins are separate from the authenticated helper's auto-imported public key. Control forwarding is confined to the owned loopback listener; deadline-aware native pipes bound/join SSH copy loops. Startup takes at most 20 seconds, with a 25-second HTTP reply budget; lost acknowledgments recover through public connection status, never an automatic duplicate Connect. Existing CLI keyed stores/services remain intact. Windows loopback SSH fixtures emulate ordinary exec/forwarding and validate real UDP/TCP negotiation/report transfer/cancellation; they do not establish native Linux sshd deployment, browser rendering, live paths or full acceptance.
+Checks: [upload/fault/cancellation/packaged bytes](internal/control/helper_upload_test.go), [native Linux uploaded helper/direct run/cleanup](internal/control/helper_launch_shell_test.go), [first/repeated/changed trust and UDP/TCP agreement](internal/control/ssh_dashboard_test.go), [actual script/HTTP/navigation/changed-key response model](internal/localapi/web/dashboard_test.cjs), [CLI public shell boundary](cmd/sneaky-port/finite_test.go). Native Linux shell/SSH fixtures differ from system sshd deployment, rendered-browser/accessibility/responsive QA, live-path/full acceptance and ARM evidence; these gates remain separate.
+
+## Usable test dashboard and automatic results
+
+Current implementation follows the [Test-only flow](#test-only-dashboard-and-sixty-second-runs). Earlier sidebar/history/comparison layouts are superseded; dated implementation evidence remains in WORK_LOG. [Protected report-label APIs](internal/control/catalog_labels.go) remain independently available and confer no validity. The Test dashboard keeps at most 64 actual provisional snapshots, exact human units and automatic terminal replay; unavailable RTT and delivery are never zero-filled.
+
+## Single-page conditional test settings
+
+```mermaid
+flowchart TD
+    A[Persistent SSH controls and main test console; no sidebar] --> B[Choose real registered protocol]
+    B --> C[TCP: explicit no-delay checkbox; other declared scalar options inline]
+    A --> D[More settings; Adjust dropdown selects inline group]
+    D --> E[Steady / Burst / Quiet independently per direction]
+    E --> F[Burst reveals active/pause milliseconds; Quiet disables its data rate]
+    D --> G[Automatic / custom source port; DSCP dropdowns; zero / custom payload]
+    D --> H[Select / add / reorder phase; main inputs edit selected phase only]
+    D --> I[Typed limits, clock bounds and saved configuration]
+    C --> J[Exact current draft; invalid text retained and start blocked]
+    F --> J
+    G --> J
+    H --> J
+    I --> J
+    J --> K[Validate / revision-save / freeze / exact client-server agreement]
+```
+
+Sources: [main markup](internal/localapi/web/index.html), [viewport layout](internal/localapi/web/dashboard.css), [typed settings](internal/localapi/web/workspace.js) (`guidedEdit`, `friendlyField`, `settingsObject`, `settingTitle`, `settingsFields`, `syncSettings`, `showSettings`, `settingsControls`, `syncWorkspace`), [protected start](internal/localapi/web/dashboard.js), [retained draft/detail paging](internal/localapi/web/navigation.js), [local timer](internal/localapi/web/diagnostics.js) (`wakePageSize`, `renderPreflight`). Group changes only switch visibility/repage existing evidence; structural changes cannot discard malformed text. Local timer checks use edited exact human-unit values, then unlock two-row result pages. Unsupported complex extension options remain visible as limitations and unmodified for validation. [Actual-script tests](internal/localapi/web/dashboard_test.cjs) (`inlineSettingsCheck`, `guidedMain`) and [real endpoint fixture](internal/localapi/usability_test.go) verify two-phase burst/deadline/rate/payload agreement, TCP options, local timer requests, exact current replay and retained retries. Rendered geometry/accessibility/responsiveness remains 23c.
+
+## Test-only dashboard and sixty-second runs
+
+```mermaid
+flowchart TD
+    A[Top SSH controls; Test only] --> B[Conditional settings; exact seconds/ms/rates]
+    B --> C[Automatic data/clock/storage/control capacity or explicit manual limits]
+    C --> D[Validate, revision-save, freeze and exact endpoint agreement]
+    D --> E[Direct UDP/TCP; unchanged cadence, send queues and accounting]
+    E --> F[Independent bounded evidence FIFO; queue/file/disk faults remain partial]
+    E --> G[Provisional counts, status/retry/Stop; failure reason visible]
+    F --> H[Terminal admitted run handle and immutable report identity]
+    G --> H
+    H --> I[Serialized client-local replay; 64 MiB; 30s HTTP / 35s browser]
+    I --> J[Exact plan/measurement binding; unchanged replay/hash/cutoff/sample gates]
+    J --> K[Current-test RTT/cards/plots; no history or comparison sections]
+```
+
+Sources: [UI and resource sizing](internal/localapi/web/workspace.js) (`draftStorage`, `guidedEdit`, `renderWorkspace`, `loadRunResult`), [HTTP budgets/start](internal/localapi/web/dashboard.js), [markup](internal/localapi/web/index.html), [plots/local timer](internal/localapi/web/diagnostics.js), [serialized guarded admission](internal/localapi/saved.go), [owned-run diagnostic binding](internal/localapi/diagnostics.go) (`runDiagnostics`, `diagnosticReport`), [local-only current replay](internal/control/saved.go) (`RunReport`, `reportWithin`), [independent active-inclusive storage](internal/control/evidence.go) (`evidenceQueueCapacity`, `Append`, `writeLoop`), [unchanged finite demand](internal/control/clock.go) (`finiteRequestDemand`). General saved/import/compare caps remain unchanged; current replay does not claim transferred-server reconciliation. Filesystem processing remains noninterruptible, with finite byte admission and owned shutdown joins. [Actual-script/sixty-second/guard fixtures](internal/localapi/usability_test.go), [UI boundary and exact-budget tests](internal/localapi/web/dashboard_test.cjs), [storage pause/saturation tests](internal/control/evidence_test.go). Browser/native sshd/live/ARM acceptance remains separate.

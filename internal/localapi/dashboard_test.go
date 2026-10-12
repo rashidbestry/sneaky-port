@@ -23,7 +23,7 @@ import (
 // TestDashboardShellGuards permits public static code only; private bootstrap/API reads remain guarded.
 func TestDashboardShellGuards(t *testing.T) {
 	s := fixtureAPI(t, stoppedRunner)
-	for _, path := range []string{"/", "/navigation.js", "/dashboard.js", "/dashboard.css", "/diagnostics.js", "/compare.js"} {
+	for _, path := range []string{"/", "/navigation.js", "/dashboard.js", "/dashboard.css", "/diagnostics.js", "/compare.js", "/workspace.js"} {
 		r := request(s, "GET", path, "shell", "")
 		r.Header.Del("Authorization")
 		r.Header.Del("X-Request-ID")
@@ -138,7 +138,11 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 		return control.RunResult{Status: "partial"}, nil
 	})
 	sshFixture := testutil.StartSSH(t, control.DashboardServer)
-	s.EnableSSH(control.NewSSHDashboard(s.store))
+	connector := control.NewSSHDashboard(s.store)
+	if err := connector.SetHelperBinary(testutil.DashboardPayload()); err != nil {
+		t.Fatal(err)
+	}
+	s.EnableSSH(connector)
 	s.store.Adapters = adapter.Default()
 	if err := extension.Register(s.store.Adapters); err != nil {
 		t.Fatal(err)

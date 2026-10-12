@@ -162,11 +162,45 @@ This case does not establish bare-metal Linux, native ARM64, Linux minima, outer
 
 ### 23e. Open directly, connect over Linux SSH and run the edited plan (completed)
 
-**Complete for implementation and recorded HTTP/script/SSH/UDP/TCP fixtures, 2026-10-12.** User-selected automatic local access, normal Linux SSH IP/port/password login (editable default username `sneak`), explicit host verification, disposable matching helper and Run Test validation/save/exact settings negotiation. Passwords remain transient; keyed CLI, original stores/services and state/retry/accounting boundaries remain intact. Matching Linux tool in PATH and SSH control forwarding are prerequisites. [Evidence](WORK_LOG.md#2026-10-12-dashboard-password-ssh-workflow), [source flow](FLOWCHART.md#dashboard-password-ssh-workflow). ARM and rendered-browser/native sshd/deployment acceptance remain separate.
+**Complete for implementation and recorded HTTP/script/SSH/UDP/TCP fixtures, 2026-10-12.** User-selected automatic local access, normal Linux SSH IP/port/password login (editable default username `sneak`), explicit host verification, disposable matching helper and Run Test validation/save/exact settings negotiation. Passwords remain transient; keyed CLI, original stores/services and state/retry/accounting boundaries remain intact. The initial PATH/manual-first-trust setup is superseded by checkpoints 23g/23h below; SSH control forwarding remains required. [Evidence](WORK_LOG.md#2026-10-12-dashboard-password-ssh-workflow), [source flow](FLOWCHART.md#dashboard-password-ssh-workflow). ARM and rendered-browser/native sshd/deployment acceptance remain separate.
+
+### 23f. Resolve copied server executables and preserve accepted SSH trust (completed)
+
+**Complete for implementation and recorded script/SSH/native Linux shell/copied-helper fixtures, 2026-10-12.** Initial optional absolute executable selection (now a legacy API branch; the dashboard uses 23g), fixed startup diagnostics and authenticated host trust retained across helper failures. Real supplied Linux executable startup and negotiated direct measurement/report transfer pass under the configured account in isolated Ubuntu WSL tests. [Evidence](WORK_LOG.md#2026-10-12-copied-helper-startup-repair), [source flow](FLOWCHART.md#copied-helper-startup-and-trust-recovery). No deployment/permission changes, real sshd/browser/full-network acceptance or ARM claim.
 
 ### 23c. Verify the rendered dashboard
 
-**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b/23d-23e. Script/HTTP fixtures do not complete this gate.
+Checkpoints 23g/23h were authorized together by the user on 2026-10-12 and are complete within their recorded implementation/fixture scopes. ARM remains deferred.
+
+**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b/23d-23m. Script/HTTP fixtures do not complete this gate.
+
+### 23g. Upload and start the bundled Linux helper (completed)
+
+**Complete for implementation and recorded packaged/SSH/native Linux fixtures, 2026-10-12.** Self-contained Windows/Linux x86-64 dashboards bundle the matching helper; Connect transfers exact bytes, verifies SHA-256 and starts it in private temporary storage. Short/corrupt/stalled uploads, fixed platform/tool/storage failures, real native uploaded-helper/direct run/report transfer and cleanup pass. [Evidence](WORK_LOG.md#2026-10-12-managed-helper-and-top-connection-bar), [source flow](FLOWCHART.md#bundled-helper-and-top-connection-bar). Existing server files/services remain intact; actual system sshd/live/full acceptance remains separate.
+
+### 23h. Top connection bar and automatic first fingerprint trust (completed)
+
+**Complete for implementation and recorded script/HTTP/SSH fixtures, 2026-10-12.** Persistent top IP/SSH port/username/password/status controls, four measurement sidebar sections, public Details dialog and inline changed-key replacement. First authenticated fingerprints save automatically; changed saved keys stop before password delivery. Actual script checks password clearing, absent path/sidebar controls, navigation/edit retention, replacement fields and lost acknowledgments; real SSH fixtures check first/repeated/changed trust and exact UDP/TCP agreement. [Evidence](WORK_LOG.md#2026-10-12-managed-helper-and-top-connection-bar), [source flow](FLOWCHART.md#bundled-helper-and-top-connection-bar). Rendered-browser acceptance remains 23c.
+
+### 23i. Make test setup usable without IDs or JSON (completed)
+
+**Complete for implementation and recorded actual-script/real HTTP/SSH/UDP/TCP fixtures, 2026-10-12.** Compact normal workflow with named saved tests, real registered protocol controls, seconds/milliseconds, payload/rate/directional-priority inputs and direct Run/Stop/Clear actions. Manage internal identifiers automatically; retain exact advanced settings behind Advanced without silent rewriting. Decimal conversion, loaded/custom plan retention, explicit TCP options, visible automatic storage and exact saved/negotiated revisions pass. [Evidence](WORK_LOG.md#2026-10-12-dashboard-usability-and-automatic-results), [source flow](FLOWCHART.md#usable-test-dashboard-and-automatic-results).
+
+### 23j. Show automatic readable test tracking and results (completed)
+
+**Complete for implementation and recorded script/HTTP/SSH/native component fixtures; authorized with 23i, 2026-10-12.** Metric cards and charts on the main Test view, honest provisional/final/partial/unavailable states, automatic terminal report loading, friendly report selectors and recovery without pasting run/report IDs. Preserve complete technical evidence/exports under Advanced. Real guided UDP/TCP completion, exact automatic final-result loading, named declared-axis comparisons, same-request lost-acknowledgment recovery, per-metric notes, active snapshot and bounded label guards pass. [Evidence](WORK_LOG.md#2026-10-12-dashboard-usability-and-automatic-results), [source flow](FLOWCHART.md#usable-test-dashboard-and-automatic-results). Rendered/native sshd/live acceptance remains separate. Screenshot router shaping and mixed-carrier flood scenarios are outside this UI task.
+
+### 23k. Put conditional test settings on one main page (completed)
+
+**Complete for embedded implementation and actual-script/HTTP/SSH/direct UDP/TCP fixtures, 2026-10-12.** Latest user request supersedes 23d/23i sidebar/Advanced navigation: no sidebar columns; all supported test settings expand inline through typed groups. TCP checkbox, traffic pattern/priority/port/payload choices reveal relevant controls; custom phases, limits, calibration and scalar comparison metadata remain editable without JSON. Group changes preserve invalid inputs and send no requests. Two-phase burst tests verify exact settings/deadline negotiation, completion/replay/comparison and same-request recovery. [Evidence](WORK_LOG.md#2026-10-12-single-page-conditional-dashboard-settings), [source flow](FLOWCHART.md#single-page-conditional-test-settings). Browser QA 23c remains next; ARM/native sshd/live acceptance remain separate.
+
+### 23l. Keep only the Test dashboard (completed)
+
+**Complete for implementation and actual-script/HTTP fixtures, user-selected 2026-10-12.** Removed Saved results/Compare sections, navigation, script loading and comparison settings. Test retains conditional controls, live/current results, local timer and retry/status/Stop. Stored evidence/protected APIs remain. Absent-section, retained-edit, exact-setting and current-result fixtures pass. [Evidence](WORK_LOG.md#2026-10-12-test-only-dashboard-and-sixty-second-repair), [source](FLOWCHART.md#test-only-dashboard-and-sixty-second-runs).
+
+### 23m. Repair sixty-second dashboard runs (completed)
+
+**Complete for implementation and real elapsed 60-second UDP/TCP loopback fixtures; authorized with 23l, 2026-10-12.** Reproduced default 129-demand/128-cap startup failure; automatic resources now cover heartbeat/calibration/report transfer, with explicit manual recovery. Independent bounded evidence buffering preserves physical send queues. Current terminal client replay uses a 64-MiB cap, exact owned plan/measurement binding and 30-second HTTP / 35-second browser budgets; ordinary saved caps remain. Both endpoints completed both 60-second protocols and current charts/replay loaded (153.59-second fixture). [Evidence](WORK_LOG.md#2026-10-12-test-only-dashboard-and-sixty-second-repair), [source](FLOWCHART.md#test-only-dashboard-and-sixty-second-runs). Browser/native sshd/live/ARM/full acceptance remains separate.
 
 ## Queued validation tasks
 

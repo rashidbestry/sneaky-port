@@ -1,7 +1,7 @@
 "use strict";
 
 // state keeps session secrets, edits and command retries in memory only; no URL/cookie/storage bootstrap.
-const state = { token: "", session: "", draft: null, selected: null, saved: false, adapters: [], client: null, busy: false, invalid: new Set(), run: null, frozen: null, pending: null, timer: null, epoch: 0, sshEnabled:false, connection:null, trust:null };
+const state = { token: "", session: "", draft: null, selected: null, saved: false, adapters: [], client: null, busy: false, invalid: new Set(), run: null, frozen: null, pending: null, timer: null, epoch: 0, sshEnabled:false, connection:null, trust:null, connectionError:"" };
 const phaseEditor = { index: 0, direction: "timing" };
 let livePage=0;
 // element resolves fixed shell IDs; untrusted content is always assigned through text/value properties.
@@ -22,11 +22,12 @@ async function api(path, method = "GET", fields = null, id = requestID(), rawPro
   let body = fields === null ? undefined : JSON.stringify({ schema_version: 1, request_id: id, ...fields });
   if (rawProfile !== null) body = body.slice(0, -1) + ',"profile":' + rawProfile + "}";
   if (body && new TextEncoder().encode(body).length > 1048576) throw new Error("Document exceeds the 1 MiB API body limit.");
-  const response = await fetch(path, { method, headers: { Authorization: "Bearer " + state.token, "X-Request-ID": id, "Content-Type": "application/json" }, body, credentials: "omit", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(path==="/api/v1/connection" ? 25000 : 5000) });
+  const timeout=path==="/api/v1/connection" ? 135000 : /^\/api\/v1\/runs\/[a-zA-Z0-9_-]+\/diagnostics(?:\?|$)/.test(path) ? 35000 : 5000;
+  const response = await fetch(path, { method, headers: { Authorization: "Bearer " + state.token, "X-Request-ID": id, "Content-Type": "application/json" }, body, credentials: "omit", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(timeout) });
   const envelope = await response.json();
   if (epoch !== state.epoch) throw new Error("Session changed; reconnect and read status.");
   if (envelope.schema_version !== 1 || envelope.request_id !== id) throw new Error("Unexpected API response identity.");
-  if (!response.ok || envelope.error) { const error = new Error(envelope.error ? envelope.error.field + ": " + envelope.error.reason : "API request failed."); error.definite = true; throw error; }
+  if (!response.ok || envelope.error) { let message=envelope.error ? envelope.error.field + ": " + envelope.error.reason : "API request failed."; if(envelope.error?.field==="revision") message="This saved test name already exists or changed elsewhere. Load that test or choose another name; your edits are retained."; if(envelope.error?.code==="invalid_profile") message="Test settings could not be validated. Check the highlighted fields, payload size, duration and rates."; const error = new Error(message); error.definite = true; throw error; }
   return envelope.result;
 }
 // dirty compares the editor to the last loaded/saved selection, preserving pending invalid input as unsaved.
@@ -34,25 +35,25 @@ function dirty() { return state.invalid.size > 0 || !state.selected || JSON.stri
 // controls reflects local editing and command state; readiness/phase timing never drive the engine here.
 function controls() {
   navigation.authenticated=!!state.token;
-  for (const node of document.querySelectorAll("#workspace button, #workspace input, #workspace select, #workspace textarea")) node.disabled = state.busy || !state.token;
+  const loading=typeof workspace!=="undefined" && !!workspace.loading;
+  for (const node of document.querySelectorAll("#workspace button, #workspace input, #workspace select, #workspace textarea, #connection-info .view button, #connection-info .view input, #connection-info .view select, #connection-info .view textarea")) node.disabled = state.busy || loading || !state.token;
   const linked=state.connection?.status==="connected", running=state.run && ["executing","cancelling"].includes(state.run.status);
   navigation.serverConnected=linked; navigation.serverRequired=state.sshEnabled;
-  navigation.trustPending=!!state.trust;
-  element("connect").disabled = state.busy || !state.token || linked || state.connection?.status==="unknown" || !state.sshEnabled;
+  element("connect").disabled = state.busy || !state.token || linked || ["unknown","connecting"].includes(state.connection?.status) || !state.sshEnabled;
   element("disconnect").disabled = state.busy || !linked || !!running || !!state.pending;
-  for(const id of ["server-ip","ssh-port","ssh-user","ssh-password"]) element(id).disabled=state.busy || linked || !state.token;
-  element("trust-connect").disabled=state.busy || !state.trust;
+  for(const id of ["server-ip","ssh-port","ssh-user","ssh-password"]) element(id).disabled=state.busy || linked || state.connection?.status==="connecting" || !state.token;
+  element("trust-connect").disabled=state.busy || !state.trust || !element("replace-ssh-host").checked;
   element("replace-ssh-host").disabled=state.busy || !state.trust;
   element("refresh-connection").disabled=state.busy || !state.token || !state.sshEnabled;
   element("create-key").disabled = state.busy || !state.token || !!state.client;
   element("validate").disabled=state.busy || !state.token; element("save").disabled=state.busy || !state.token;
   element("live-prev").disabled=state.busy || !state.token || !state.run?.progress || livePage===0; element("live-next").disabled=state.busy || !state.token || !state.run?.progress || (livePage+1)*livePageSize()>=10;
-  element("start").disabled = state.busy || !state.token || state.invalid.size>0 || state.sshEnabled && !linked || !!state.pending || !!running;
+  element("start").disabled = state.busy || loading || !state.token || state.invalid.size>0 || state.sshEnabled && !linked || !!state.pending || !!running;
   element("retry").hidden = !state.pending;
   element("pending").textContent = state.pending ? "Acknowledgment unknown. Retry uses the same command ID and frozen target. Do not start another run." : "";
   element("edit-state").textContent = state.draft ? (dirty() || !state.saved ? "Run Test validates and saves these edits, then negotiates with the server." : "Saved workload. Run Test agrees these exact settings with the server.") : "";
+  if (typeof workspaceControls === "function") workspaceControls();
   if (typeof diagnosticControls === "function") diagnosticControls();
-  if (typeof comparisonControls === "function") comparisonControls();
   navigationControls();
   for (const entry of navigation.fields) { const row=entry.root.lastChild; if (row && row.className==="pager") { row.children[0].disabled=state.busy || entry.page===0; row.children[2].disabled=state.busy || entry.page+1>=Math.ceil(entry.fields.length/fieldPageSize()); } }
   for (const entry of navigation.readers.values()) { const row=element(entry.id+"-pages").lastChild; if(row) { row.children[0].disabled=entry.page===0; row.children[2].disabled=entry.page+1>=entry.pageCount; } }
@@ -185,15 +186,15 @@ function renderEditor() {
     else inputField(advanced, state.draft, key);
   }
   pageFields(advanced);
-  renderPhases(); element("profile-json").value = JSON.stringify(state.draft, null, 2);
+  renderPhases(); element("profile-json").value = JSON.stringify(state.draft, null, 2); if(typeof syncWorkspace==="function") syncWorkspace();
 }
 // selectProfile replaces the draft only on explicit load/save/connect; revisions remain separate from edits.
-function selectProfile(selected, saved) { if (selected.profile.phases.length > 64) throw new Error("This dashboard edits at most 64 phases; use the CLI for larger profiles."); state.selected = clone(selected); state.draft = clone(selected.profile); state.saved = saved; renderEditor(); controls(); }
+function selectProfile(selected, saved) { if (selected.profile.phases.length > 64) throw new Error("This dashboard edits at most 64 phases; use the CLI for larger profiles."); state.selected = clone(selected); state.draft = clone(selected.profile); state.saved = saved; if(typeof workspace!=="undefined") { workspace.phase=0; workspace.patterns={}; } renderEditor(); controls(); }
 // catalog loads bounded pages sequentially and rejects excessive catalogs rather than silently truncating them.
-async function catalog(namespace) {
+async function catalog(namespace, labels=false) {
   const all = []; let cursor = "0";
   for (let page = 0; page < 16; page++) {
-    const result = await api("/api/v1/" + namespace + "?cursor=" + cursor + "&limit=16"); all.push(...result.items);
+    const result = await api("/api/v1/" + namespace + "?cursor=" + cursor + "&limit=16"+(labels ? "&labels=1" : "")); all.push(...result.items);
     if (!result.next_cursor) return all;
     if (!/^\d+$/.test(result.next_cursor) || Number(result.next_cursor) <= Number(cursor)) throw new Error("Invalid catalog cursor.");
     cursor = result.next_cursor;
@@ -203,8 +204,8 @@ async function catalog(namespace) {
 // fillSelect renders saved identities through text properties, preserving the explicit selection where possible.
 function fillSelect(id, items) {
   const field = element(id); const previous = field.value; field.replaceChildren();
-  for (const item of items) { const option = document.createElement("option"); option.value = item; option.textContent = item; field.append(option); }
-  if (items.includes(previous)) field.value = previous;
+  for (const item of items) { const option = document.createElement("option"); option.value=item; option.textContent=id==="profiles" && typeof prettyName==="function" ? prettyName(item) : item; field.append(option); }
+  if(items.includes(previous)) field.value=previous;
 }
 // refreshCatalogs reads profiles/pairings serially to respect the server's single saved-operation admission.
 async function refreshCatalogs() {
@@ -217,11 +218,11 @@ function previewPairing() {
   readText("pairing-preview",pairing ? JSON.stringify(pairing.bundle, null, 2) : "No pairing selected.");
 }
 // readyDraft blocks malformed local input; the authoritative shared validator remains the API.
-function readyDraft() { if (state.invalid.size) throw new Error("Resolve invalid integer/JSON fields before validating or saving."); return clone(state.draft); }
+function readyDraft() { if (state.invalid.size) throw new Error("Check the highlighted settings before running or saving."); return clone(state.draft); }
 // showRun presents actual API states and nulls; final completeness is never inferred from HTTP success.
 function showRun(run) {
-  state.run = run; element("run-id").value = run.control_run_id; element("run-state").textContent = "Run " + run.control_run_id + " · " + run.status;
-  readText("run-detail",JSON.stringify(run, null, 2)); renderLive(run); controls();
+  state.run = run; element("run-id").value = run.control_run_id; element("run-state").textContent = "Test " + run.status;
+  readText("run-detail",JSON.stringify(run, null, 2)); renderLive(run); if(typeof rememberProgress==="function") { rememberProgress(run); void loadRunResult(run); } controls();
 }
 
 // renderLive presents exact provisional local counters; its progress bar alone uses a bounded display ratio.
@@ -253,14 +254,14 @@ async function transmitPending() {
   try {
     const run = await api(command.path, "POST", command.fields, command.id);
     if (command.frozen) { state.frozen = clone(command.frozen); readText("frozen",JSON.stringify(state.frozen, null, 2)); }
-    state.pending = null; showRun(run); schedulePoll(); navigate("run","live"); notice("Run command acknowledged: " + run.status + ".");
-  } catch (error) { if (error.definite) state.pending = null; else { navigate("run","live"); error.message = "Command acknowledgment unknown. Retry the retained command or read status. " + error.message; } throw error; }
+    state.pending = null; showRun(run); schedulePoll(); navigate("dashboard","overview"); notice("Run command acknowledged: " + run.status + ".");
+  } catch (error) { if (error.definite) state.pending = null; else { navigate("dashboard","overview"); error.message = "Command acknowledgment unknown. Retry the retained command or read status. " + error.message; } throw error; }
 }
 // disconnect forgets the token and stops reads; it does not send a run cancellation or alter saved files.
 function disconnect() {
   if (typeof clearDiagnostics === "function") clearDiagnostics();
   if (typeof clearComparison === "function") clearComparison();
-  clearReaders(); state.epoch++; state.token = ""; state.session = ""; state.connection=null; state.trust=null; navigation.authenticated=false; clearTimeout(state.timer); element("ssh-password").value = ""; element("workspace").hidden = true; navigate("connection","session"); notice("Local dashboard access interrupted. Reload to recover; an admitted test may still be active."); controls();
+  closeUtility(); clearReaders(); if(typeof clearWorkspace==="function") { state.run=null; clearWorkspace(); } state.epoch++; state.token = ""; state.session = ""; state.connection=null; state.trust=null; state.connectionError=""; navigation.authenticated=false; clearTimeout(state.timer); element("ssh-password").value = ""; element("ssh-trust").hidden=true; element("connection-status").textContent="Dashboard access interrupted · Reload to recover."; element("connection-status").dataset.state="failed"; element("workspace").hidden = true; navigate("dashboard","overview"); notice("Local dashboard access interrupted. Reload to recover; an admitted test may still be active."); controls();
 }
 // bind wraps explicit actions with serialization and visible errors, avoiding unhandled promises.
 function bind(id, action) { element(id).addEventListener("click", function clicked() { /* One explicit UI action at a time. */ void perform(action); }); }
@@ -271,28 +272,39 @@ async function bootstrapSession() {
   const envelope=await response.json(); if(!response.ok || envelope.schema_version!==1 || envelope.request_id!==id || !/^[a-f0-9]{64}$/.test(envelope.result?.session_token)) throw new Error("Could not open the local dashboard. Reload its exact local URL.");
   state.token=envelope.result.session_token; state.epoch++;
   state.session=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(state.token))),function fingerprintByte(b) { /* Retain a nonsecret API-process retry identity. */ return b.toString(16).padStart(2,"0"); }).join("");
-  try { const setup=await api("/api/v1/setup"); state.adapters=await catalog("adapters"); state.client=setup.client_enrollment; state.sshEnabled=setup.ssh_enabled; state.connection=setup.connection; selectProfile(setup.selected_profile,setup.saved); await refreshCatalogs(); readText("enrollment",state.client ? JSON.stringify(state.client,null,2) : "Connect creates a managed local identity automatically."); if(state.client) element("client-id").value=state.client.client_id; element("workspace").hidden=false; showConnection(); notice("Dashboard ready. Enter your server details and connect over SSH."); }
+  try { const setup=await api("/api/v1/setup"); state.adapters=await catalog("adapters"); state.client=setup.client_enrollment; state.sshEnabled=setup.ssh_enabled; state.connection=setup.connection; selectProfile(setup.selected_profile,setup.saved); if(setup.active_run) { showRun(setup.active_run); schedulePoll(); } await refreshCatalogs(); readText("enrollment",state.client ? JSON.stringify(state.client,null,2) : "Connect creates a managed local identity automatically."); if(state.client) element("client-id").value=state.client.client_id; element("workspace").hidden=false; showConnection(); notice("Dashboard ready. Enter your server details and connect over SSH."); }
   catch(error) { disconnect(); throw error; }
 }
 // showConnection displays only public SSH/helper identity; credentials never enter a reader or profile.
-function showConnection() { const linked=state.connection?.status==="connected"; if(linked) { element("server-ip").value=state.connection.server_ip; element("ssh-port").value=String(state.connection.ssh_port); element("ssh-user").value=state.connection.ssh_username; } element("connection-status").textContent=linked ? "Connected to "+state.connection.ssh_username+"@"+state.connection.server_ip+":"+state.connection.ssh_port+". Choose protocol settings in Workload." : "Enter the server IP, SSH port, username and password."; element("ssh-trust").hidden=!state.trust; if(state.trust) element("ssh-fingerprint").textContent="Server identity: "+state.trust.host_key_fingerprint+(state.trust.previous_fingerprint ? " · Previously trusted: "+state.trust.previous_fingerprint : ""); readText("connection-detail",JSON.stringify(state.connection || {status:"disconnected"},null,2)); controls(); }
+function showConnection() {
+  const linked=state.connection?.status==="connected", pending=state.connection?.status==="connecting";
+  if(linked) { element("server-ip").value=state.connection.server_ip; element("ssh-port").value=String(state.connection.ssh_port); element("ssh-user").value=state.connection.ssh_username; }
+  const status=element("connection-status");
+  status.dataset.state=state.connectionError ? "failed" : linked ? "connected" : pending ? "connecting" : "disconnected";
+  status.textContent=state.connectionError ? "Connection failed: "+state.connectionError : linked ? "Connected · "+state.connection.ssh_username+"@"+state.connection.server_ip+":"+state.connection.ssh_port : pending ? "Connecting · Signing in, uploading and starting the server…" : state.connection?.status==="unknown" ? "Connection status unknown · Press Refresh." : "Disconnected · Enter server details and press Connect.";
+  element("ssh-trust").hidden=!state.trust;
+  if(state.trust) element("ssh-fingerprint").textContent="Server identity changed. New: "+state.trust.host_key_fingerprint+" · Saved: "+state.trust.previous_fingerprint;
+  readText("connection-detail",JSON.stringify(state.connection || {status:"disconnected"},null,2)); controls();
+}
 // connectServer sends a password once to the local connector and applies only the chosen server target.
 async function connectServer(accept=false) {
-  const address=element("server-ip").value.trim(),port=element("ssh-port").value,user=element("ssh-user").value.trim(); if(!/^[1-9][0-9]{0,4}$/.test(port) || Number(port)>65535) throw new Error("SSH port must be 1–65535.");
+  const address=element("server-ip").value.trim(),port=element("ssh-port").value,user=element("ssh-user").value.trim(); if(!/^[1-9][0-9]{0,4}$/.test(port) || Number(port)>65535) { state.connectionError="SSH port must be 1–65535."; showConnection(); throw new Error(state.connectionError); }
   const fields={server_ip:address,ssh_port:Number(port),ssh_username:user,ssh_password:element("ssh-password").value};
-  if(accept) { if(!state.trust || state.trust.server_ip!==address || state.trust.ssh_port!==Number(port) || state.trust.ssh_username!==user) throw new Error("Server details changed. Press Connect again."); fields.trust_fingerprint=state.trust.host_key_fingerprint; fields.replace_host_key=element("replace-ssh-host").checked; }
+  if(accept) { if(!state.trust || state.trust.server_ip!==address || state.trust.ssh_port!==Number(port) || state.trust.ssh_username!==user) throw new Error("Server details changed. Press Connect again."); if(!element("replace-ssh-host").checked) throw new Error("Select Replace saved server identity before reconnecting."); fields.trust_fingerprint=state.trust.host_key_fingerprint; fields.replace_host_key=true; }
+  state.connectionError=""; state.connection={status:"connecting"}; showConnection();
   let result;
   try { result=await api("/api/v1/connection","POST",fields); }
-  catch(error) { element("ssh-password").value=""; state.trust=null; if(!error.definite) { state.connection={status:"unknown"}; error.message+=". Connection acknowledgment unknown. Press Refresh connection before connecting again."; } showConnection(); navigate("connection","session"); throw error; }
-  if(result.status==="trust_required") { state.trust=result; element("replace-ssh-label").hidden=!result.previous_fingerprint; element("replace-ssh-host").checked=false; showConnection(); navigate("connection","trust"); notice("Verify the displayed SSH fingerprint, then trust this server to connect."); return; }
-  element("ssh-password").value=""; state.trust=null; state.connection=result;
+  catch(error) { element("ssh-password").value=""; state.trust=null; if(!error.definite) { state.connection={status:"unknown"}; error.message+=". Connection acknowledgment unknown. Press Refresh connection before connecting again."; } if(error.definite) state.connection={status:"disconnected"}; state.connectionError=error.message; showConnection(); throw error; }
+  if(result.status==="trust_required") { state.trust=result; element("replace-ssh-label").hidden=!result.previous_fingerprint; element("replace-ssh-host").checked=false; state.connection={status:"disconnected"}; showConnection(); notice("Server identity changed. Review it, select replacement, and reconnect."); return; }
+  element("ssh-password").value=""; state.trust=null; state.connection=result; showConnection();
   const setup=await api("/api/v1/setup"); state.client=setup.client_enrollment; if(state.client) { element("client-id").value=state.client.client_id; readText("enrollment",JSON.stringify(state.client,null,2)); }
-  state.draft.server_address=result.server_ip; state.draft.address_family=result.server_ip.includes(":") ? "ipv6" : "ipv4"; state.draft.pairing_ref=result.pairing_ref; renderEditor(); await refreshCatalogs(); showConnection(); navigate("workload","protocol"); notice("SSH connected. Configure your test, then press Run Test.");
+  state.draft.server_address=result.server_ip; state.draft.address_family=result.server_ip.includes(":") ? "ipv6" : "ipv4"; state.draft.pairing_ref=result.pairing_ref; renderEditor(); await refreshCatalogs(); showConnection(); navigate("dashboard","overview"); notice("SSH connected. Configure your test, then press Run Test.");
 }
 bind("connect",connectServer);
 bind("trust-connect",async function trustServer() { /* Accept only the actual observed fingerprint and an explicit changed-key replacement. */ await connectServer(true); });
-bind("disconnect",async function disconnectServer() { /* End the owned helper only after active work/retries are resolved. */ await api("/api/v1/connection","DELETE"); state.connection={status:"disconnected"}; state.trust=null; element("ssh-password").value=""; showConnection(); navigate("connection","session"); notice("SSH server disconnected."); });
-bind("refresh-connection",async function refreshConnection() { /* Recover helper/SSH state after a lost Connect acknowledgment; preserve every pending invalid field. */ state.connection=await api("/api/v1/connection"); if(state.connection.status==="connected" && !state.client) { const setup=await api("/api/v1/setup"); state.client=setup.client_enrollment; if(state.client) { element("client-id").value=state.client.client_id; readText("enrollment",JSON.stringify(state.client,null,2)); } } showConnection(); if(state.connection.status==="connected" && !state.invalid.size) { state.draft.server_address=state.connection.server_ip; state.draft.address_family=state.connection.server_ip.includes(":") ? "ipv6" : "ipv4"; state.draft.pairing_ref=state.connection.pairing_ref; renderEditor(); } notice("Server connection status refreshed."); });
+element("replace-ssh-host").addEventListener("change",function replacementChoice() { /* An unchecked changed-key confirmation can never send SSH credentials. */ controls(); });
+bind("disconnect",async function disconnectServer() { /* End the owned helper only after active work/retries are resolved. */ await api("/api/v1/connection","DELETE"); state.connection={status:"disconnected"}; state.trust=null; element("ssh-password").value=""; state.connectionError=""; showConnection(); notice("SSH server disconnected."); });
+bind("refresh-connection",async function refreshConnection() { /* Recover helper/SSH state after a lost Connect acknowledgment; preserve every pending invalid field. */ state.connectionError=""; state.connection=await api("/api/v1/connection"); if(state.connection.status==="connected" && !state.client) { const setup=await api("/api/v1/setup"); state.client=setup.client_enrollment; if(state.client) { element("client-id").value=state.client.client_id; readText("enrollment",JSON.stringify(state.client,null,2)); } } showConnection(); if(state.connection.status==="connected" && !state.invalid.size) { state.draft.server_address=state.connection.server_ip; state.draft.address_family=state.connection.server_ip.includes(":") ? "ipv6" : "ipv4"; state.draft.pairing_ref=state.connection.pairing_ref; renderEditor(); } notice("Server connection status refreshed."); });
 bind("refresh-catalogs", async function refreshSaved() { /* Refresh catalogs without replacing unsaved editor fields. */ await refreshCatalogs(); notice("Saved lists refreshed; editor unchanged."); });
 element("pairings").addEventListener("change", previewPairing);
 bind("use-pairing", function usePairing() { /* Assign only the pairing reference; preserve all pending inputs during explicit selection. */ if (state.invalid.size) throw new Error("Resolve invalid inputs before selecting a pairing."); state.draft.pairing_ref = safeID(element("pairings").value); renderEditor(); notice("Pairing reference selected. Review the data address separately and save edits."); });
@@ -319,6 +331,7 @@ bind("apply-json", async function applyJSON() { /* Validate original JSON bytes 
 bind("start", async function startRun() { /* Run Test validates/saves the current draft, then retains the exact negotiated revision and command identity. */
   if(state.pending) throw new Error("Resolve the pending command before running another test.");
   if(state.sshEnabled) { state.connection=await api("/api/v1/connection"); if(state.connection.status!=="connected") { showConnection(); throw new Error("Connect the SSH server first."); } if(state.draft.server_address!==state.connection.server_ip || state.draft.pairing_ref!==state.connection.pairing_ref) throw new Error("This workload targets another server. Reconnect its SSH server before testing."); }
+  if(typeof draftStorage==="function") draftStorage(state.draft);
   if(!state.saved || dirty()) { const validated=await api("/api/v1/profiles/validate","POST",{profile_revision:"",profile:readyDraft()}); const draft=validated.profile,revision=draft.profile_id===state.selected.profile.profile_id && state.saved ? state.selected.profile_revision : ""; const saved=await api("/api/v1/profiles/"+safeID(draft.profile_id),"PUT",{profile_revision:revision,profile:draft}); selectProfile(saved,true); await refreshCatalogs(); }
   state.pending = { id: requestID(), session: state.session, path: "/api/v1/runs", fields: { profile_id: state.selected.profile.profile_id, profile_revision: state.selected.profile_revision }, frozen: clone(state.selected) }; await transmitPending();
 });

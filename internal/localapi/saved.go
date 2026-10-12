@@ -19,7 +19,7 @@ import (
 
 // queryRoute permits queries only on bounded catalogs and explicit report export/diagnostic selectors.
 func queryRoute(path string) bool {
-	return path == "/api/v1/adapters" || path == "/api/v1/profiles" || path == "/api/v1/pairings" || path == "/api/v1/reports" || strings.HasPrefix(path, "/api/v1/reports/") && (strings.HasSuffix(path, "/export") || strings.HasSuffix(path, "/diagnostics"))
+	return path == "/api/v1/adapters" || path == "/api/v1/profiles" || path == "/api/v1/pairings" || path == "/api/v1/reports" || strings.HasPrefix(path, "/api/v1/reports/") && (strings.HasSuffix(path, "/export") || strings.HasSuffix(path, "/diagnostics")) || strings.HasPrefix(path, "/api/v1/runs/") && strings.HasSuffix(path, "/diagnostics")
 }
 
 // selectedProfile takes a validated private snapshot; a saved ID takes precedence over the transient launch plan.
@@ -48,7 +48,8 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return false
 	}
 	ns := parts[0]
-	if ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" && ns != "setup" && ns != "preflight" {
+	runDiagnostic := ns == "runs" && len(parts) == 3 && profile.SafeID(parts[1]) && parts[2] == "diagnostics"
+	if !runDiagnostic && ns != "profiles" && ns != "pairings" && ns != "reports" && ns != "client-keys" && ns != "setup" && ns != "preflight" {
 		return false
 	}
 	if s.store == nil && ns != "setup" && ns != "preflight" {
@@ -68,6 +69,14 @@ func (s *Server) saved(w http.ResponseWriter, r *http.Request, id string) bool {
 		return true
 	}
 	defer s.savedMu.Unlock()
+	if runDiagnostic {
+		if r.Method == "GET" {
+			s.runDiagnostics(w, r, id, parts[1])
+		} else {
+			reject(w, 404, id, "not_found", "route", "route or method unavailable")
+		}
+		return true
+	}
 	if ns == "preflight" {
 		if len(parts) == 1 && r.Method == "POST" {
 			s.preflight(w, r, id)
@@ -151,11 +160,15 @@ func (s *Server) diskReply(w http.ResponseWriter, id string, value any, err erro
 func (s *Server) catalog(w http.ResponseWriter, r *http.Request, id, namespace string) {
 	q, err := url.ParseQuery(r.URL.RawQuery)
 	for k, v := range q {
-		if (k != "cursor" && k != "limit") || len(v) != 1 {
+		if (k != "cursor" && k != "limit" && k != "labels") || len(v) != 1 {
 			err = errors.New("invalid query")
 		}
 	}
 	cursor, limit := 0, 16
+	labels := q.Has("labels")
+	if labels && (namespace != "reports" || q.Get("labels") != "1") {
+		err = errors.New("labels require the report catalog")
+	}
 	if err == nil && q.Has("cursor") {
 		cursor, err = strconv.Atoi(q.Get("cursor"))
 	}
@@ -181,6 +194,7 @@ func (s *Server) catalog(w http.ResponseWriter, r *http.Request, id, namespace s
 		next = strconv.Itoa(end)
 	}
 	items := []any{}
+	labelBudget := uint64(control.APIReportBytes)
 	for _, savedID := range ids[cursor:end] {
 		if namespace == "pairings" {
 			bundle, err := s.store.Pairing(savedID)
@@ -192,6 +206,12 @@ func (s *Server) catalog(w http.ResponseWriter, r *http.Request, id, namespace s
 				ID     string         `json:"pairing_id"`
 				Bundle control.Bundle `json:"bundle"`
 			}{savedID, bundle})
+		} else if labels {
+			label, err := s.store.ReportLabel(savedID, &labelBudget)
+			if err != nil {
+				label = control.ReportLabel{ID: savedID, Name: "Saved test", State: "unavailable"}
+			}
+			items = append(items, label)
 		} else {
 			items = append(items, savedID)
 		}

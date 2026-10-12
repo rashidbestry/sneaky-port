@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"time"
 
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/measure"
@@ -237,6 +238,36 @@ func buildDiagnostic(r *control.ReplayedReport, scope string, policies ...measur
 
 // diagnostics replays one explicit saved endpoint/scope under existing serialized bounded report admission.
 func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request, id, report string) {
+	s.diagnosticReport(w, r, id, report, nil)
+}
+
+// runDiagnostics binds larger replay admission to one terminal API run and its immutable report/measurement identity.
+func (s *Server) runDiagnostics(w http.ResponseWriter, r *http.Request, id, run string) {
+	// Larger bounded replay needs its own response budget; ordinary API read/write deadlines remain unchanged.
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		reject(w, 503, id, "resource_limit", "report", "current test result deadline unavailable")
+		return
+	}
+	s.mu.Lock()
+	owned := s.runs[run]
+	var status Status
+	if owned != nil {
+		status = owned.status
+	}
+	s.mu.Unlock()
+	if owned == nil || status.ReportID == "" {
+		reject(w, 404, id, "not_found", "run", "current test report unavailable")
+		return
+	}
+	if status.State == "executing" || status.State == "cancelling" {
+		reject(w, 409, id, "conflict", "run", "test must finish before reading finalized results")
+		return
+	}
+	s.diagnosticReport(w, r, id, status.ReportID, &status)
+}
+
+// diagnosticReport preserves exact endpoint/scope/presentation gates and verifies owned-run provenance before projection.
+func (s *Server) diagnosticReport(w http.ResponseWriter, r *http.Request, id, report string, run *Status) {
 	q, err := url.ParseQuery(r.URL.RawQuery)
 	policy, policyErr := presentationQuery(q, "endpoint", "scope")
 	endpoint, scope := "local", "main"
@@ -246,11 +277,19 @@ func (s *Server) diagnostics(w http.ResponseWriter, r *http.Request, id, report 
 	if q.Has("scope") {
 		scope = q.Get("scope")
 	}
-	if err != nil || policyErr != nil || endpoint != "local" && endpoint != "server" {
+	if err != nil || policyErr != nil || endpoint != "local" && endpoint != "server" || run != nil && endpoint != "local" {
 		reject(w, 400, id, "invalid_request", "query", "explicit endpoint/scope required")
 		return
 	}
-	p, err := s.store.SavedReport(report)
+	var p *control.ReplayedReport
+	if run == nil {
+		p, err = s.store.SavedReport(report)
+	} else {
+		p, err = s.store.RunReport(report)
+		if err == nil && (p.Manifest.PlanHash != run.Revision || p.Manifest.RunID != run.MeasurementID || p.Manifest.Endpoint != "client") {
+			err = errors.New("current test/report identity mismatch")
+		}
+	}
 	if err == nil && endpoint == "server" {
 		p = p.ServerReport
 		if p == nil {

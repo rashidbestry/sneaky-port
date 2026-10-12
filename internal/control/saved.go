@@ -16,6 +16,9 @@ import (
 const SavedItemsMax = 256
 const APIReportBytes = 8 << 20
 
+// APIRunReportBytes bounds replay for one admitted run; general saved/import/compare reads retain their smaller caps.
+const APIRunReportBytes = 64 << 20
+
 var ErrRevision = errors.New("saved revision conflict")
 
 // SavedProfile carries normalized settings and their canonical revision, never local key paths.
@@ -158,6 +161,16 @@ func (s *Store) SaveProfile(id, expected string, p profile.Plan) (SavedProfile, 
 // SavedReport resolves only safe report IDs and uses existing replay/checksum/accounting gates.
 // Offline evidence is consistency-checked, never authenticated by import or cached summaries.
 func (s *Store) SavedReport(id string) (*ReplayedReport, error) {
+	return s.reportWithin(id, APIReportBytes, true)
+}
+
+// RunReport replays current client-local evidence under a finite cap; remote reconciliation is a separate operation.
+func (s *Store) RunReport(id string) (*ReplayedReport, error) {
+	return s.reportWithin(id, APIRunReportBytes, false)
+}
+
+// reportWithin resolves safe owned paths and passes one aggregate budget through local/transferred replay.
+func (s *Store) reportWithin(id string, budget uint64, remote bool) (*ReplayedReport, error) {
 	if !profile.SafeID(id) {
 		return nil, errors.New("invalid report ID")
 	}
@@ -169,7 +182,10 @@ func (s *Store) SavedReport(id string) (*ReplayedReport, error) {
 	if _, err = os.Lstat(path); err != nil {
 		return nil, err
 	}
-	return ReplayReport(path, APIReportBytes, s.AdapterRegistry())
+	if !remote {
+		return replayReport(path, &budget, false, s.AdapterRegistry())
+	}
+	return ReplayReport(path, budget, s.AdapterRegistry())
 }
 
 // ImportReport admits only fixed raw-evidence files into a private staging directory, then replays it.
