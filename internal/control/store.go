@@ -14,11 +14,24 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/profile"
 )
 
 // Store keeps application identities and public trust records away from system SSH files.
-type Store struct{ Root string }
+type Store struct {
+	Root     string
+	Adapters *adapter.Registry // Assigned at startup only; nil uses production registration.
+}
+
+// AdapterRegistry resolves the store-wide startup registry for configuration, runs and saved replay.
+// Register factories before serving; runtime registration is unsupported.
+func (s *Store) AdapterRegistry() *adapter.Registry {
+	if s.Adapters != nil {
+		return s.Adapters
+	}
+	return adapter.Default()
+}
 
 // Bundle contains only the public server identity and explicitly advertised control endpoint.
 type Bundle struct {

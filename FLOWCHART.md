@@ -2,6 +2,26 @@
 
 Updated: 2026-10-12. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Production clock bounds, live counters and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
+## Adapter extension gate
+
+```mermaid
+flowchart TD
+    A[Register descriptor and factory before serving] --> B[Store startup registry]
+    B --> C[Protected API discovery and profile validation/save]
+    C --> D[Common dashboard adapter/options editor]
+    B --> E[Authenticated SSH hello/plan/prepare/binding]
+    E --> F[Finite lifecycle with registry-selected worker]
+    F --> G[Descriptor frame limit and fixed framing bytes]
+    G --> H[Shared scheduler/reader/FIFO, ticket/deadline accounting]
+    H --> I[Bounded endpoint evidence and joined cleanup]
+    I --> J[Same registry replay and authenticated reconciliation]
+    J --> K[Common reports/import/export/diagnostics/comparison]
+```
+
+Sources: [registry](internal/adapter/adapter.go) (`Register`, `Validate`, `Describe`), [store](internal/control/store.go) (`AdapterRegistry`), [control](internal/control/session.go) (`NewServer`, `clientSession`, `control`), [runner](internal/control/run.go) (`executeRun`), [finite lifecycle](internal/engine/finite.go) (`NewFiniteWithEvidence`), [worker](internal/worker/endpoint.go) (`NewRegistered`, `write`, `receive`), [accounting](internal/engine/endpoint.go) (`NewCollector`, `newEndpoint`), [replay](internal/control/replay.go) (`ReplayReport`, `replayReport`), [transfer](internal/control/transfer.go) (`receiveServerReport`), [remote replay](internal/control/reconcile.go) (`replayTransferred`), [saved operations](internal/control/saved.go) (`Profile`, `SaveProfile`, `SavedReport`, `ImportReport`), [comparison](internal/control/compare.go) (`CompareSavedReports`), [API](internal/localapi/server.go) (`adapterRegistry`, `adapters`), [options/save](internal/localapi/saved.go) (`profileWrite`), [dashboard script](internal/localapi/web/dashboard.js) (`adapterOptions`).
+
+The [test-only TCP-backed factory](internal/testutil/extension/adapter.go) (`Register`, `Describe`, `Validate`, `Prepare`, `Dial`, `basePlan`) changes its private socket options while retaining the public/HMAC plan identity. [authentication identity fixture](internal/engine/finite_test.go) rejects direction tags that differ from the frozen plan before worker ownership. [HTTP/SSH workflow fixtures](internal/localapi/extension_test.go) cover IPv4/IPv6 completion, cancellation, framing-byte accounting, unregistered replay rejection, report import/export/comparison and listener/reservation reuse; [actual-script fixture](internal/localapi/web/dashboard_test.cjs) covers descriptor/options validation and saved/run controls. Production defaults still expose UDP/TCP only. Fixed logical-message overhead is not outer-packet evidence; rendered-browser/native/later-carrier/full acceptance remains pending. [Canonical boundary](README.md#adapter-extension-gate).
+
 ## Start reading here
 
 ```mermaid

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/profile"
 )
 
@@ -301,7 +302,7 @@ func validateReportOffer(o reportOffer, ready ReadyResult, p profile.Plan) error
 
 // receiveServerReport uses a separate channel after finite stop, preserving endpoint-only local files.
 // Transfer failure yields an incomplete receipt; it never manufactures remote arrivals or retries.
-func receiveServerReport(ctx context.Context, raw net.Conn, client *ssh.Client, dir string, ready ReadyResult, p profile.Plan) (*RemoteTransfer, *Reconciliation, error) {
+func receiveServerReport(ctx context.Context, raw net.Conn, client *ssh.Client, dir string, ready ReadyResult, p profile.Plan, registries ...*adapter.Registry) (*RemoteTransfer, *Reconciliation, error) {
 	t := &RemoteTransfer{Version: 1, RunID: ready.RunID, SessionID: ready.SessionID, PlanHash: ready.PlanHash, Status: "incomplete", Reason: "transfer not finalized", Source: "same pinned-host, enrolled-client SSH connection; local receipt is not a transferable attestation"}
 	deadline := time.Now().Add(time.Duration(p.Limits.SetupTimeout))
 	raw.SetDeadline(deadline)
@@ -333,10 +334,10 @@ func receiveServerReport(ctx context.Context, raw net.Conn, client *ssh.Client, 
 	}
 	var reconciliation *Reconciliation
 	if err == nil {
-		local, e := ReplayReport(dir, transferLimit(p))
+		local, e := ReplayReport(dir, transferLimit(p), registries...)
 		if e == nil {
 			var remote *ReplayedReport
-			remote, e = ReplayReport(remoteDir, transferLimit(p))
+			remote, e = ReplayReport(remoteDir, transferLimit(p), registries...)
 			if e == nil {
 				if remote.Manifest.RunID != ready.RunID || remote.Manifest.SessionID != ready.SessionID || remote.Manifest.PlanHash != ready.PlanHash || remote.Manifest.Endpoint != "server" {
 					e = errors.New("server report content identity mismatch")

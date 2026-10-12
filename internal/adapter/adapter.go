@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -19,15 +20,18 @@ import (
 
 // Descriptor describes a stable shared contract without protocol-specific UI switches.
 type Descriptor struct {
-	ID        string            `json:"adapter_id"`
-	Version   int               `json:"adapter_contract_version"`
-	MaxFrame  int               `json:"max_frame_bytes"`
-	Families  []string          `json:"address_families"`
-	Platforms []string          `json:"platforms"`
-	Options   map[string]string `json:"options"`
+	ID           string            `json:"adapter_id"`
+	Version      int               `json:"adapter_contract_version"`
+	MaxFrame     int               `json:"max_frame_bytes"`
+	FramingBytes int               `json:"framing_bytes"` // Fixed transport bytes beyond each authenticated message.
+	Families     []string          `json:"address_families"`
+	Platforms    []string          `json:"platforms"`
+	Options      map[string]string `json:"options"`
 }
 
 // Transport owns one established session and its physical outer-marking state.
+// Read strips fixed framing and returns one complete authenticated message; Write counts framing bytes.
+// Partial-read errors may expose consumed bytes through ReadBytes() int; Close must unblock owned I/O.
 type Transport interface {
 	Read() ([]byte, error)
 	SetReadDeadline(time.Time) error
@@ -63,7 +67,7 @@ func NewRegistry() *Registry { return &Registry{entries: map[string]Factory{}} }
 // Register binds one immutable descriptor/factory identity at startup.
 func (r *Registry) Register(f Factory) error {
 	d := f.Describe()
-	if !profile.SafeID(d.ID) || d.Version != 1 || d.MaxFrame < probe.Overhead {
+	if !profile.SafeID(d.ID) || d.Version != 1 || d.MaxFrame < probe.Overhead || d.MaxFrame > probe.TCPMax || d.FramingBytes < 0 || d.FramingBytes > probe.TCPMax {
 		return errors.New("invalid adapter descriptor")
 	}
 	if _, ok := r.entries[d.ID]; ok {
@@ -80,6 +84,33 @@ func (r *Registry) Get(id string) (Factory, error) {
 		return nil, fmt.Errorf("unsupported adapter %q", id)
 	}
 	return f, nil
+}
+
+// Validate enforces common profile and advertised capability limits before factory-specific options.
+// Unsupported identities, versions, families, platforms or frame sizes never substitute a carrier.
+func (r *Registry) Validate(p profile.Plan) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	f, err := r.Get(p.Adapter)
+	if err != nil {
+		return err
+	}
+	d := f.Describe()
+	if p.Contract != d.Version || !slices.Contains(d.Families, p.Family) || !slices.Contains(d.Platforms, runtime.GOOS) {
+		return errors.New("unsupported adapter contract, address family or platform")
+	}
+	for name := range p.Options {
+		if _, ok := d.Options[name]; !ok {
+			return errors.New("undeclared adapter option")
+		}
+	}
+	for _, ph := range p.Phases {
+		if ph.Client.ContentBytes > d.MaxFrame-probe.Overhead || ph.Server.ContentBytes > d.MaxFrame-probe.Overhead {
+			return errors.New("content exceeds advertised adapter frame limit")
+		}
+	}
+	return f.Validate(p)
 }
 
 // Describe returns stable descriptor order for API, configuration and reports.
@@ -116,7 +147,11 @@ func (f socketFactory) Describe() Descriptor {
 		id, max = "tcp", probe.TCPMax
 		options["tcp_no_delay"] = "required boolean"
 	}
-	return Descriptor{ID: id, Version: 1, MaxFrame: max, Families: []string{"ipv4", "ipv6"}, Platforms: []string{"windows", "linux"}, Options: options}
+	framing := 0
+	if f.stream {
+		framing = 4
+	}
+	return Descriptor{ID: id, Version: 1, MaxFrame: max, FramingBytes: framing, Families: []string{"ipv4", "ipv6"}, Platforms: []string{"windows", "linux"}, Options: options}
 }
 
 // Validate checks carrier content and options before either endpoint opens sockets.

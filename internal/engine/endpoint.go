@@ -96,12 +96,14 @@ type Collector struct {
 }
 
 // NewCollector freezes the plan/windows and checks epoch-relative overflow before I/O ownership.
-func NewCollector(p profile.Plan, direction byte, start uint64) (*Collector, error) {
-	factory, err := adapter.Default().Get(p.Adapter)
-	if err != nil {
-		return nil, err
+// An optional startup registry must match live execution; absent registrations reject offline replay.
+func NewCollector(p profile.Plan, direction byte, start uint64, registries ...*adapter.Registry) (*Collector, error) {
+	r := adapter.Default()
+	if len(registries) > 0 && registries[0] != nil {
+		r = registries[0]
 	}
-	if err = factory.Validate(p); err != nil {
+	err := r.Validate(p)
+	if err != nil {
 		return nil, err
 	}
 	ws, err := worker.PlanWindows(p, direction)
@@ -370,14 +372,14 @@ type Endpoint struct {
 // newEndpoint validates the frozen plan digest and connects shared multi-phase accounting.
 // Standalone callers apply constant markings; finite lifecycle supplies the physical-phase writer hook.
 func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id string, create func(context.Context, worker.Config) (*worker.Endpoint, error), persistence ...Persistence) (*Endpoint, error) {
-	if p.Adapter != id {
+	if p.Adapter != id || cfg.SendAuth.Adapter != id || cfg.ReceiveAuth.Adapter != id {
 		return nil, errors.New("accounting adapter mismatch")
 	}
 	start := cfg.Start.Sub(cfg.EpochStart)
 	if start < 0 {
 		return nil, errors.New("invalid accounting start")
 	}
-	c, err := NewCollector(p, cfg.Direction, uint64(start))
+	c, err := NewCollector(p, cfg.Direction, uint64(start), cfg.Registry)
 	if err != nil {
 		return nil, err
 	}

@@ -6,11 +6,19 @@ It will compare real TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS data pat
 
 Connection quality means timely delivery, low p95/p99 latency, low jitter, and few spikes or stalls under sustained game-like traffic. Preferential treatment of DNS is a hypothesis to measure, not an assumed advantage.
 
-The protocol architecture must be extensible: later releases should add probe adapters through shared measurement, configuration, dashboard, and reporting contracts.
+The protocol architecture uses startup descriptor/factory registration across shared measurement, configuration, dashboard and reporting contracts. The [adapter extension gate](#adapter-extension-gate) now passes with a test-only fixture.
 
 **Current status: finite authenticated UDP/TCP runs, evidence/replay/export, reconciliation, one-way estimates, protected local API, dashboard diagnostics and matched saved-run comparisons implemented within recorded scopes. Live counters, verified clock bounds, rendered-browser QA and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
 Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Saved dashboard diagnostics and matched comparisons are implemented; independently verified production clock bounds, live counters, rendered-browser QA and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
+
+## Adapter extension gate
+
+Adapters register in code before serving. `Store.Adapters` selects one startup registry for saved configuration, authenticated client/server coordination, finite workers and replay/import/comparison; nil retains the production UDP/TCP registry. Standalone workers use `Config.Registry`, and offline `ReplayReport` accepts the matching registry. Unknown IDs/versions/options and unsupported advertised families/platforms/frame sizes reject explicitly. This is compile-time integration, with no runtime plugin loader.
+
+Descriptors now expose `framing_bytes`: the fixed transport bytes beyond each authenticated message (UDP 0, framed TCP 4). `Read` returns a complete message with framing removed; `Write` returns bytes including framing. Common workers use those limits/costs while the factory owns real framing/socket behavior. These fixed costs are not captured outer-packet sizes; variable overhead and later-carrier mechanics still need their own contracts. SSH discovery now requires this descriptor field: older descriptor shapes reject during contract negotiation before traffic. Use matching updated client/server builds; saved reports and probe framing remain compatible.
+
+The TCP-backed `test-extension` fixture has a distinct authenticated identity, `enabled` option and 1,024-byte limit. It is imported only by tests and is absent from production commands. Its protected HTTP/SSH lifecycle, both-direction accounting, cancellation, saved replay/import/three-format exports/comparison and actual dashboard script pass the shared workflow. This gate adds no production carrier or native/live support claim. [Source flow](FLOWCHART.md#adapter-extension-gate), [evidence](WORK_LOG.md#2026-10-12-adapter-extension-gate).
 
 ## Run the foundation tools
 

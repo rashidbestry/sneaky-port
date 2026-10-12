@@ -82,11 +82,8 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		factory, err := adapter.Default().Get(p.Adapter)
+		err = adapter.Default().Validate(p)
 		if err != nil {
-			return err
-		}
-		if err = factory.Validate(p); err != nil {
 			return err
 		}
 		hash, err := p.Hash()

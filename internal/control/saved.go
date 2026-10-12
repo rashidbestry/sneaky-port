@@ -110,7 +110,7 @@ func (s *Store) Profile(id string) (SavedProfile, error) {
 		return out, err
 	}
 	p, err := profile.Decode(bytes.NewReader(b))
-	if err != nil || p.ID != id {
+	if err != nil || p.ID != id || s.AdapterRegistry().Validate(p) != nil {
 		return out, errors.New("invalid saved profile")
 	}
 	h, err := p.Hash()
@@ -124,7 +124,7 @@ func (s *Store) SaveProfile(id, expected string, p profile.Plan) (SavedProfile, 
 	if !profile.SafeID(id) || p.ID != id {
 		return out, errors.New("invalid profile identity")
 	}
-	if err := p.Validate(); err != nil {
+	if err := s.AdapterRegistry().Validate(p); err != nil {
 		return out, err
 	}
 	lock, err := s.lock()
@@ -169,7 +169,7 @@ func (s *Store) SavedReport(id string) (*ReplayedReport, error) {
 	if _, err = os.Lstat(path); err != nil {
 		return nil, err
 	}
-	return ReplayReport(path, APIReportBytes)
+	return ReplayReport(path, APIReportBytes, s.AdapterRegistry())
 }
 
 // ImportReport admits only fixed raw-evidence files into a private staging directory, then replays it.
@@ -244,7 +244,7 @@ func (s *Store) ImportReport(id string, files map[string][]byte) (*ReplayedRepor
 			return nil, err
 		}
 	}
-	r, err := ReplayReport(temp, APIReportBytes)
+	r, err := ReplayReport(temp, APIReportBytes, s.AdapterRegistry())
 	if err != nil {
 		return nil, err
 	}

@@ -104,7 +104,7 @@ function adapterOptions(parent) {
     label.append(field); grid.append(label);
   }
   parent.append(grid);
-  element("capabilities").textContent = d ? "Registered " + d.adapter_id + " contract " + d.adapter_contract_version + "; maximum authenticated frame " + d.max_frame_bytes + " bytes; families " + d.address_families.join(", ") + "; platforms " + d.platforms.join(", ") + ". Payload excludes measurement/authentication framing. Fragmentation and adjustable headers are unavailable in this slice. Requested DSCP is not evidence of applied or captured marking." : "Unsupported adapter: no fallback. Choose a registered adapter and validate its explicit options.";
+  element("capabilities").textContent = d ? "Registered " + d.adapter_id + " contract " + d.adapter_contract_version + "; maximum authenticated frame " + d.max_frame_bytes + " bytes; transport framing " + d.framing_bytes + " bytes per message; families " + d.address_families.join(", ") + "; platforms " + d.platforms.join(", ") + ". Payload excludes measurement/authentication framing. Fragmentation and adjustable headers are unavailable in this slice. Requested DSCP is not evidence of applied or captured marking." : "Unsupported adapter: no fallback. Choose a registered adapter and validate its explicit options.";
 }
 // renderPhases provides ordered common phase controls and independent directional fields.
 function renderPhases() {

@@ -95,15 +95,7 @@ func NewFiniteWithEvidence(parent context.Context, cfg worker.Config, p profile.
 	ctx, cancel := context.WithCancel(parent)
 	// The I/O context survives lifecycle cancellation only for the explicit bounded drain.
 	ioCtx := context.WithoutCancel(parent)
-	var endpoint *Endpoint
-	switch p.Adapter {
-	case "udp":
-		endpoint, err = newEndpoint(ioCtx, cfg, p, "udp", worker.NewUDP, persistence)
-	case "tcp":
-		endpoint, err = newEndpoint(ioCtx, cfg, p, "tcp", worker.NewTCP, persistence)
-	default:
-		err = errors.New("finite adapter worker unsupported")
-	}
+	endpoint, err := newEndpoint(ioCtx, cfg, p, p.Adapter, worker.NewRegistered, persistence)
 	if err != nil {
 		cancel()
 		return nil, err

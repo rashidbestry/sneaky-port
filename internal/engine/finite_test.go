@@ -13,6 +13,26 @@ import (
 	"sneaky-port/internal/worker"
 )
 
+// TestFiniteRejectsForeignAdapterAuthentication rejects a valid plan/hash with a different carrier tag.
+// Rejection precedes worker ownership and traffic; prepared fixture sockets stay caller-owned.
+func TestFiniteRejectsForeignAdapterAuthentication(t *testing.T) {
+	for _, id := range []string{"tcp", "unregistered"} {
+		t.Run(id, func(t *testing.T) { // Both auth directions agree with each other but violate the frozen UDP plan.
+			c, _, p := realPair(t, testutil.Plan())
+			c.SendAuth.Adapter, c.ReceiveAuth.Adapter = id, id
+			finite, err := NewFinite(context.Background(), c, p, false)
+			if err == nil {
+				finite.Cancel()
+				finite.Wait(context.Background())
+				t.Fatal("foreign adapter authentication started a worker")
+			}
+			if finite != nil {
+				t.Fatal("rejected authentication transferred transport ownership")
+			}
+		})
+	}
+}
+
 // markingFixture replaces only the marking API to test phase selection without pretending to capture packets.
 type markingFixture struct {
 	adapter.Transport

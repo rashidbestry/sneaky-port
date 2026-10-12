@@ -97,6 +97,11 @@ async function main() {
   ids["profile-json"].value = originalProfile; await click("apply-json"); assert.equal(ids.notice.dataset.error, "false");
   const tcp = JSON.parse(originalProfile); tcp.adapter_id = "tcp"; tcp.adapter_options = { tcp_no_delay: true }; ids["profile-json"].value = JSON.stringify(tcp); await click("apply-json"); assert.ok(ids.capabilities.textContent.includes("tcp")); assert.ok(descendants(ids["profile-fields"]).some(function optionLabel(node) { /* Verify registered option descriptions reach the common form without protocol-name UI switches. */ return node.textContent.includes("tcp_no_delay"); }));
   ids["profile-json"].value = originalProfile; await click("apply-json");
+  const extension = JSON.parse(originalProfile); extension.adapter_id = "test-extension"; extension.adapter_options = { enabled: true }; ids["profile-json"].value = JSON.stringify(extension); await click("apply-json");
+  assert.ok(ids.capabilities.textContent.includes("transport framing 4 bytes")); assert.ok(ids.capabilities.textContent.includes("test-extension"));
+  assert.ok(descendants(ids["profile-fields"]).some(function extensionOption(node) { /* The common form must render the test-only descriptor option. */ return node.textContent.includes("enabled"); }));
+  await click("validate"); assert.equal(ids.notice.dataset.error, "false");
+  evaluate('state.draft.adapter_options.enabled = false'); await click("validate"); assert.equal(ids.notice.dataset.error, "true"); evaluate('state.draft.adapter_options.enabled = true');
   evaluate('state.draft.grace_ns = "9007199254740993"'); await click("show-json"); assert.ok(ids["profile-json"].value.includes('"9007199254740993"')); evaluate('state.draft.grace_ns = state.selected.profile.grace_ns');
   await click("add-phase"); assert.equal(evaluate("state.draft.phases.length"), 2);
   const second = ids.phases.children[1]; const move = second.children.at(-1).children[0]; const original = evaluate("state.draft.phases[1].phase_id"); move.listeners.click[0](); assert.equal(evaluate("state.draft.phases[0].phase_id"), original);

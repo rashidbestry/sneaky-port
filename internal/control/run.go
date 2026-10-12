@@ -161,7 +161,7 @@ func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(s
 	anchor := time.Now()
 	clock := startClock(ctx, sshClient, anchor, p, result.Readiness, persistence)
 	defer clock.stop()
-	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false, persistence)
+	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: store.AdapterRegistry(), Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false, persistence)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ loop:
 		return errors.New("invalid finite stop acknowledgment")
 	}
 	result.ServerStatus = finished.Status
-	result.Remote, result.Reconciliation, err = receiveServerReport(ctx, raw, sshClient, result.ReportPath, result.Readiness, p)
+	result.Remote, result.Reconciliation, err = receiveServerReport(ctx, raw, sshClient, result.ReportPath, result.Readiness, p, store.AdapterRegistry())
 	if err != nil {
 		return errors.Join(runErr, err)
 	}

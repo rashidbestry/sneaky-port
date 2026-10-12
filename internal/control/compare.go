@@ -518,7 +518,7 @@ func (s *Store) CompareSavedReports(ctx context.Context, q ComparisonRequest) (C
 			if _, err := os.Lstat(path); err != nil {
 				return Comparison{}, err
 			}
-			r, err := replayReport(path, &remaining, true)
+			r, err := replayReport(path, &remaining, true, s.AdapterRegistry())
 			if err != nil {
 				return Comparison{}, err
 			}

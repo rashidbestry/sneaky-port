@@ -78,6 +78,14 @@ type Server struct {
 	savedMu  sync.Mutex
 }
 
+// adapterRegistry keeps discovery and validation on the same startup registry as the store/runner.
+func (s *Server) adapterRegistry() *adapter.Registry {
+	if s.store != nil {
+		return s.store.AdapterRegistry()
+	}
+	return adapter.Default()
+}
+
 // Listen validates and snapshots the configured plan before opening only a literal loopback address.
 // Hostnames, wildcard binds and unspecified addresses are rejected before DNS resolution/listening.
 func Listen(address string, p profile.Plan, runner Runner) (*Server, error) {
@@ -309,7 +317,7 @@ func (s *Server) adapters(w http.ResponseWriter, r *http.Request, id string) {
 	if err == nil && q.Has("limit") {
 		limit, err = strconv.Atoi(q.Get("limit"))
 	}
-	items := adapter.Default().Describe()
+	items := s.adapterRegistry().Describe()
 	if err != nil || cursor < 0 || cursor > len(items) || limit < 1 || limit > 16 {
 		reject(w, 400, id, "invalid_request", "query", "cursor or limit outside bounds")
 		return

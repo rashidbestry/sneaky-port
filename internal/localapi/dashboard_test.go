@@ -11,8 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/profile"
+	"sneaky-port/internal/testutil/extension"
 )
 
 // TestDashboardShellGuards permits public static code only; private bootstrap/API reads remain guarded.
@@ -129,6 +131,10 @@ func TestDashboardJavaScriptWorkflow(t *testing.T) {
 		<-ctx.Done()
 		return control.RunResult{Status: "partial"}, nil
 	})
+	s.store.Adapters = adapter.Default()
+	if err := extension.Register(s.store.Adapters); err != nil {
+		t.Fatal(err)
+	}
 	importDiagnosticFixture(t, s)
 	importComparisonFixture(t, s)
 	pub, err := control.GenerateKey(t.TempDir() + "/host")

@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/profile"
 )
@@ -245,8 +244,8 @@ func (s *Server) profileWrite(w http.ResponseWriter, r *http.Request, id, target
 		reject(w, 422, id, "invalid_profile", "profile", "profile fields or identity failed shared validation")
 		return
 	}
-	factory, err := adapter.Default().Get(p.Adapter)
-	if err != nil || factory.Validate(p) != nil {
+	err = s.adapterRegistry().Validate(p)
+	if err != nil {
 		reject(w, 422, id, "unsupported_profile", "adapter_options", "registered adapter and supported explicit options required")
 		return
 	}

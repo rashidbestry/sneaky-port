@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
@@ -87,17 +88,18 @@ func reportFile(dir, name string, remaining *uint64) ([]byte, error) {
 // ReplayReport validates run/plan/schema and replays a bounded immutable snapshot of local files.
 // Only a finalized saved manifest and matching cutoff can authorize complete endpoint observations.
 // A torn last line in failed/unfinalized storage is excluded, leaving a visibly partial valid prefix.
-func ReplayReport(dir string, maxBytes uint64) (*ReplayedReport, error) {
+// An optional startup registry permits registered extensions; unknown contracts never fall back.
+func ReplayReport(dir string, maxBytes uint64, registries ...*adapter.Registry) (*ReplayedReport, error) {
 	if maxBytes == 0 || maxBytes > 1<<30 {
 		return nil, errors.New("max-bytes must be explicit and between 1 and 1073741824")
 	}
 	remaining := maxBytes
-	return replayReport(dir, &remaining, true)
+	return replayReport(dir, &remaining, true, registries...)
 }
 
 // replayReport shares the caller's aggregate byte budget with optional transferred endpoint files.
 // Remote sidecars cannot change the endpoint-only saved summary or confer offline authentication.
-func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, error) {
+func replayReport(dir string, budget *uint64, remote bool, registries ...*adapter.Registry) (*ReplayedReport, error) {
 	info, err := os.Lstat(dir)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("report must be a real directory")
@@ -141,7 +143,7 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 	} else if m.Endpoint != "client" {
 		return nil, errors.New("invalid report endpoint")
 	}
-	c, err := engine.NewCollector(m.Plan, direction, 0)
+	c, err := engine.NewCollector(m.Plan, direction, 0, registries...)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +306,7 @@ func replayReport(dir string, budget *uint64, remote bool) (*ReplayedReport, err
 		}
 	}
 	if remote && m.Endpoint == "client" {
-		if err = replayTransferred(dir, r, &remaining); err != nil {
+		if err = replayTransferred(dir, r, &remaining, registries...); err != nil {
 			return nil, err
 		}
 	}

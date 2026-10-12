@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
@@ -121,7 +122,7 @@ func reconcileOrigin(origin engine.Result, peer engine.Result, warnings *[]strin
 
 // replayTransferred rechecks a saved transfer receipt and its fixed files before deriving delivery offline.
 // Cached reconciliation JSON is never trusted; absent/incomplete receipts retain unknown delivery.
-func replayTransferred(dir string, local *ReplayedReport, remaining *uint64) error {
+func replayTransferred(dir string, local *ReplayedReport, remaining *uint64, registries ...*adapter.Registry) error {
 	path := filepath.Join(dir, "server-transfer.json")
 	if _, err := os.Lstat(path); os.IsNotExist(err) {
 		return nil
@@ -156,7 +157,7 @@ func replayTransferred(dir string, local *ReplayedReport, remaining *uint64) err
 		return err
 	}
 	*remaining -= uint64(t.Offer.Bytes)
-	remote, err := replayReport(remoteDir, remaining, false)
+	remote, err := replayReport(remoteDir, remaining, false, registries...)
 	if err != nil {
 		return err
 	}

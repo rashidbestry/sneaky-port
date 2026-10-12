@@ -133,7 +133,7 @@ func NewServer(store *Store, signer ssh.Signer) (*Server, error) {
 	if signer == nil || !bytes.Equal(key.Marshal(), signer.PublicKey().Marshal()) {
 		return nil, errors.New("host private key does not match initialized identity")
 	}
-	return &Server{store, id, signer, adapter.Default(), make(chan struct{}, 1)}, nil
+	return &Server{store, id, signer, store.AdapterRegistry(), make(chan struct{}, 1)}, nil
 }
 
 // Serve bounds connections and closes every owned connection/listener when its context ends.
@@ -368,7 +368,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 	}
 	factory, err := s.Registry.Get(plan.Adapter)
 	if err == nil {
-		err = factory.Validate(plan)
+		err = s.Registry.Validate(plan)
 	}
 	if err == nil {
 		err = policy.Check(plan)
@@ -500,7 +500,7 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 			closePrepared()
 			anchor := time.Now()
 			clock.start(anchor, result, plan)
-			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true, persistence)
+			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: s.Registry, Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true, persistence)
 			if err != nil {
 				persistence.Finalize(engine.Result{})
 				fail(request, err)
@@ -709,9 +709,9 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 	ctx, stopClient := context.WithCancel(ctx)
 	defer stopClient()
 	var result ReadyResult
-	factory, err := adapter.Default().Get(p.Adapter)
+	factory, err := store.AdapterRegistry().Get(p.Adapter)
 	if err == nil {
-		err = factory.Validate(p)
+		err = store.AdapterRegistry().Validate(p)
 	}
 	if err != nil {
 		return result, err
@@ -811,7 +811,7 @@ func clientSession(ctx context.Context, store *Store, signer ssh.Signer, p profi
 	}
 	// Hello uses empty lifecycle IDs before a run is proposed.
 	runText = ""
-	e, err := exchange("hello", helloBody{[]int{1}, adapter.Default().Describe(), false})
+	e, err := exchange("hello", helloBody{[]int{1}, store.AdapterRegistry().Describe(), false})
 	if err != nil {
 		return result, err
 	}

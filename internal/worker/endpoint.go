@@ -35,6 +35,7 @@ type Schedule struct {
 // construction. Start/EpochStart are local monotonic anchors; Peer has no shared clock.
 // EventCapacity bounds in-memory records, independently of future persisted budgets.
 type Config struct {
+	Registry              *adapter.Registry // Startup registry; nil selects production adapters.
 	Transport             adapter.Transport
 	SendAuth, ReceiveAuth probe.Auth
 	Run, Session          [16]byte
@@ -107,6 +108,21 @@ func validateSchedule(s Schedule, maxFrame int) (uint64, []byte, error) {
 		return 0, nil, errors.New("invalid component schedule/content/identity")
 	}
 	return n, s.Traffic.Payload(), nil
+}
+
+// NewRegistered uses descriptor frame/framing limits without selecting a protocol by name.
+// The factory owns authentic framing; events count complete logical messages and transport bytes.
+func NewRegistered(parent context.Context, c Config) (*Endpoint, error) {
+	r := c.Registry
+	if r == nil {
+		r = adapter.Default()
+	}
+	f, err := r.Get(c.SendAuth.Adapter)
+	if err != nil {
+		return nil, err
+	}
+	d := f.Describe()
+	return newEndpoint(parent, c, transportContract{d.ID, d.MaxFrame, d.FramingBytes})
 }
 
 // newEndpoint validates explicit windows and starts shared independent real-I/O workers.
