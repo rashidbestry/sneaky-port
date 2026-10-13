@@ -29,7 +29,7 @@ func (c *Collector) trackProgress(e worker.Event) {
 	}
 }
 
-// publishProgress publishes at most four times per second, independently of readers; final reports supersede it.
+// publishProgress publishes at most four times per second plus a terminal update; final reports supersede it.
 // Cutoff/elapsed are host-local; no synchronized server progress or complete remote delivery is inferred.
 func (c *Collector) publishProgress(feed *measure.ProgressFeed, cfg worker.Config, terminal bool) {
 	if feed == nil {
@@ -41,7 +41,7 @@ func (c *Collector) publishProgress(feed *measure.ProgressFeed, cfg worker.Confi
 		c.live.Limit(c.observation)
 		cutoff = min(cutoff, c.observation)
 	}
-	if c.progressPublished && now-c.lastProgress < 250000000 {
+	if !terminal && c.progressPublished && now-c.lastProgress < 250000000 {
 		return
 	}
 	c.progressPublished = true
@@ -52,6 +52,7 @@ func (c *Collector) publishProgress(feed *measure.ProgressFeed, cfg worker.Confi
 		elapsed = min(now-c.start, c.finalEnd-c.start)
 	}
 	p := measure.Progress{AsOf: profile.Decimal(now), Cutoff: profile.Decimal(cutoff), AccountingValid: c.err == nil, Elapsed: profile.Decimal(elapsed), Total: profile.Decimal(c.finalEnd - c.start), Stage: "setup", Main: main, Warmup: warmup, PeerReceived: c.peerReceived}
+	p.RTTTime = c.live.RTTRanges(c.start)
 	if now >= c.start {
 		p.Stage = "grace"
 		for _, w := range c.windows {

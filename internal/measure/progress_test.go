@@ -119,15 +119,104 @@ func TestProgressFeedIndependentCopies(t *testing.T) {
 			for j := 0; j < 10000; j++ {
 				if s := feed.Snapshot(); s != nil {
 					s.Main.Planned = 0
+					s.RTTTime[0].Count = 0
 				}
 			}
 		})
 	}
 	for j := 1; j <= 10000; j++ {
-		feed.Publish(Progress{AsOf: profile.Decimal(j), Main: LiveCounts{Planned: profile.Decimal(j)}})
+		value := Progress{AsOf: profile.Decimal(j), Main: LiveCounts{Planned: profile.Decimal(j)}, RTTTime: []LiveRTTRange{{Count: 1, Min: 9007199254740993, Max: 9007199254740993}}}
+		feed.Publish(value)
+		value.RTTTime[0].Count = 0
 	}
 	wg.Wait()
-	if feed.Snapshot().Main.Planned != 10000 {
+	if s := feed.Snapshot(); s.Main.Planned != 10000 || s.RTTTime[0].Count != 1 || s.RTTTime[0].Max != 9007199254740993 {
 		t.Fatal("reader changed immutable snapshot")
+	}
+}
+
+// TestLiveRTTRanges preserves actual attempt-to-receipt extrema, late samples and strict cutoff rebasing.
+func TestLiveRTTRanges(t *testing.T) {
+	l, _ := NewLedger(16)
+	a := NewLiveAccounting()
+	// complete adds one valid origin receipt; its local write/processing times are not RTT boundaries.
+	complete := func(sequence uint64, lifecycle uint8, scheduled, attempt, receipt uint64) Identity {
+		t.Helper()
+		id := Identity{Lifecycle: lifecycle, Sequence: profile.Decimal(sequence)}
+		if err := l.Schedule(id, scheduled, scheduled+10); err != nil {
+			t.Fatal(err)
+		}
+		l.Admit(id, scheduled, "accepted", "")
+		l.Attempt(id, attempt)
+		if err := l.ReceiveReceipt(id, attempt, receipt); err != nil {
+			t.Fatal(err)
+		}
+		l.TrackProgress(a, id, receipt+1)
+		return id
+	}
+	id := complete(0, 2, 100, 103, 108)
+	complete(1, 2, 200, 203, 250) // Late completed RTT remains a real sample.
+	complete(2, 1, 300, 303, 310) // Warmup cannot enter main latency.
+	l.ReceiveReceipt(id, 103, 311)
+	l.TrackProgress(a, id, 312)
+	local := Identity{Lifecycle: 2, Sequence: 3}
+	l.Schedule(local, 400, 410)
+	l.Admit(local, 400, "skipped_local", "fixture")
+	l.TrackProgress(a, local, 401)
+	a.Counts(1000000100)
+	ranges := a.RTTRanges(100)
+	if len(ranges) != 1 || ranges[0] != (LiveRTTRange{Start: 0, End: 999999900, Count: 2, Min: 5, Max: 47}) {
+		t.Fatal("RTT boundaries/population/elapsed range changed", ranges)
+	}
+	ranges[0].Min = 0
+	if a.RTTRanges(100)[0].Min != 5 {
+		t.Fatal("range reader changed owner state")
+	}
+	a.Limit(250) // Equality excludes the late receipt at 250, preserving the first receipt.
+	ranges = a.RTTRanges(100)
+	if len(ranges) != 1 || ranges[0] != (LiveRTTRange{Start: 0, End: 150, Count: 1, Min: 5, Max: 5}) {
+		t.Fatal("actual cutoff did not rebase RTT", ranges)
+	}
+	a.Limit(108)
+	if len(a.RTTRanges(100)) != 0 {
+		t.Fatal("cutoff-equal receipt became a latency sample")
+	}
+}
+
+// TestLiveRTTRangeBound retains a fixed recent time window despite reordering and late old receipts.
+func TestLiveRTTRangeBound(t *testing.T) {
+	l, _ := NewLedger(512)
+	a := NewLiveAccounting()
+	id := Identity{Lifecycle: 2, Sequence: 200}
+	l.Schedule(id, 0, 100)
+	l.Admit(id, 0, "accepted", "")
+	l.Attempt(id, 1)
+	l.TrackProgress(a, id, 2)
+	for i := uint64(0); i < 200; i++ {
+		id := Identity{Lifecycle: 2, Sequence: profile.Decimal(i)}
+		scheduled := i * LiveRTTBucketNS
+		if err := l.Schedule(id, scheduled, scheduled+100); err != nil {
+			t.Fatal(err)
+		}
+		l.Admit(id, scheduled, "accepted", "")
+		l.Attempt(id, scheduled+1)
+		if err := l.ReceiveReceipt(id, scheduled+1, scheduled+7); err != nil {
+			t.Fatal(err)
+		}
+		l.TrackProgress(a, id, scheduled+8)
+	}
+	if err := l.ReceiveReceipt(id, 1, 200*LiveRTTBucketNS); err != nil {
+		t.Fatal(err)
+	}
+	l.TrackProgress(a, id, 200*LiveRTTBucketNS+1)
+	ranges := a.RTTRanges(0)
+	main, _ := a.Counts(200*LiveRTTBucketNS + 1)
+	if len(ranges) != LiveRTTBuckets || main.Completed != 201 || ranges[0].Start != 72*profile.Decimal(LiveRTTBucketNS) || ranges[len(ranges)-1].Start != 199*profile.Decimal(LiveRTTBucketNS) {
+		t.Fatal("latency retention changed counters/window", main, len(ranges))
+	}
+	for _, r := range ranges {
+		if r.Count != 1 || r.Min != 6 || r.Max != 6 {
+			t.Fatal("old late sample changed retained envelopes", r)
+		}
 	}
 }

@@ -60,6 +60,8 @@ Tasks 17-18 implement T06/T14's protected local configuration/run/report boundar
 
 ## Current UDP/TCP release decisions
 
+Latest checkpoint 23n, user-selected 2026-10-13 (T13/T14, F02/F05/S09): remove the receipt-count chart; show on-time/late/pending/missed outcomes numerically and one live client RTT chart in ms versus elapsed seconds. Bounded one-second ranges preserve completed min/max/count, exclude warmup/duplicates/absent receipts and obey actual cutoffs; terminal replay replaces them. Final quantiles, direction/clock/loss boundaries and engine scheduling remain unchanged. [Latency flow](FLOWCHART.md#numeric-receipts-and-live-latency).
+
 Latest checkpoints 23l/23m, user-selected 2026-10-12 (T04/T06/T13/T14/T22): Test only; remove Saved results/Compare UI and comparison setup controls. Keep conditional settings/current results and stored evidence/protected APIs. Automatic resources include heartbeat/calibration/report-transfer capacity without changing cadence or offered traffic. Storage buffering is independent of physical send queues: 128–8192 active-inclusive records derived from frozen ledger limits, with event_bytes bounding queued bytes. Current terminal client results get an owned-run 64-MiB local-only replay cap and 30-second HTTP / 35-second browser budgets, with exact plan/measurement binding; ordinary saved/import/compare caps remain unchanged. [Operator flow](README.md#dashboard-setup-and-run-controls), [current source](FLOWCHART.md#test-only-dashboard-and-sixty-second-runs).
 
 Checkpoint 23k established conditional inline settings without sidebars. The latest choice above supersedes its top activity/history and comparison controls; [dated evidence](WORK_LOG.md#2026-10-12-single-page-conditional-dashboard-settings) remains.

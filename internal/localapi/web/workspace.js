@@ -1,7 +1,7 @@
 "use strict";
 
 // workspace keeps display selection/history separate from immutable plans and server-owned run timing.
-const workspace = { history: [], run: "", result: null, resultRun: "", loading: null, autoStorage: true, initial: null, phase:0, settings:false, group:"traffic", patterns:{} };
+const workspace = { run: "", result: null, resultRun: "", loading: null, autoStorage: true, initial: null, phase:0, settings:false, group:"traffic", patterns:{} };
 // prettyName turns stored names into readable labels without exposing generated run/report handles.
 function prettyName(value) { return String(value).replace(/[-_]+/g," ").replace(/\b(udp|tcp)\b/gi,function protocolName(word) { /* Preserve familiar protocol acronyms in saved names. */ return word.toUpperCase(); }); }
 // unitText formats exact decimal integers into human units without floating-point rounding.
@@ -196,21 +196,18 @@ function metricCard(id,value,note) { element(id).textContent=value; element(id+"
 // sampleNote keeps per-metric sample/coverage limitations beside human-unit values rather than implying confidence.
 function sampleNote(view,key) { const label=view.evidence_labels?.[key]; return label ? label.completed+" samples · "+evidenceBrief(label) : "Evidence unavailable"; }
 
-// rememberProgress coalesces observed snapshots into a bounded local plot, without interpolating absent evidence.
+// rememberProgress resets results on run changes; the engine supplies bounded provisional RTT envelopes.
 function rememberProgress(run) {
-  if(workspace.run!==run.control_run_id) { workspace.run=run.control_run_id; workspace.history=[]; workspace.result=null; workspace.resultRun=""; }
-  const progress=run.progress,latest=workspace.history.at(-1);
-  if(progress && (!latest || latest.as_of_ns!==progress.as_of_ns)) { workspace.history.push(clone(progress)); if(workspace.history.length>64) workspace.history.shift(); }
+  if(workspace.run!==run.control_run_id) { workspace.run=run.control_run_id; workspace.result=null; workspace.resultRun=""; }
   renderWorkspace();
 }
-// countPlot draws observed cumulative receipt/deadline counters; it is not throughput, RTT or network-loss evidence.
-function countPlot() {
-  const svg=svgNode("svg",{viewBox:"0 0 800 250",role:"img","aria-label":"Observed provisional cumulative receipt and deadline counters"});
-  const groups=workspace.history; let maximum=1n,end=1n;
-  for(const group of groups) { end=end>BigInt(group.elapsed_ns) ? end : BigInt(group.elapsed_ns); for(const key of ["on_time","late","deadline_misses"]) maximum=maximum>BigInt(group.main[key]) ? maximum : BigInt(group.main[key]); }
-  for(let tick=0;tick<=4;tick++) { const y=210-tick*45; svg.append(svgNode("line",{x1:50,x2:775,y1:y,y2:y,class:"plot-grid"})); const text=svgNode("text",{x:5,y:y+4,class:"chart-label"}); text.textContent=String(maximum*BigInt(tick)/4n); svg.append(text); }
-  for(const group of groups) for(const [key,color] of [["on_time","#59cdaa"],["late","#ffb264"],["deadline_misses","#fb7185"]]) svg.append(svgNode("circle",{cx:50+725*ratio(group.elapsed_ns,end),cy:210-180*ratio(group.main[key],maximum),r:3,fill:color},unitText(group.elapsed_ns,9)+" s · "+metricName(key)+": "+group.main[key]));
-  const label=svgNode("text",{x:50,y:245,class:"chart-label"}); label.textContent=groups.length ? "Observed snapshots · 0 to "+unitText(end,9)+" s · cumulative local counts" : "Counts appear during the test. No observations yet."; svg.append(label); element("test-count-chart").replaceChildren(svg);
+// latencyPlot renders client attempt-to-receipt RTT in ms; missing receipts never create latency samples.
+// Live one-second ranges retain min/max/count; authoritative saved ranges replace them after replay.
+function latencyPlot(progress,view) {
+  element("test-latency-note").textContent=view ? (view.complete ? "Final" : "Partial")+" client RTT · ms · completed-sample ranges" : "Provisional client RTT · ms · up to 128 one-second ranges";
+  if(view) { plot("test-rtt-chart",view,"rtt",false,true); return; }
+  const ranges=progress?.rtt_time || [],time=ranges.map(function liveRange(range) { /* Preserve the engine's exact envelope and omit unknown missing/local time bins. */ return {start_ns:range.start_ns,end_ns:range.end_ns,rtt:{count:range.count,min_ns:range.min_ns,max_ns:range.max_ns},missing:"0",local:"0"}; });
+  plot("test-rtt-chart",{time,phases:[],cutoff_ns:progress?.elapsed_ns || "0",summary:{RTTSamples:progress?.main.completed || "0"}},"rtt",false,true);
 }
 // renderWorkspace keeps live counts, finalized replay and partial/unavailable states visibly distinct.
 function renderWorkspace() {
@@ -226,12 +223,11 @@ function renderWorkspace() {
   metricCard("card-tail",summary && summary.RTTP95!=null ? unitText(summary.RTTP95,6)+" ms" : "—",summary ? sampleNote(view,"RTTP95") : "Available after finalization");
   metricCard("card-variation",summary && summary.VariationP95!=null ? unitText(summary.VariationP95,6)+" ms" : "—",summary ? sampleNote(view,"VariationP95") : "Available after finalization");
   const planned=summary?.Planned ?? counts?.planned,misses=summary?.DeadlineMisses ?? counts?.deadline_misses;
-  metricCard("card-misses",planned!==undefined && misses!==undefined && (summary || p.accounting_valid) ? percentText(misses,planned) : "—",misses!==undefined ? String(misses)+" missed of "+planned+" reached slots"+(p && !p.accounting_valid && !summary ? " · accounting incomplete" : "") : "No reached slots yet");
+  metricCard("card-misses",String(misses ?? "—"),misses!==undefined ? (summary || p.accounting_valid ? percentText(misses,planned)+" of "+planned+" reached slots" : "Accounting incomplete")+" · includes late/local misses" : "No reached slots yet");
   metricCard("card-on-time",String(summary?.OnTime ?? counts?.on_time ?? "—"),"On-time application receipts");
+  metricCard("card-late",String(summary?.Late ?? counts?.late ?? "—"),"Also counted as missed deadlines");
   metricCard("card-pending",String(summary?.Pending ?? counts?.pending ?? "—"),"Pending deadlines · delivery unknown");
-  countPlot();
-  if(view) plot("test-rtt-chart",view,"rtt",false,true);
-  else { const svg=svgNode("svg",{viewBox:"0 0 800 250",role:"img","aria-label":"Receipt RTT is unavailable until this test is finalized"}); const text=svgNode("text",{x:80,y:125,class:"chart-label"}); text.textContent=active ? "Receipt RTT is finalized after the test." : "Run a test to view receipt RTT."; svg.append(text); element("test-rtt-chart").replaceChildren(svg); }
+  latencyPlot(p,view);
 }
 // loadRunResult automatically loads the exact terminal report once; failures stay explicit and retries are read-only.
 async function loadRunResult(run) {
@@ -246,7 +242,7 @@ async function loadRunResult(run) {
   finally { if(workspace.loading===loading) { workspace.loading=null; controls(); } }
 }
 // clearWorkspace releases prior observations/result labels on local access loss without cancelling admitted work.
-function clearWorkspace() { workspace.history=[]; workspace.run=""; workspace.result=null; workspace.resultRun=""; workspace.initial=null; workspace.phase=0; workspace.settings=false; workspace.group="traffic"; showSettings(); renderWorkspace(); }
+function clearWorkspace() { workspace.run=""; workspace.result=null; workspace.resultRun=""; workspace.initial=null; workspace.phase=0; workspace.settings=false; workspace.group="traffic"; showSettings(); renderWorkspace(); }
 guidedEdit("test-name",function testName(plan,value) { /* Name edits derive safe storage identities; no UID needs to be typed. */ const name=value.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,64); if(!name) throw new Error("Give the test a name using letters or numbers."); plan.profile_id=name; });
 for(const [id,key,places] of [["test-duration","duration_ns",9],["test-warmup","warmup_ns",9],["test-deadline","receipt_deadline_ns",6],["test-grace","grace_ns",6]]) guidedEdit(id,function timing(plan,value) { /* Scale only the selected phase or explicitly edited global duration. */ const parsed=unitValue(value,places); if(["duration_ns","receipt_deadline_ns"].includes(key) && parsed==="0") throw new Error("Duration and deadline must be greater than zero."); if(key==="duration_ns") plan.phases[workspace.phase][key]=parsed; else plan[key]=parsed; });
 for(const [id,key] of [["test-payload","client"],["test-down-payload","server"]]) guidedEdit(id,function payload(plan,value) { /* Independent selected-phase payloads preserve asymmetric and custom plans. */ const parsed=unitValue(value,0); const maximum=(descriptor()?.max_frame_bytes || 1048576)-124; if(BigInt(parsed)>BigInt(maximum)) throw new Error("Payload exceeds this protocol's frame limit ("+maximum+" bytes)."); plan.phases[workspace.phase][key].content_bytes=Number(parsed); });
@@ -264,7 +260,7 @@ element("test-protocol").addEventListener("change",function protocolChoice() { /
 });
 element("test-no-delay").addEventListener("change",function tcpOption() { /* A visible checkbox supplies the explicit native TCP boolean instead of JSON. */ if(state.draft.adapter_id==="tcp") state.draft.adapter_options.tcp_no_delay=element("test-no-delay").checked; controls(); });
 element("automatic-storage").addEventListener("change",function storageChoice() { /* Enabling automatic capacity can resolve valid pending duration/resource edits; malformed text is retained. */ const automatic=element("automatic-storage").checked; if(state.invalid.size && !automatic) { element("automatic-storage").checked=workspace.autoStorage; notice("Check highlighted settings before disabling automatic resources.",true); return; } workspace.autoStorage=automatic; if(automatic) { for(const field of Array.from(state.invalid)) if(field.revalidate) field.revalidate(); try { draftStorage(state.draft); } catch(error) { notice(error.message,true); } } if(!state.invalid.size) syncSettings(); controls(); });
-bind("reset-test",function resetTest() { /* Reset only the draft/display, keep saved evidence and the authenticated connection. */ const draft=clone(workspace.initial),names=new Set(Array.from(element("profiles").children).map(function savedName(option) { /* Generate a readable unused test name without requiring a machine handle. */ return option.value; })); let suffix=1,name=draft.adapter_id+"-test"; while(names.has(name) || name===state.selected.profile.profile_id) name=draft.adapter_id+"-test-"+(++suffix); draft.profile_id=name; if(state.connection?.status==="connected") { draft.server_address=state.connection.server_ip; draft.pairing_ref=state.connection.pairing_ref; draft.address_family=draft.server_address.includes(":") ? "ipv6" : "ipv4"; } state.draft=draft; state.saved=false; state.run=null; workspace.history=[]; workspace.result=null; workspace.resultRun=""; renderEditor(); controls(); notice("New test ready. Saved tests and results are retained."); });
+bind("reset-test",function resetTest() { /* Reset only the draft/display, keep saved evidence and the authenticated connection. */ const draft=clone(workspace.initial),names=new Set(Array.from(element("profiles").children).map(function savedName(option) { /* Generate a readable unused test name without requiring a machine handle. */ return option.value; })); let suffix=1,name=draft.adapter_id+"-test"; while(names.has(name) || name===state.selected.profile.profile_id) name=draft.adapter_id+"-test-"+(++suffix); draft.profile_id=name; if(state.connection?.status==="connected") { draft.server_address=state.connection.server_ip; draft.pairing_ref=state.connection.pairing_ref; draft.address_family=draft.server_address.includes(":") ? "ipv6" : "ipv4"; } state.draft=draft; state.saved=false; state.run=null;  workspace.result=null; workspace.resultRun=""; renderEditor(); controls(); notice("New test ready. Saved tests and results are retained."); });
 bind("test-refresh",async function refreshTest() { /* Read the managed run handle; users never have to paste it into a normal form. */ if(state.run) { showRun(await api("/api/v1/runs/"+safeID(state.run.control_run_id))); await loadRunResult(state.run); schedulePoll(); } });
 bind("test-retry",transmitPending);
 element("test-advanced").addEventListener("click",function trafficSettings() { /* Expand settings in place without requests, field replacement or a separate view. */ workspace.settings=!workspace.settings; showSettings(); });

@@ -26,15 +26,22 @@ function ratio(value, maximum) { return maximum === 0n ? 0 : Number(BigInt(value
 // ECDF groups retain rank envelopes, not synthetic samples or recomputed final quantiles.
 function plot(target, view, metric, cumulative, human=false) {
   const groups = cumulative ? view[metric + "_ecdf"] : view.time;
-  const svg = svgNode("svg", { viewBox: "0 0 800 250", role: "img", "aria-label": cumulative ? "Completed-sample ECDF rank envelopes" : "Host-local scheduled time and duration ranges" });
+  const svg = svgNode("svg", { viewBox: "0 0 800 250", role: "img", "aria-label": human && !cumulative ? "Client receipt RTT in milliseconds against elapsed seconds, completed-sample ranges" : cumulative ? "Completed-sample ECDF rank envelopes" : "Host-local scheduled time and duration ranges" });
   let maximum = 0n;
   for (const group of groups) { const range = cumulative ? group : group[metric]; if (range.max_ns !== null) maximum = maximum > BigInt(range.max_ns) ? maximum : BigInt(range.max_ns); }
   const cutoff = BigInt(view.cutoff_ns), samples = BigInt(view.summary.RTTSamples);
   // Coordinate conversion occurs only after scaling exact nanoseconds/ranks to bounded ratios.
-  const x = function xCoordinate(value) { return 50 + 720 * ratio(value, cumulative ? maximum : cutoff); };
+  const left=human && !cumulative ? 100 : 50;
+  const x = function xCoordinate(value) { return left + (770-left) * ratio(value, cumulative ? maximum : cutoff); };
   const y = function yCoordinate(value) { /* Map the exact duration/rank ratio to bounded vertical coordinates. */ return 210 - 180 * ratio(value, cumulative ? samples : maximum); };
-  svg.append(svgNode("line", { x1: 50, y1: 210, x2: 770, y2: 210, class: "axis" }));
-  svg.append(svgNode("line", { x1: 50, y1: 30, x2: 50, y2: 210, class: "axis" }));
+  svg.append(svgNode("line", { x1: left, y1: 210, x2: 770, y2: 210, class: "axis" }));
+  svg.append(svgNode("line", { x1: left, y1: 30, x2: left, y2: 210, class: "axis" }));
+  if(human && !cumulative) for(let tick=0;tick<=4;tick++) {
+    const duration=maximum*BigInt(tick)/4n,yTick=210-tick*45;
+    svg.append(svgNode("line",{x1:left,x2:770,y1:yTick,y2:yTick,class:"plot-grid"}));
+    const value=svgNode("text",{x:left-6,y:yTick+4,"text-anchor":"end",class:"chart-label"}); value.textContent=unitText(duration,6); svg.append(value);
+    const seconds=svgNode("text",{x:left+tick*(770-left)/4,y:228,"text-anchor":tick===4 ? "end" : "middle",class:"chart-label"}); seconds.textContent=unitText(cutoff*BigInt(tick)/4n,9)+" s"; svg.append(seconds);
+  }
   if (!cumulative) {
     for (const phase of view.phases) {
       if (BigInt(phase.start_ns) > cutoff) continue;
@@ -51,7 +58,7 @@ function plot(target, view, metric, cumulative, human=false) {
     }
   }
   const bottom = svgNode("text", { x: 50, y: 245, class: "chart-label" }); bottom.textContent = cumulative ? "Duration ns (0 to " + maximum + ") · cumulative completed fraction (0 to 1)" : "Host-local scheduled ns (0 to " + cutoff + ") · duration ns (0 to " + maximum + ")"; if(human) bottom.textContent=cumulative ? "Receipt RTT · 0 to "+unitText(maximum,6)+" ms · completed fraction" : "Elapsed · 0 to "+unitText(cutoff,9)+" s · RTT 0 to "+unitText(maximum,6)+" ms"; svg.append(bottom);
-  if (!groups.length) { const empty = svgNode("text", { x: 70, y: 110, class: "chart-label" }); empty.textContent = "No eligible samples / reached slots in this scope."; svg.append(empty); }
+  if (!groups.length) { const empty = svgNode("text", { x: left+20, y: 110, class: "chart-label" }); empty.textContent = human ? "No completed RTT samples yet." : "No eligible samples / reached slots in this scope."; svg.append(empty); }
   element(target).replaceChildren(svg);
 }
 // wakePageSize keeps optional inline timer evidence compact without dropping any exact observation.

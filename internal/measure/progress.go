@@ -3,6 +3,7 @@ package measure
 import (
 	"container/heap"
 	"context"
+	"slices"
 	"sneaky-port/internal/profile"
 	"sync/atomic"
 )
@@ -21,7 +22,20 @@ type LiveCounts struct {
 	Completed      profile.Decimal `json:"completed"`
 }
 
-// Progress has fixed-size counters and bounded phase identity; it never exposes raw records or keys.
+// LiveRTTBucketNS and LiveRTTBuckets bound provisional RTT ranges independently of network queues.
+const LiveRTTBucketNS, LiveRTTBuckets = uint64(1000000000), 128
+
+// LiveRTTRange retains exact completed RTT extrema/count in a half-open scheduled-time bucket.
+// Times are client-local elapsed nanoseconds; absent receipts never become zero-duration samples.
+type LiveRTTRange struct {
+	Start profile.Decimal `json:"start_ns"`
+	End   profile.Decimal `json:"end_ns"`
+	Count profile.Decimal `json:"count"`
+	Min   profile.Decimal `json:"min_ns"`
+	Max   profile.Decimal `json:"max_ns"`
+}
+
+// Progress has fixed-size counters, bounded RTT ranges and phase identity; it exposes no keys or raw records.
 // AsOf is host-local publication time, not a remote clock or proof of finalized observation completeness.
 type Progress struct {
 	AsOf            profile.Decimal `json:"as_of_ns"`
@@ -34,6 +48,7 @@ type Progress struct {
 	Main            LiveCounts      `json:"main"`
 	Warmup          LiveCounts      `json:"warmup"`
 	PeerReceived    profile.Decimal `json:"peer_data_received"`
+	RTTTime         []LiveRTTRange  `json:"rtt_time"`
 }
 
 // ProgressFeed coalesces into one atomic immutable snapshot; readers never execute on the accounting owner.
@@ -55,12 +70,17 @@ func ProgressSink(ctx context.Context) *ProgressFeed {
 }
 
 // Publish replaces one bounded snapshot without waiting on a consumer or invoking UI callbacks.
-func (f *ProgressFeed) Publish(value Progress) { copy := value; f.latest.Store(&copy) }
+func (f *ProgressFeed) Publish(value Progress) {
+	copy := value
+	copy.RTTTime = slices.Clone(value.RTTTime)
+	f.latest.Store(&copy)
+}
 
-// Snapshot returns an independent scalar copy; nil means setup has not published an engine observation.
+// Snapshot copies counters and bounded ranges; nil means no engine observation has been published.
 func (f *ProgressFeed) Snapshot() *Progress {
 	if value := f.latest.Load(); value != nil {
 		copy := *value
+		copy.RTTTime = slices.Clone(value.RTTTime)
 		return &copy
 	}
 	return nil
@@ -107,10 +127,14 @@ type LiveAccounting struct {
 	cutoff       uint64
 	ceiling      uint64
 	sealed       bool
+	rtt          map[uint64]LiveRTTRange
+	lastBucket   uint64
 }
 
 // NewLiveAccounting allocates optional accounting state bounded by the existing ledger admission cap.
-func NewLiveAccounting() *LiveAccounting { return &LiveAccounting{slots: map[Identity]*liveSlot{}} }
+func NewLiveAccounting() *LiveAccounting {
+	return &LiveAccounting{slots: map[Identity]*liveSlot{}, rtt: map[uint64]LiveRTTRange{}}
+}
 
 // liveContribution matches summary count semantics for one reached origin; missing receipts are never packet loss.
 func liveContribution(e *Entry, cutoff uint64) LiveCounts {
@@ -175,7 +199,56 @@ func (a *LiveAccounting) update(slot *liveSlot, cutoff uint64) {
 		total = &a.warmup
 	}
 	replaceContribution(total, slot.counts, next)
+	if slot.entry.Identity.Lifecycle == 2 && slot.counts.Completed == 0 && next.Completed == 1 {
+		a.addRTT(slot.entry)
+	}
 	slot.counts = next
+}
+
+// addRTT aggregates the first eligible main receipt only; old buckets age out without changing counts.
+func (a *LiveAccounting) addRTT(e *Entry) {
+	key := uint64(e.Scheduled) / LiveRTTBucketNS
+	if key > a.lastBucket {
+		a.lastBucket = key
+		for bucket := range a.rtt {
+			if a.lastBucket-bucket >= LiveRTTBuckets {
+				delete(a.rtt, bucket)
+			}
+		}
+	}
+	if a.lastBucket-key >= LiveRTTBuckets {
+		return
+	}
+	r := a.rtt[key]
+	duration := *e.Receipt - *e.Attempt
+	if r.Count == 0 {
+		r.Min, r.Max = duration, duration
+	}
+	r.Count++
+	r.Min, r.Max = min(r.Min, duration), max(r.Max, duration)
+	a.rtt[key] = r
+}
+
+// RTTRanges copies sorted bounded ranges relative to run start and clips the actual observation cutoff.
+// These provisional envelopes cannot supply quantiles, one-way delay or missing-receipt latency.
+func (a *LiveAccounting) RTTRanges(start uint64) []LiveRTTRange {
+	keys := make([]uint64, 0, len(a.rtt))
+	for key := range a.rtt {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	out := make([]LiveRTTRange, 0, len(keys))
+	for _, key := range keys {
+		r := a.rtt[key]
+		begin := key * LiveRTTBucketNS
+		end := min(begin+min(LiveRTTBucketNS, ^uint64(0)-begin), a.cutoff)
+		if end <= start {
+			continue
+		}
+		r.Start, r.End = profile.Decimal(max(begin, start)-start), profile.Decimal(end-start)
+		out = append(out, r)
+	}
+	return out
 }
 
 // TrackProgress observes existing ledger entries without exposing mutable references to consumers.
@@ -227,6 +300,8 @@ func (a *LiveAccounting) Limit(cutoff uint64) {
 	a.cutoff = cutoff
 	a.main = LiveCounts{}
 	a.warmup = LiveCounts{}
+	clear(a.rtt)
+	a.lastBucket = 0
 	clear(a.deadlines)
 	a.deadlines = a.deadlines[:0]
 	for _, slot := range a.slots {

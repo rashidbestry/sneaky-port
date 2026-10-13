@@ -125,8 +125,28 @@ async function navigationCheck() {
   let pages=ids["message-details"].textContent; let next=ids["message-details-pages"].lastChild.children[2]; while(!next.disabled) { next.click(); pages+="\n"+ids["message-details"].textContent; next=ids["message-details-pages"].lastChild.children[2]; }
   assert.equal(pages,source); evaluate("closeUtility()"); assert.equal(evaluate("JSON.stringify(state.draft)"),draft); assert.equal(requests.length,count);
 }
+// latencyChartCheck checks live ms axes, exact envelopes, numeric counts, empty data and run/final replacement.
+function latencyChartCheck() {
+  assert.equal(ids["test-count-chart"],undefined); assert.ok(!html.includes("Observed receipts"));
+  const original=evaluate("JSON.stringify({run:state.run,result:workspace.result,resultRun:workspace.resultRun,workspaceRun:workspace.run})"),before=requests.length;
+  const ranges=[{start_ns:"0",end_ns:"1000000000",count:"2",min_ns:"1125000",max_ns:"23500000"},{start_ns:"2000000000",end_ns:"3000000000",count:"1",min_ns:"0",max_ns:"0"}];
+  const run={control_run_id:"latency-fixture",profile_id:"latency",status:"executing",progress:{as_of_ns:"9007199254740993",elapsed_ns:"3000000000",total_ns:"60000000000",accounting_valid:false,main:{planned:"9007199254740993",deadline_misses:"3",on_time:"4",late:"2",pending:"1",completed:"6"},rtt_time:ranges}};
+  evaluate("workspace.result=null; state.run="+JSON.stringify(run)+"; rememberProgress(state.run)");
+  assert.equal(ids["card-on-time"].textContent,"4"); assert.equal(ids["card-late"].textContent,"2"); assert.equal(ids["card-misses"].textContent,"3"); assert.equal(ids["card-pending"].textContent,"1"); assert.equal(ids["card-rtt"].textContent,"—");
+  const nodes=descendants(ids["test-rtt-chart"]),rects=nodes.filter(function sampleRange(node) { /* Count genuine envelopes rather than grid elements. */ return node.attributes?.class==="sample-range"; });
+  assert.equal(rects.length,2); assert.ok(nodes.some(function exactDuration(node) { /* Milliseconds keep the original nanosecond precision. */ return node.textContent.includes("1.125–23.5 ms"); }));
+  assert.ok(nodes.some(function millisecondsAxis(node) { /* Verify human vertical labels. */ return node.textContent==="23.5"; })); assert.ok(nodes.some(function secondsAxis(node) { /* Verify elapsed-time horizontal labels. */ return node.textContent==="3 s"; }));
+  assert.ok(!nodes.some(function inventedLine(node) { /* Absent receipts/time bins cannot become a connecting latency line. */ return ["polyline","path","circle"].includes(node.tagName); }));
+  assert.ok(ids["test-latency-note"].textContent.includes("Provisional"));
+  evaluate("state.run.progress.rtt_time=[]; renderWorkspace()"); assert.ok(descendants(ids["test-rtt-chart"]).some(function noData(node) { /* No receipt is explicit rather than zero latency. */ return node.textContent==="No completed RTT samples yet."; }));
+  const view={complete:false,endpoint:"client",scope:"main",integrity:"verified",cutoff_ns:"3000000000",phases:[],summary:{Planned:"7",DeadlineMisses:"3",OnTime:"4",Late:"2",Pending:"0",RTTSamples:"3",RTTMedian:"1125000",RTTP95:"23500000"},time:ranges.map(function savedRange(range) { /* Match the authoritative diagnostic shape. */ return {start_ns:range.start_ns,end_ns:range.end_ns,rtt:{count:range.count,min_ns:range.min_ns,max_ns:range.max_ns},missing:"0",local:"0"}; })};
+  evaluate("state.run.status='partial'; workspace.result="+JSON.stringify(view)+"; renderWorkspace()"); assert.equal(ids["card-rtt"].textContent,"1.125 ms"); assert.ok(ids["test-latency-note"].textContent.startsWith("Partial"));
+  evaluate("state.run.control_run_id='next-latency-run'; rememberProgress(state.run)"); assert.equal(evaluate("workspace.result"),null); assert.equal(descendants(ids["test-rtt-chart"]).filter(function oldRange(node) { /* A new run cannot inherit old latency ranges. */ return node.attributes?.class==="sample-range"; }).length,0);
+  evaluate("(function restoreLatencyFixture() { /* Restore normal workflow state without commands or retained synthetic observations. */ const previous="+original+"; state.run=previous.run; workspace.result=previous.result; workspace.resultRun=previous.resultRun; workspace.run=previous.workspaceRun; renderWorkspace(); })()"); assert.equal(requests.length,before);
+}
 // main exercises actual script/API pairing, exact edits, revision conflicts and idempotent control recovery.
 async function main() {
+  await evaluate("bootPromise"); latencyChartCheck();
   await evaluate("bootPromise"); assert.equal(ids.workspace.hidden,false); assert.equal(evaluate("state.token.length"),64); assert.equal(ids.token,undefined); assert.equal(ids.start.disabled,true); assert.equal(ids["nav-workload"].hidden,true);
   assert.equal(ids["nav-connection"],undefined); assert.equal(ids["server-executable"],undefined); assert.equal(ids["view-connection-session"],undefined);
   ids["server-ip"].value="127.0.0.1"; ids["ssh-port"].value=process.env.DASHBOARD_TEST_SSH_PORT; ids["ssh-user"].value="sneak"; ids["ssh-password"].value="fixture-password";
@@ -254,6 +274,7 @@ async function durationBudgetCheck() {
 }
 // guidedMain drives normal controls against a real loopback measurement runner without any manual machine identities.
 async function guidedMain() {
+  await evaluate("bootPromise"); latencyChartCheck();
   await evaluate("bootPromise"); assert.equal(evaluate("navigation.section"),"dashboard"); assert.equal(ids["nav-workload"].hidden,true);
   ids["server-ip"].value="127.0.0.1"; ids["ssh-port"].value=process.env.DASHBOARD_TEST_SSH_PORT; ids["ssh-user"].value="sneak"; ids["ssh-password"].value="fixture-password";
   await click("connect"); await click("refresh-connection"); assert.equal(evaluate("state.connection.status"),"connected");

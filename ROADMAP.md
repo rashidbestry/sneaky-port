@@ -172,7 +172,7 @@ This case does not establish bare-metal Linux, native ARM64, Linux minima, outer
 
 Checkpoints 23g/23h were authorized together by the user on 2026-10-12 and are complete within their recorded implementation/fixture scopes. ARM remains deferred.
 
-**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b/23d-23m. Script/HTTP fixtures do not complete this gate.
+**Pending tooling.** Real-browser visual/interaction/accessibility/responsive checks after checkpoints 23a-23b/23d-23n. Script/HTTP fixtures do not complete this gate.
 
 ### 23g. Upload and start the bundled Linux helper (completed)
 
@@ -201,6 +201,10 @@ Checkpoints 23g/23h were authorized together by the user on 2026-10-12 and are c
 ### 23m. Repair sixty-second dashboard runs (completed)
 
 **Complete for implementation and real elapsed 60-second UDP/TCP loopback fixtures; authorized with 23l, 2026-10-12.** Reproduced default 129-demand/128-cap startup failure; automatic resources now cover heartbeat/calibration/report transfer, with explicit manual recovery. Independent bounded evidence buffering preserves physical send queues. Current terminal client replay uses a 64-MiB cap, exact owned plan/measurement binding and 30-second HTTP / 35-second browser budgets; ordinary saved caps remain. Both endpoints completed both 60-second protocols and current charts/replay loaded (153.59-second fixture). [Evidence](WORK_LOG.md#2026-10-12-test-only-dashboard-and-sixty-second-repair), [source](FLOWCHART.md#test-only-dashboard-and-sixty-second-runs). Browser/native sshd/live/ARM/full acceptance remains separate.
+
+### 23n. Replace receipt-count plotting with live latency (completed)
+
+**Complete for implementation, actual-script/API and real finite UDP/TCP loopback fixtures; user-selected 2026-10-13.** Removed the count chart and show on-time/late/pending/missed outcomes numerically. One chart displays client attempt-to-receipt RTT in ms versus elapsed seconds, using copied main-only one-second min/max/count ranges bounded to 128 recent buckets; strict cutoff/warmup/duplicate/absent-receipt rules remain. Final replay replaces live ranges. Owned-source test/vet/build, focused race and rebuilt matching-helper checks pass. [Evidence](WORK_LOG.md#2026-10-13-numeric-receipts-and-live-latency), [source](FLOWCHART.md#numeric-receipts-and-live-latency). Next remains 23c rendered-browser QA; native sshd/live/ARM/full acceptance stays separate.
 
 ## Queued validation tasks
 

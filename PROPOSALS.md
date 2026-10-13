@@ -10,7 +10,7 @@ Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticat
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23m are implemented within recorded scopes. Latest 23l/23m keeps Test only and repairs long-run capacity/current results; 23c browser QA is pending tooling and native ARM is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23n are implemented within recorded scopes. Latest 23n shows numeric receipts and live RTT in ms; 23l/23m retains Test only and repaired long-run capacity/current results; 23c browser QA is pending tooling and native ARM is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
@@ -178,13 +178,13 @@ Remaining work: integrate the contract's explicit preflight/window limits and ad
 
 ### S09: Distribution and phase comparison views
 
-- [ ] Accepted future scope by user, 2026-10-11; saved time/ECDF and scalar matched phase comparisons implemented; live client-local counters implemented; extra histograms/overlays and additional live plots remain future scope. [Evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons).
+- [ ] Accepted future scope by user, 2026-10-11; saved time/ECDF, scalar matched phase comparisons and live client-local counters/RTT ranges implemented. Extra histograms/overlays and other live plots remain future scope. [Comparison evidence](WORK_LOG.md#2026-10-12-matched-saved-run-comparisons), [RTT evidence](WORK_LOG.md#2026-10-13-numeric-receipts-and-live-latency).
 
 Add optional histograms/CDFs and matched-run overlays alongside phase timelines for completed RTT, scheduling error, deadline outcomes and delivery interruptions. Show direction, workload phase, units, sample counts, missing/late outcomes and measurement boundaries; allow inspection of the underlying records.
 
-Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Saved time/ECDF and matched scalar comparison paths are implemented; live client-local counters are implemented; additional live plots/overlays remain future scope. Complements S02/S06 without adopting their additional metrics or confidence policy.
+Purpose: extend F07's required live summaries and comparison controls using ideas from iperf2, Flent, Crusader and Graphite Meter. Saved time/ECDF, matched scalar comparisons and live client-local counters/RTT ranges are implemented; other live plots/overlays remain future scope. Complements S02/S06 without adopting their additional metrics or confidence policy.
 
-First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); saved dashboard/report integration is implemented in tasks 20-21 and live counters in checkpoint 23b; additional live plots remain future scope. Additional histograms/overlays need their own defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. A phase-aligned display does not establish synchronized host clocks; plots never drive scheduling.
+First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded updates are settled in the [contract](DESIGN.md#first-slice-implementation-contract); tasks 20-21 implement saved integration, 23b live counters and 23n client RTT ranges. Further histograms/overlays need defined limits. Keep deadline misses first, no combined score, and explicit ties/inconclusive outcomes. Completed-sample distributions must not hide missing slow traffic. Phase alignment does not synchronize host clocks; plots never drive scheduling.
 
 ### S10: Controlled contention scenario catalogue
 

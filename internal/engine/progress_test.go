@@ -41,7 +41,7 @@ func TestFiniteProgress(t *testing.T) {
 			seen := false
 			for time.Now().Before(deadline) {
 				snapshot := feed.Snapshot()
-				if snapshot != nil && snapshot.Stage == "measurement" && snapshot.Main.Planned > 0 {
+				if snapshot != nil && snapshot.Stage == "measurement" && len(snapshot.RTTTime) > 0 {
 					seen = true
 					if snapshot.Main.Completed > snapshot.Main.Attempted || snapshot.Cutoff > snapshot.AsOf {
 						t.Fatal("invalid progress population", snapshot)
@@ -56,6 +56,17 @@ func TestFiniteProgress(t *testing.T) {
 			_, peerErr := server.Wait(ctx)
 			if err != nil || peerErr != nil || !r.Complete || !seen {
 				t.Fatal("finite progress/completion failed", err, peerErr, seen)
+			}
+			snapshot := feed.Snapshot()
+			var samples uint64
+			for _, group := range snapshot.RTTTime {
+				samples += uint64(group.Count)
+				if group.Min > group.Max || group.End > snapshot.Elapsed || group.Start >= group.End {
+					t.Fatal("invalid live RTT range", group, snapshot)
+				}
+			}
+			if snapshot.Stage != "finalizing" || samples != uint64(r.Summary.RTTSamples) || samples == 0 {
+				t.Fatal("terminal latency did not match main receipt samples", samples, r.Summary.RTTSamples, snapshot.Stage)
 			}
 		})
 	}

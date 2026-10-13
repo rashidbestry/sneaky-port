@@ -1,6 +1,6 @@
 # Code flow
 
-Updated: 2026-10-12. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Live client-local counters and section navigation are implemented; production clock bounds, rendered-browser QA and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-13. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Live client-local counters and section navigation are implemented; production clock bounds, rendered-browser QA and full acceptance remain pending. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
 
 ## Adapter extension gate
 
@@ -579,7 +579,7 @@ flowchart TD
     B --> F[Clock marking and declared environment context; independent gates]
     G[Explicit start freezes run plan and creates run-owned atomic feed] --> H[Authenticated finite client engine and single accounting owner]
     H --> I[Bounded incremental reached-slot contributions and strict expiry heap]
-    I --> J[At most four publications per second; one immutable scalar snapshot]
+    I --> J[Four publications per second plus terminal update; copied counters and bounded RTT ranges]
     J --> K[Protected HTTP status copies; no ledger access or UI callback]
     K --> L[Coalesced one-per-second browser poll and provisional local progress]
     H --> M[Cancellation joins and finalizes original local evidence]
@@ -645,7 +645,7 @@ Checks: [upload/fault/cancellation/packaged bytes](internal/control/helper_uploa
 
 ## Usable test dashboard and automatic results
 
-Current implementation follows the [Test-only flow](#test-only-dashboard-and-sixty-second-runs). Earlier sidebar/history/comparison layouts are superseded; dated implementation evidence remains in WORK_LOG. [Protected report-label APIs](internal/control/catalog_labels.go) remain independently available and confer no validity. The Test dashboard keeps at most 64 actual provisional snapshots, exact human units and automatic terminal replay; unavailable RTT and delivery are never zero-filled.
+Current implementation follows the [Test-only flow](#test-only-dashboard-and-sixty-second-runs). Earlier sidebar/history/comparison layouts are superseded; dated implementation evidence remains in WORK_LOG. [Protected report-label APIs](internal/control/catalog_labels.go) remain independently available and confer no validity. The Test dashboard keeps bounded provisional RTT ranges, exact human units, numeric receipt outcomes and automatic terminal replay; unavailable RTT and delivery are never zero-filled.
 
 ## Single-page conditional test settings
 
@@ -669,6 +669,22 @@ flowchart TD
 
 Sources: [main markup](internal/localapi/web/index.html), [viewport layout](internal/localapi/web/dashboard.css), [typed settings](internal/localapi/web/workspace.js) (`guidedEdit`, `friendlyField`, `settingsObject`, `settingTitle`, `settingsFields`, `syncSettings`, `showSettings`, `settingsControls`, `syncWorkspace`), [protected start](internal/localapi/web/dashboard.js), [retained draft/detail paging](internal/localapi/web/navigation.js), [local timer](internal/localapi/web/diagnostics.js) (`wakePageSize`, `renderPreflight`). Group changes only switch visibility/repage existing evidence; structural changes cannot discard malformed text. Local timer checks use edited exact human-unit values, then unlock two-row result pages. Unsupported complex extension options remain visible as limitations and unmodified for validation. [Actual-script tests](internal/localapi/web/dashboard_test.cjs) (`inlineSettingsCheck`, `guidedMain`) and [real endpoint fixture](internal/localapi/usability_test.go) verify two-phase burst/deadline/rate/payload agreement, TCP options, local timer requests, exact current replay and retained retries. Rendered geometry/accessibility/responsiveness remains 23c.
 
+## Numeric receipts and live latency
+
+```mermaid
+flowchart TD
+    A[Authenticated first main receipt] --> B[Ledger-owned attempt-to-receipt RTT]
+    B --> C[Exact min/max/count in at most 128 one-second scheduled-time buckets]
+    C --> D[Copied atomic progress ranges; 4 Hz plus terminal update]
+    D --> E[Coalesced status reads; numeric receipt outcomes]
+    E --> F[One SVG latency chart: elapsed seconds / RTT ms]
+    F --> G[Terminal client replay replaces provisional ranges]
+    H[Actual cancellation cutoff] --> I[Rebase counts and ranges; exclude equality]
+    I --> D
+```
+
+Sources: [live range/accounting/copies](internal/measure/progress.go) (`addRTT`, `RTTRanges`, `Limit`, `Publish`, `Snapshot`), [engine publication](internal/engine/progress.go) (`publishProgress`), [terminal rebuild](internal/engine/endpoint.go) (`collect`), [numeric cards/live-final replacement](internal/localapi/web/workspace.js) (`rememberProgress`, `latencyPlot`, `renderWorkspace`), [ms/seconds axes](internal/localapi/web/diagnostics.js) (`plot`), [main markup/layout](internal/localapi/web/index.html), [viewport sizing](internal/localapi/web/dashboard.css). Late first receipts remain eligible; warmup/duplicates/local or missing outcomes produce no RTT sample. Old buckets age out of the labeled provisional window without reducing total counts; final replay retains its existing full-scope range/quantile gates. No interpolation, cross-host subtraction or live quantiles. [Range/cutoff/ownership tests](internal/measure/progress_test.go), [real finite UDP/TCP progress](internal/engine/progress_test.go), [actual-script numeric/axis/replacement checks](internal/localapi/web/dashboard_test.cjs) (`latencyChartCheck`). Rendered-browser acceptance remains 23c.
+
 ## Test-only dashboard and sixty-second runs
 
 ```mermaid
@@ -678,7 +694,7 @@ flowchart TD
     C --> D[Validate, revision-save, freeze and exact endpoint agreement]
     D --> E[Direct UDP/TCP; unchanged cadence, send queues and accounting]
     E --> F[Independent bounded evidence FIFO; queue/file/disk faults remain partial]
-    E --> G[Provisional counts, status/retry/Stop; failure reason visible]
+    E --> G[Numeric provisional counts, live RTT ms, status/retry/Stop; visible failures]
     F --> H[Terminal admitted run handle and immutable report identity]
     G --> H
     H --> I[Serialized client-local replay; 64 MiB; 30s HTTP / 35s browser]
