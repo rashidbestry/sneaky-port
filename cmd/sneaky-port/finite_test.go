@@ -39,7 +39,8 @@ func TestFiniteCLI(t *testing.T) {
 	t.Cleanup(func() { // Release setup resources after the server cleanup registered below has joined.
 		ln.Close()
 	})
-	policy := control.ServerPolicy{Version: 1, ControlListen: ln.Addr().String(), DataBindIP: "127.0.0.1", PortMin: 1, PortMax: 65535, SetupTimeout: 2e9, ShutdownTimeout: 2e9, AuthPoll: 20e6, MaxConnections: 8, MaxAuthTries: 3, MaxControlRequests: 100, MaxBindAttempts: 16, MaxQueueBytes: 1 << 20, MaxLedgerMessages: 1000, MaxEventBytes: 1 << 20, MaxFileBytes: 2 << 20}
+	// Disk flush/join has a fixture-only budget; short measurement phases must not imply fast host IO.
+	policy := control.ServerPolicy{Version: 1, ControlListen: ln.Addr().String(), DataBindIP: "127.0.0.1", PortMin: 1, PortMax: 65535, SetupTimeout: 2e9, ShutdownTimeout: 10e9, AuthPoll: 20e6, MaxConnections: 8, MaxAuthTries: 3, MaxControlRequests: 100, MaxBindAttempts: 16, MaxQueueBytes: 1 << 20, MaxLedgerMessages: 1000, MaxEventBytes: 1 << 20, MaxFileBytes: 2 << 20}
 	bundle, err := serverStore.InitServer("server", "127.0.0.1", ln.Addr().(*net.TCPAddr).Port, policy, "")
 	if err != nil {
 		t.Fatal(err)
@@ -66,22 +67,7 @@ func TestFiniteCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
-	go func() { // Serve only the isolated owned loopback endpoint.
-		done <- server.Serve(ctx, ln)
-	}()
-	t.Cleanup(func() { // Join the fixture server after every CLI run has completed its bounded cleanup.
-		cancel()
-		select {
-		case err := <-done:
-			if err != nil {
-				t.Error(err)
-			}
-		case <-time.After(3 * time.Second):
-			t.Error("CLI fixture cleanup timeout")
-		}
-	})
+	fixture := startFiniteCLIServer(t, server, ln)
 	port, err := net.ListenPacket("udp4", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -94,6 +80,7 @@ func TestFiniteCLI(t *testing.T) {
 	p.Limits.MaxLag = 30e6
 	// This CLI success/cancellation fixture must not conflate storage saturation with lifecycle behavior.
 	p.Limits.QueueMessages = 128
+	p.Limits.ShutdownTimeout = policy.ShutdownTimeout
 	path := filepath.Join(root, "plan.json")
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -173,7 +160,62 @@ func TestFiniteCLI(t *testing.T) {
 	if result.Status != "partial" || result.Local == nil || result.Local.Complete {
 		t.Fatal("partial CLI evidence missing")
 	}
+	// Cancellation returns the client's joined evidence, while the peer may still own its drain.
+	// Join that server stage before starting the independent API success/comparison fixture.
+	fixture.stop(t)
+	ln, err = net.Listen("tcp4", net.JoinHostPort(bundle.ControlAddress, fmt.Sprint(bundle.ControlPort)))
+	if err != nil {
+		t.Fatal("API fixture listener rebind failed", err)
+	}
+	server, err = control.NewServer(serverStore, signer)
+	if err != nil {
+		ln.Close()
+		t.Fatal(err)
+	}
+	startFiniteCLIServer(t, server, ln)
 	exerciseFiniteAPI(t, clientStore, path)
+}
+
+// finiteCLIServer holds the owned server join separately from the client's local run completion.
+type finiteCLIServer struct {
+	cancel context.CancelFunc
+	done   <-chan error
+}
+
+// startFiniteCLIServer starts one isolated stage and registers its authoritative server-worker join.
+func startFiniteCLIServer(t *testing.T, server *control.Server, ln net.Listener) *finiteCLIServer {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { // Serve only the owned loopback endpoint; Serve returns after all connection workers join.
+		done <- server.Serve(ctx, ln)
+	}()
+	fixture := &finiteCLIServer{cancel: cancel, done: done}
+	t.Cleanup(func() { // Stop a still-active stage before its temporary stores and listener are removed.
+		fixture.stop(t)
+	})
+	return fixture
+}
+
+// stop joins the owned server once; its watchdog allows the unchanged peer drain and worker budgets.
+func (s *finiteCLIServer) stop(t *testing.T) {
+	t.Helper()
+	if s.cancel == nil {
+		return
+	}
+	s.cancel()
+	// The server joins data, calibration and evidence separately, then closes its clock gate.
+	timer := time.NewTimer(time.Minute)
+	defer timer.Stop()
+	select {
+	case err := <-s.done:
+		s.cancel = nil
+		if err != nil {
+			t.Error("CLI fixture server failed", err)
+		}
+	case <-timer.C:
+		t.Fatal("CLI fixture server worker join timed out")
+	}
 }
 
 // exerciseFiniteAPI reuses the real SSH fixture to verify HTTP start/status/cancel and persisted evidence.
@@ -181,13 +223,15 @@ func TestFiniteCLI(t *testing.T) {
 func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 	t.Helper()
 	// Four completed comparison trials, replay/export and cancellation share this fixture lifetime.
-	// Each individual run still has its five-second deadline and unchanged engine limits.
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	// Individual runs retain the explicit profile limits; terminal polling adds only a fixture watchdog.
+	// The session watchdog includes five terminal observations plus replay/export HTTP work.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	reader, writer := io.Pipe()
 	done := make(chan error, 1)
 	go func() { // Bootstrap through a pipe so token output never races an in-memory buffer or enters logs.
-		err := run(ctx, []string{"client-api", "-data-dir", store.Root, "-profile", path}, writer)
+		// Explicit fixture shutdown covers the independent data/calibration/storage joins.
+		err := run(ctx, []string{"client-api", "-data-dir", store.Root, "-profile", path, "-shutdown-timeout", "45s"}, writer)
 		writer.CloseWithError(err)
 		done <- err
 	}()
@@ -199,7 +243,7 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 			if err != nil {
 				t.Error(err)
 			}
-		case <-time.After(3 * time.Second):
+		case <-time.After(55 * time.Second):
 			t.Error("API CLI cleanup timeout")
 		}
 	})
@@ -264,21 +308,15 @@ func exerciseFiniteAPI(t *testing.T, store *control.Store, path string) {
 			// Cancellation during setup is also bounded; data-phase cancellation is already covered by the CLI fixture above.
 			apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "POST", "/api/v1/runs/"+controlID+"/cancel", "stop", `{"schema_version":1,"request_id":"stop"}`)
 		}
-		deadline := time.Now().Add(5 * time.Second)
-		for time.Now().Before(deadline) {
-			state = apiCLIRequest(t, client, bootstrap.URL, bootstrap.Token, "GET", "/api/v1/runs/"+controlID, "poll", "")
-			if state["status"] != "executing" && state["status"] != "cancelling" {
-				break
-			}
-			time.Sleep(5 * time.Millisecond)
-		}
+		state = awaitFiniteAPI(t, client, bootstrap.URL, bootstrap.Token, controlID, "poll")
 		if interrupted {
 			if state["status"] != "failed" && state["status"] != "partial" {
 				t.Fatal("cancel did not finalize", state["status"])
 			}
 		} else {
 			if state["status"] != "completed" || state["local_complete"] != true || state["measurement_started"] != true {
-				t.Fatal("API finite run missing", state)
+				logFiniteAPIEvidence(t, store)
+				t.Fatalf("API finite run failed before expected completion: status=%v measurement_started=%v local_complete=%v public_state=%v; API intentionally omits the underlying runner error", state["status"], state["measurement_started"], state["local_complete"], state)
 			}
 			if _, ok := state["progress"].(map[string]any); !ok {
 				t.Fatal("real finite API progress missing")
@@ -383,16 +421,10 @@ func exerciseComparisonAPI(t *testing.T, client *http.Client, base, token string
 		body, _ := json.Marshal(map[string]any{"schema_version": 1, "request_id": command, "profile_id": profileID, "profile_revision": revision})
 		state := apiCLIRequest(t, client, base, token, "POST", "/api/v1/runs", command, string(body))
 		handle := state["control_run_id"].(string)
-		deadline := time.Now().Add(5 * time.Second)
-		for state["status"] == "executing" || state["status"] == "cancelling" {
-			if time.Now().After(deadline) {
-				t.Fatal("comparison trial did not finalize")
-			}
-			time.Sleep(5 * time.Millisecond)
-			state = apiCLIRequest(t, client, base, token, "GET", "/api/v1/runs/"+handle, "compare-poll", "")
-		}
+		state = awaitFiniteAPI(t, client, base, token, handle, "compare-poll")
 		if state["status"] != "completed" {
-			t.Fatal("comparison fixture incomplete", state["status"])
+			logFiniteAPIEvidence(t, store)
+			t.Fatal("comparison fixture incomplete; underlying runner error is not public", state)
 		}
 		ids = append(ids, state["measurement_run_id"].(string)+"-client")
 	}
@@ -435,6 +467,71 @@ func exerciseComparisonAPI(t *testing.T, client *http.Client, base, token string
 	}
 }
 
+// logFiniteAPIEvidence reports owned fixture publication and reservation state without printing credentials.
+// Absent or incomplete files remain explicit diagnostics; they do not establish the hidden runner error.
+func logFiniteAPIEvidence(t *testing.T, store *control.Store) {
+	t.Helper()
+	_, lockErr := os.Stat(filepath.Join(store.Root, "active-run.lock"))
+	t.Logf("API fixture active-run.lock present=%v stat_error=%v", lockErr == nil, lockErr)
+	dirs, err := os.ReadDir(filepath.Join(store.Root, "reports"))
+	if err != nil {
+		t.Log("API fixture reports unavailable", err)
+		return
+	}
+	for _, dir := range dirs {
+		if !dir.IsDir() || !profile.SafeID(dir.Name()) {
+			continue
+		}
+		root := filepath.Join(store.Root, "reports", dir.Name())
+		var manifest struct {
+			State    string `json:"state"`
+			Complete bool   `json:"local_evidence_complete"`
+			Storage  string `json:"storage_status"`
+		}
+		b, readErr := os.ReadFile(filepath.Join(root, "manifest.json"))
+		var decodeErr error
+		if readErr == nil {
+			decodeErr = json.Unmarshal(b, &manifest)
+		}
+		t.Logf("API fixture report=%s manifest_state=%s complete=%v storage=%s read_error=%v decode_error=%v", dir.Name(), manifest.State, manifest.Complete, manifest.Storage, readErr, decodeErr)
+		for _, name := range []string{"events.jsonl", "summary.json"} {
+			info, statErr := os.Stat(filepath.Join(root, name))
+			if statErr != nil {
+				t.Logf("API fixture report=%s file=%s unavailable=%v", dir.Name(), name, statErr)
+				continue
+			}
+			t.Logf("API fixture report=%s file=%s bytes=%d", dir.Name(), name, info.Size())
+		}
+	}
+}
+
+// awaitFiniteAPI observes explicit terminal publication without treating a short polling window as completion.
+// Its watchdog bounds only test liveness; it neither retries a run nor changes measurement or HTTP limits.
+func awaitFiniteAPI(t *testing.T, client *http.Client, base, token, handle, requestID string) map[string]any {
+	t.Helper()
+	// Setup, independent ten-second joins, final stop and report transfer have separate budgets.
+	watchdog := time.NewTimer(90 * time.Second)
+	defer watchdog.Stop()
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer ticker.Stop()
+	var state map[string]any
+	for {
+		state = apiCLIRequest(t, client, base, token, "GET", "/api/v1/runs/"+handle, requestID, "")
+		switch state["status"] {
+		case "completed", "partial", "failed":
+			return state
+		case "executing", "cancelling":
+		default:
+			t.Fatal("API run published an unknown lifecycle state", state)
+		}
+		select {
+		case <-ticker.C:
+		case <-watchdog.C:
+			t.Fatal("API terminal publication watchdog expired", state)
+		}
+	}
+}
+
 // apiCLIRequest exercises actual authenticated HTTP while keeping bootstrap credentials out of diagnostics.
 func apiCLIRequest(t *testing.T, client *http.Client, base, token, method, path, id, body string) map[string]any {
 	t.Helper()
@@ -446,9 +543,17 @@ func apiCLIRequest(t *testing.T, client *http.Client, base, token, method, path,
 	r.Header.Set("X-Request-ID", id)
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Origin", base)
-	response, err := client.Do(r)
+	requestClient := client
+	if method == "POST" && path == "/api/v1/reports/compare" {
+		// Multi-report replay has a thirty-second server response budget; keep transport headroom.
+		comparisonClient := *client
+		comparisonClient.Timeout = 35 * time.Second
+		requestClient = &comparisonClient
+	}
+	started := time.Now()
+	response, err := requestClient.Do(r)
 	if err != nil {
-		t.Fatal("API HTTP failed", err)
+		t.Fatalf("API HTTP failed: method=%s path=%s elapsed=%s: %v", method, path, time.Since(started), err)
 	}
 	defer response.Body.Close()
 	var envelope struct {

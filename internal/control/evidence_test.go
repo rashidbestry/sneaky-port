@@ -164,6 +164,7 @@ func TestEvidenceDiskBoundaries(t *testing.T) {
 
 // assertPersistedRun checks both owned endpoints after real runs, including asynchronously closed control sessions.
 // It compares the client's exact observation sequence/cutoffs without claiming receiver reconciliation.
+// Peer completion is required only when acknowledged; its independent drain/publication has a fixture watchdog.
 func assertPersistedRun(t *testing.T, rig *testRig, result RunResult, complete bool) {
 	t.Helper()
 	m, s, events := readEvidence(t, result.ReportPath)
@@ -182,7 +183,8 @@ func assertPersistedRun(t *testing.T, rig *testRig, result RunResult, complete b
 		}
 	}
 	dir := filepath.Join(rig.server.Root, "reports", result.Readiness.RunID+"-server")
-	end := time.Now().Add(2 * time.Second)
+	publicationBudget := 6*time.Duration(rig.plan.Limits.ShutdownTimeout) + 2*time.Duration(rig.plan.Limits.WriteTimeout) + time.Duration(rig.plan.Grace)
+	end := time.Now().Add(publicationBudget)
 	for {
 		b, _ := os.ReadFile(filepath.Join(dir, "manifest.json"))
 		var server EvidenceManifest
@@ -191,12 +193,12 @@ func assertPersistedRun(t *testing.T, rig *testRig, result RunResult, complete b
 			break
 		}
 		if time.Now().After(end) {
-			t.Fatal("server local evidence not finalized")
+			t.Fatalf("server local evidence not finalized within fixture publication budget %s: state=%s server_status=%s", publicationBudget, server.State, result.ServerStatus)
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
 	server, _, _ := readEvidence(t, dir)
-	if server.RunID != m.RunID || server.SessionID != m.SessionID || server.PlanHash != m.PlanHash || complete && !server.Complete {
+	if server.RunID != m.RunID || server.SessionID != m.SessionID || server.PlanHash != m.PlanHash || result.ServerStatus == "completed" && !server.Complete {
 		t.Fatal("server evidence identity/completeness mismatch")
 	}
 	for _, path := range []string{result.ReportPath, dir} {

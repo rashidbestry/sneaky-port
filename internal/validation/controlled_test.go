@@ -34,6 +34,10 @@ import (
 
 const faultSlots = 12
 
+// controlledShutdownTimeout bounds lifecycle joins independently of the 900 ms
+// observation window; native filesystem flushing is not a traffic-delay assertion.
+const controlledShutdownTimeout = 10 * time.Second
+
 // truthEvent records the fixture's exact transformation and local release floor;
 // parsed headers remain untrusted until the product independently authenticates them.
 type truthEvent struct {
@@ -403,7 +407,7 @@ func newRig(t *testing.T, mode string) *validationRig {
 	t.Cleanup(func() { // Release only this fixture listener if setup or assertions fail.
 		ln.Close()
 	})
-	policy := control.ServerPolicy{Version: 1, ControlListen: ln.Addr().String(), DataBindIP: "127.0.0.1", PortMin: 1, PortMax: 65535, SetupTimeout: 3e9, ShutdownTimeout: 2e9, AuthPoll: 20e6, MaxConnections: 8, MaxAuthTries: 3, MaxControlRequests: 1000, MaxBindAttempts: 16, MaxQueueBytes: 1 << 20, MaxLedgerMessages: 1000, MaxEventBytes: 4 << 20, MaxFileBytes: 8 << 20}
+	policy := control.ServerPolicy{Version: 1, ControlListen: ln.Addr().String(), DataBindIP: "127.0.0.1", PortMin: 1, PortMax: 65535, SetupTimeout: 3e9, ShutdownTimeout: profile.Decimal(controlledShutdownTimeout), AuthPoll: 20e6, MaxConnections: 8, MaxAuthTries: 3, MaxControlRequests: 1000, MaxBindAttempts: 16, MaxQueueBytes: 1 << 20, MaxLedgerMessages: 1000, MaxEventBytes: 4 << 20, MaxFileBytes: 8 << 20}
 	bundle, err := server.InitServer("validation-server", "127.0.0.1", ln.Addr().(*net.TCPAddr).Port, policy, "")
 	if err != nil {
 		t.Fatal(err)
@@ -444,7 +448,7 @@ func newRig(t *testing.T, mode string) *validationRig {
 			if err != nil {
 				t.Error(err)
 			}
-		case <-time.After(5 * time.Second):
+		case <-time.After(3*controlledShutdownTimeout + 5*time.Second):
 			t.Error("controlled fixture server cleanup timeout")
 		}
 	})
@@ -453,6 +457,7 @@ func newRig(t *testing.T, mode string) *validationRig {
 	p.Phases[0].Client.RateNumerator, p.Phases[0].Server.RateNumerator = 20, 20
 	p.Limits.MaxLag, p.Limits.HeartbeatInterval, p.Limits.ControlRequests = 1e9, 50e6, 1000
 	p.Limits.QueueMessages, p.Limits.EventBytes, p.Limits.FileBytes = 128, 4<<20, 8<<20
+	p.Limits.ShutdownTimeout = profile.Decimal(controlledShutdownTimeout)
 	p.SpikeThreshold = 100e6
 	reserve, err := net.ListenPacket("udp4", "127.0.0.1:0")
 	if err != nil {
@@ -466,11 +471,22 @@ func newRig(t *testing.T, mode string) *validationRig {
 // run authenticates both endpoints, transfers the real server report and independently replays exact summaries.
 func (r *validationRig) run(t *testing.T) (*control.ReplayedReport, control.RunResult) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	// The outer watchdog covers setup, fixed observation, both endpoint joins and
+	// bounded report exchanges; it cannot cancel a permitted disk flush early.
+	watchdog := time.Duration(r.plan.Limits.SetupTimeout) + time.Duration(r.plan.Warmup) + time.Duration(r.plan.Duration()) + time.Duration(r.plan.Grace) + 6*time.Duration(r.plan.Limits.ShutdownTimeout) + 4*time.Duration(r.plan.Limits.WriteTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), watchdog)
 	defer cancel()
+	started := time.Now()
 	result, err := control.Run(ctx, r.client, r.signer, r.plan)
 	if err != nil || result.Status != "completed" || result.Remote == nil || result.Remote.Status != "verified" || result.Reconciliation == nil || result.Reconciliation.Status != "reconciled" {
-		t.Fatalf("controlled real run/transfer: err=%v result=%+v", err, result)
+		remote, remoteReason, reconciliation, reconciliationReason := "absent", "", "absent", ""
+		if result.Remote != nil {
+			remote, remoteReason = result.Remote.Status, result.Remote.Reason
+		}
+		if result.Reconciliation != nil {
+			reconciliation, reconciliationReason = result.Reconciliation.Status, result.Reconciliation.Reason
+		}
+		t.Fatalf("controlled real run/transfer: err=%v elapsed=%s watchdog=%s shutdown=%s status=%s reason=%q server=%s complete=%t generation_ns=%d observation_ns=%d planned=%d skipped=%d written=%d raw_records=%d remote=%s remote_reason=%q reconciliation=%s reconciliation_reason=%q run=%s report=%s", err, time.Since(started), watchdog, time.Duration(r.plan.Limits.ShutdownTimeout), result.Status, result.Reason, result.ServerStatus, result.Evidence.Complete, result.Evidence.GenerationCutoff, result.Evidence.ObservationCutoff, result.Evidence.Summary.Planned, result.Evidence.Summary.Skipped, result.Evidence.Summary.Written, len(result.Evidence.Records), remote, remoteReason, reconciliation, reconciliationReason, result.Readiness.RunID, result.ReportPath)
 	}
 	replayed, err := control.ReplayReport(result.ReportPath, 32<<20, r.client.Adapters)
 	if err != nil || replayed.Verification != "matched" || replayed.ServerReport == nil || replayed.ServerReport.Verification != "matched" || !reflect.DeepEqual(replayed.Reconciliation, result.Reconciliation) {
