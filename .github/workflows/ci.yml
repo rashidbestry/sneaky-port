@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      revision:
+        description: Exact revision selected by the release workflow
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ inputs.revision || github.ref }}
+  cancel-in-progress: ${{ !inputs.revision }}
+
+jobs:
+  check:
+    name: ${{ matrix.platform }} x86-64 checks
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-2025
+          - platform: linux
+            runner: ubuntu-24.04
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GOARCH: amd64
+      GOAMD64: v1
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+          cache: true
+      - name: Set up dashboard test runtime
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify modules and source formatting
+        run: |
+          go mod verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskSources = @(Get-ChildItem cmd,internal -Recurse -File -Filter '*.go' | ForEach-Object { $_.FullName })
+          $taskUnformatted = & gofmt -l @taskSources
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($taskUnformatted) { throw ('Run gofmt on: ' + ($taskUnformatted -join ', ')) }
+      - name: Test owned source and dashboard harness
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          go test -p 1 -count=1 ./cmd/... ./internal/...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./cmd/... ./internal/...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Enable native race compiler
+        run: |
+          if ($env:RUNNER_OS -eq 'Windows') {
+            foreach ($taskGccDirectory in @('C:\msys64\ucrt64\bin', 'C:\mingw64\bin')) {
+              if (Test-Path -LiteralPath (Join-Path $taskGccDirectory 'gcc.exe')) {
+                $env:PATH = $taskGccDirectory + [IO.Path]::PathSeparator + $env:PATH
+                $taskGccDirectory | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+                break
+              }
+            }
+          }
+          $taskCompiler = (Get-Command gcc -ErrorAction Stop).Source
+          'CC=' + $taskCompiler | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          & $taskCompiler --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test with native race instrumentation
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          go test -race -p 1 -count=1 ./cmd/... ./internal/...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build dashboard and matching helper
+        env:
+          CGO_ENABLED: '0'
+        run: ./build-dashboard.ps1 -Platform '${{ matrix.platform }}'
+      - name: Verify embedded helper and native Linux helper fixtures
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          $env:DASHBOARD_BUNDLE_ARTIFACT = Join-Path $env:GITHUB_WORKSPACE 'build/sneaky-port-server-linux-amd64'
+          if ($env:RUNNER_OS -eq 'Linux') { $env:DASHBOARD_NATIVE_BINARY = $env:DASHBOARD_BUNDLE_ARTIFACT }
+          go test -p 1 -count=1 -tags dashboard_bundle ./internal/control -run '^(TestPackagedHelper|TestHelperLauncherLinuxBinary|TestSSHActualLinuxCopiedHelper|TestSSHActualLinuxUploadedHelper)$'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

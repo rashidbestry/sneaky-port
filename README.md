@@ -12,6 +12,18 @@ The protocol architecture uses startup descriptor/factory registration across sh
 
 Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Saved dashboard diagnostics and matched comparisons are implemented; live progress/evidence presentation are implemented; independently verified production clock bounds and full acceptance remain pending; current Test dashboard Chrome QA passes. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
 
+## Download the preview
+
+[v0.1.0-alpha.1](https://github.com/rashidbestry/sneaky-port/releases/tag/v0.1.0-alpha.1) provides Windows and Linux x86-64 archives with the dashboard, matching embedded Linux helper, examples and dependency licenses. Extract your platform's archive and follow its included README; Go is not required to run the binaries. This is a prerelease with the [remaining acceptance gates](ROADMAP.md#task-35-current-acceptance-review) still open.
+
+## GitHub Actions
+
+[CI](.github/workflows/ci.yml) runs on branch pushes, pull requests and manual dispatch: Windows Server 2025/Ubuntu 24.04 x86-64 owned-source tests, native race checks, vet, formatting, the Node dashboard harness and packaged-helper checks. Hosted checks are separate from Windows 11 deployment, rendered-browser QA and the remaining native/live acceptance gates.
+
+[Release preview](.github/workflows/release.yml) runs on a new `v*` version tag or manual dispatch with an existing tag. It validates the exact tagged revision, requires CI to pass, builds/verifies both archives and publishes a prerelease with GitHub's built-in token. All releases remain prereleases while full acceptance is incomplete. Commit and push these workflow files before creating a new tag; the tagged commit must include the packaging script. Existing releases are not overwritten.
+
+The shared [packager](.github/scripts/package-release.ps1) also runs locally: `./.github/scripts/package-release.ps1 -Platform windows -Version v0.1.0-alpha.2` (use `linux` on Linux). It writes only public binaries, examples, quickstart/build metadata and licenses to `build/release-assets/`, verifies extraction and refuses existing staging/output. [Automation flow](FLOWCHART.md#ci-and-release-packaging).
+
 ## Adapter extension gate
 
 Adapters register in code before serving. `Store.Adapters` selects one startup registry for saved configuration, authenticated client/server coordination, finite workers and replay/import/comparison; nil retains the production UDP/TCP registry. Standalone workers use `Config.Registry`, and offline `ReplayReport` accepts the matching registry. Unknown IDs/versions/options and unsupported advertised families/platforms/frame sizes reject explicitly. This is compile-time integration, with no runtime plugin loader.

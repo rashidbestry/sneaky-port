@@ -1,0 +1,165 @@
+name: Release preview
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish (for example v0.1.0-alpha.2)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Validate release tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      revision: ${{ steps.version.outputs.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve exact tagged commit
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$') { throw 'Use a version tag such as v0.1.0-alpha.2' }
+          if ($Matches[4]) {
+            foreach ($taskIdentifier in $Matches[4].Split('.')) {
+              if ($taskIdentifier -match '^0[0-9]+$') { throw 'Numeric prerelease identifiers cannot have leading zeroes' }
+            }
+          }
+          $taskRevision = & git rev-parse --verify ('refs/tags/' + $env:RELEASE_TAG + '^{commit}')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskHead = & git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($taskRevision -ne $taskHead) { throw 'Checkout does not match the requested tag' }
+          'tag=' + $env:RELEASE_TAG | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          'revision=' + $taskRevision | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+  checks:
+    name: Validate tagged source
+    needs: resolve
+    uses: ./.github/workflows/ci.yml
+    with:
+      revision: ${{ needs.resolve.outputs.revision }}
+
+  package:
+    name: Package ${{ matrix.platform }} x86-64
+    needs: [resolve, checks]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-2025
+          - platform: linux
+            runner: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.1'
+          cache: true
+      - name: Build and verify public archive
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          RELEASE_PLATFORM: ${{ matrix.platform }}
+        run: ./.github/scripts/package-release.ps1 -Platform $env:RELEASE_PLATFORM -Version $env:RELEASE_TAG -Repository $env:RELEASE_REPOSITORY
+      - name: Retain verified archive
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.platform }}-amd64
+          path: |
+            build/release-assets/*.zip
+            build/release-assets/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  publish:
+    name: Publish verified prerelease
+    needs: [resolve, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download both archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*-amd64
+          path: release-assets
+          merge-multiple: true
+          digest-mismatch: error
+      - name: Publish preview from exact tag
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_REVISION: ${{ needs.resolve.outputs.revision }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $taskFiles = @(Get-ChildItem release-assets -File)
+          $taskNames = @(
+            ('sneaky-port-' + $env:RELEASE_TAG + '-windows-amd64.zip'),
+            ('sneaky-port-' + $env:RELEASE_TAG + '-linux-amd64.tar.gz')
+          )
+          if ($taskFiles.Count -ne 2) { throw 'Expected exactly two platform archives' }
+          foreach ($taskFile in $taskFiles) {
+            if ($taskFile.Name -notin $taskNames -or $taskFile.Length -eq 0) { throw 'Unexpected release asset' }
+          }
+          $taskRefJSON = & gh api ('repos/' + $env:GH_REPO + '/git/ref/tags/' + $env:RELEASE_TAG)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskRef = ($taskRefJSON | ConvertFrom-Json).object
+          while ($taskRef.type -eq 'tag') {
+            $taskTagJSON = & gh api ('repos/' + $env:GH_REPO + '/git/tags/' + $taskRef.sha)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $taskRef = ($taskTagJSON | ConvertFrom-Json).object
+          }
+          if ($taskRef.type -ne 'commit' -or $taskRef.sha -ne $env:RELEASE_REVISION) { throw 'Tag changed after validation' }
+          $taskNotes = @"
+          UDP/TCP measurement preview for Windows 11 and Linux x86-64. Extract your platform archive and follow its README; both dashboards embed their matching Linux helper.
+
+          Automated Windows/Linux owned-source tests, race checks, vet, builds, embedded-helper equality and archive smoke checks passed. Hosted-runner checks are separate from Windows 11 deployment, selected native Linux support qualification, rendered-browser QA and live-network evidence.
+
+          Full acceptance remains incomplete: native Linux qualification, physical/NAT/Windows traffic capture, production clock bounds, independent reference acceptance and non-loopback live trials remain open. Production one-way results remain estimated/unavailable. TLS, QUIC, WireGuard, Hysteria2 and DNS are future work.
+
+          Source: https://github.com/$env:GH_REPO/tree/$env:RELEASE_REVISION
+          "@
+          $taskNotes | Set-Content release-notes.md -Encoding utf8
+          $taskArchives = @($taskFiles.FullName)
+          gh release create $env:RELEASE_TAG @taskArchives --repo $env:GH_REPO --verify-tag --target $env:RELEASE_REVISION --title ($env:RELEASE_TAG + ' - UDP/TCP preview') --notes-file release-notes.md --prerelease --latest=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskReleaseJSON = & gh api ('repos/' + $env:GH_REPO + '/releases/tags/' + $env:RELEASE_TAG)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskRelease = $taskReleaseJSON | ConvertFrom-Json
+          if ($taskRelease.draft -or -not $taskRelease.prerelease -or $taskRelease.assets.Count -ne 2) { throw 'Published prerelease state mismatch' }
+          foreach ($taskFile in $taskFiles) {
+            $taskAssets = @($taskRelease.assets | Where-Object { $_.name -eq $taskFile.Name })
+            $taskDigest = 'sha256:' + (Get-FileHash -LiteralPath $taskFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($taskAssets.Count -ne 1 -or $taskAssets[0].size -ne $taskFile.Length -or $taskAssets[0].digest -ne $taskDigest) { throw 'Published archive digest mismatch' }
+          }
+          'Published: ' + $taskRelease.html_url | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

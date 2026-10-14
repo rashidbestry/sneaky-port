@@ -1,6 +1,22 @@
 # Code flow
 
-Updated: 2026-10-13. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Live client-local counters and section navigation are implemented; production clock bounds and full acceptance remain pending; current Test dashboard Chrome QA passes. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+Updated: 2026-10-14. This describes **current foundations, authenticated readiness and finite UDP/TCP CLI/accounting**. Bounded persistence, replay/export, authenticated reconciliation, SSH clock captures, one-way estimates and protected configuration/run/report API plus dashboard setup/run controls are implemented. Saved diagnostic/distribution views and local preflight are implemented. Live client-local counters and section navigation are implemented; production clock bounds and full acceptance remain pending; current Test dashboard Chrome QA passes. Each function has a purpose comment; `go test ./internal/quality -v` audits it. [Roadmap task index](ROADMAP.md#first-slice-task-index) tracks remaining work.
+
+## CI and release packaging
+
+```mermaid
+flowchart TD
+    A[Branch push, pull request or manual CI] --> B[Windows and Linux owned-source tests, race, vet and Node harness]
+    T[Version tag or manual release] --> V[Validate exact tagged commit]
+    V --> B
+    B --> H[Build dashboards and verify matching helper]
+    H --> P[Release only: package both public archives]
+    P --> E[Extract, verify inventory and hashes, run native command smoke]
+    E --> U[Upload and download workflow artifacts]
+    U --> R[Recheck tag, publish prerelease and verify asset digests]
+```
+
+Sources: [CI](.github/workflows/ci.yml), [release](.github/workflows/release.yml), [public packager](.github/scripts/package-release.ps1) (`Get-ReleaseBinaryInfo`, `Test-ReleaseCommands`, `Test-ReleaseExtraction`), [archive quickstart](.github/scripts/release-readme.md), [dashboard builder](build-dashboard.ps1), [embedded-helper equality](internal/control/helper_upload_test.go) (`TestPackagedHelper`). CI/package success covers hosted process/build scopes; full acceptance 35 and native/physical/clock/reference/live gates remain open.
 
 ## Adapter extension gate
 
