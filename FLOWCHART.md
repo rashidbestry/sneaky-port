@@ -562,6 +562,8 @@ flowchart TD
 
 Sources: [one_way.go](internal/control/one_way.go) (`productionOneWay`, `deriveOneWay`, `oneWayQueries`, `retainOneWay`), [calibration.go](internal/calibration/calibration.go) (`Build`, `Delay`), [reconciliation](internal/control/reconcile.go) (`reconcileReports`), [replay](internal/control/replay.go), [exports](internal/control/export.go), [synthetic fixtures](internal/control/one_way_test.go), [real SSH/UDP/TCP fixtures](internal/control/clock_test.go). Revisions are reconstructed from raw captures, with hashes/sample IDs, signed bounds, age and clock-local units; future samples never upgrade earlier results. Missing receiver captures stay null. Exact populations include omitted details under min(event budget, 256 KiB). Endpoint-only RTT/delivery and raw files remain unchanged. Production verification cannot be enabled by profile/source text; independent clock-bound, native clock-change/impairment/live acceptance remains pending.
 
+[Live clock fixtures](internal/control/clock_test.go) (`TestLiveClockRuns`, `assertLiveOneWayPopulation`) require exact eligible-attempt identities, direction/state/model populations, replay and explicit reasons/null bounds for unavailable outcomes. A TCP/IPv6 case deliberately requires more samples than its whole-run budget; [known-clock fixtures](internal/control/one_way_test.go) (`TestOneWayKnownClocks`) separately require estimates. Native sample availability does not guarantee a usable causal envelope.
+
 ## Diagnostic and distribution views
 
 ```mermaid
@@ -754,7 +756,8 @@ flowchart TD
     B --> D[Linux explicit opt-in: verify separate netns and only loopback]
     D --> E[Port/carrier filters: directional kernel netem; owned MTU]
     D --> F[Reject original namespace before any mutation]
-    C --> G[Original finite engine, strict cutoffs and bounded evidence]
+    C --> S[Selected platform elapsed release floors; recheck after timer wake]
+    S --> G[Original finite engine, strict cutoffs and bounded evidence]
     E --> G
     G --> H[Authenticated server transfer and exact receiver reconciliation]
     H --> I[Shared replay and JSON/JSONL/CSV; preserve unknown packet loss]
@@ -767,5 +770,7 @@ flowchart TD
 ```
 
 Sources: [known-identity fault registry/pump and real workflow](internal/validation/controlled_test.go) (`transform`, `dispatch`, `run`, `retain`), [namespace guard/directional netem/MTU/rate/interruption](internal/control/netem_linux_test.go) (`guardIsolatedNetwork`, `configureMeasurementNetem`, `retainNetworkEvidence`), [independent UDP/TCP IPv4/IPv6 marking capture](internal/platform/marking_capture_linux_test.go), [real TCP stall/partial accounting](internal/engine/tcp_test.go), [partial raw report retention](internal/control/evidence_test.go) (`assertPersistedRun`), [cancellation/control loss](internal/control/run_test.go). Test fixtures add no product shaping/routing/dependencies or clock calibration. Linux kernel cases are named WSL2 loopback evidence; Windows receive faults occur after actual socket reads and preserve authentic writes/bindings. [Case states and remaining gates](ROADMAP.md#queued-validation-tasks), [evidence](WORK_LOG.md#2026-10-13-controlled-validation-and-x86-64-release-scope). Shipping targets are Windows/Linux x86-64; old architecture evidence remains historical.
+
+The receive fixture uses one [platform elapsed epoch](internal/elapsed/epoch.go) for local release floors, matching production's source. Go timers only wake the dispatcher; selected-source failures stop with their original error. [Frozen-source and failure regressions](internal/validation/fixture_clock_test.go) (`TestFixtureTimerCannotAdvanceSelectedClock`, `TestFixtureClockFailureStopsRelease`) prove OS timer wakes cannot advance that source. Exact 9/11/13-ms and 140-ms hold/RTT floors, identities and sample counts remain checked without a timing tolerance.
 
 The [optional pinned IRTT fixture](internal/control/reference_irtt_windows_test.go) (`TestIRTTElapsedOverlap`, `runOverlapProduct`, `runOverlapIRTT`, `MarshalJSON`) alternates separate native Windows loopback trials, requesting 20-Hz/124-byte UDP request/reply and no independent downstream product data. It hashes the exact audited binary, retains actual offered/raw/SSH-reconciled evidence and reconstructs only raw local client elapsed times. Failed external processes leave unavailable populations null. Current IRTT runtime errors and unbounded boundary differences keep the experiment inconclusive; no engineering band or held-out result is invented.

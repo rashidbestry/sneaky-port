@@ -22,6 +22,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
 )
 
@@ -173,20 +174,31 @@ func TestClockFraming(t *testing.T) {
 }
 
 // TestLiveClockRuns verifies real authenticated IPv4/IPv6 UDP/TCP, replay and three export formats.
-// Assertions cover evidence/populations, not a numerical host-clock accuracy claim.
+// Assertions cover exact evidence/populations and honest unavailable outcomes, not host-clock accuracy.
 func TestLiveClockRuns(t *testing.T) {
-	for _, kind := range []string{"udp", "tcp", "udp6", "tcp6"} {
-		t.Run(kind, func(t *testing.T) { // Each run has explicit time-separated samples and a bounded recent window.
-			r := finiteRig(t, kind)
+	for _, tc := range []struct {
+		name, carrier string
+		insufficient  bool
+	}{{"udp", "udp", false}, {"tcp", "tcp", false}, {"udp6", "udp6", false}, {"tcp6", "tcp6", false}, {"tcp6_insufficient_samples", "tcp6", true}} {
+		t.Run(tc.name, func(t *testing.T) { // Real carrier runs retain bounded samples; one case deliberately cannot form a clock model.
+			r := finiteRig(t, tc.carrier)
 			r.plan.Phases[0].Duration = 300e6
 			r.plan.Calibration.Cadence = 50e6
 			r.plan.Calibration.Window = 3
+			if tc.insufficient {
+				// The threshold exceeds every reachable cadence slot, independent of native scheduling speed.
+				r.plan.Calibration.Samples = clockBudget(r.plan) + 1
+				r.plan.Calibration.Window = r.plan.Calibration.Samples
+			}
 			result, err := Run(context.Background(), r.client, r.signer, r.plan)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if result.Clock == nil || result.Clock.Valid < 2 || result.Clock.Attempts > clockBudget(r.plan) || len(result.Clock.Recent) > 3 || result.Clock.Status == "calibrated" || result.Clock.Traffic.Sent == 0 || result.Clock.Traffic.Received == 0 {
+			if result.Clock == nil || result.Clock.Valid < 2 || result.Clock.Attempts > clockBudget(r.plan) || len(result.Clock.Recent) > r.plan.Calibration.Window || result.Clock.Status == "calibrated" || result.Clock.Traffic.Sent == 0 || result.Clock.Traffic.Received == 0 {
 				t.Fatalf("live captures: %+v", result.Clock)
+			}
+			if tc.insufficient && (result.Clock.Status != "unavailable" || result.Clock.RecentValid >= r.plan.Calibration.Samples) {
+				t.Fatalf("insufficient live sample threshold was satisfied: %+v", result.Clock)
 			}
 			for _, c := range result.Clock.Recent {
 				if c.Valid && validateCapture(c) != "" || c.Scheduled%r.plan.Calibration.Cadence != 0 {
@@ -200,21 +212,100 @@ func TestLiveClockRuns(t *testing.T) {
 			if replay.Clock == nil || !reflect.DeepEqual(replay.Clock, result.Clock) || replay.Verification != "matched" {
 				t.Fatal("replay changed captures")
 			}
-			if result.Reconciliation == nil || result.Reconciliation.OneWay == nil || !reflect.DeepEqual(result.Reconciliation.OneWay, replay.Reconciliation.OneWay) || result.Reconciliation.OneWay.Calibrated != 0 || result.Reconciliation.OneWay.Estimated == 0 {
-				t.Fatal("live one-way estimates/replay missing or unverified bounds promoted")
+			server, err := ReplayReport(filepath.Join(r.server.Root, "reports", result.Readiness.RunID+"-server"), 8<<20)
+			if err != nil || server.Clock != nil {
+				t.Fatal("server invented client-origin capture set", err)
 			}
+			if result.Reconciliation == nil || result.Reconciliation.OneWay == nil || replay.Reconciliation == nil {
+				t.Fatal("live one-way reconciliation/replay missing")
+			}
+			oneWay := result.Reconciliation.OneWay
+			if !reflect.DeepEqual(oneWay, replay.Reconciliation.OneWay) {
+				t.Fatalf("live one-way replay differs: live=%+v replay=%+v", oneWay, replay.Reconciliation.OneWay)
+			}
+			if oneWay.OmittedModels != 0 || len(oneWay.Models) != result.Clock.Attempts {
+				t.Fatalf("live captures missing model revisions: attempts=%d models=%d omitted=%d", result.Clock.Attempts, len(oneWay.Models), oneWay.OmittedModels)
+			}
+			assertLiveOneWayPopulation(t, oneWay, result.Evidence, server.Evidence, tc.insufficient)
 			for _, format := range []string{"json", "jsonl", "csv"} {
 				var b bytes.Buffer
 				if err = ExportReport(&b, replay, format); err != nil || !bytes.Contains(b.Bytes(), []byte("calibration_id")) || !bytes.Contains(b.Bytes(), []byte("t1_ns")) || !bytes.Contains(b.Bytes(), []byte("lower_ns")) || !bytes.Contains(b.Bytes(), []byte("one_way")) {
 					t.Fatal("clock export", format, err)
 				}
 			}
-			server, err := ReplayReport(filepath.Join(r.server.Root, "reports", result.Readiness.RunID+"-server"), 8<<20)
-			if err != nil || server.Clock != nil {
-				t.Fatal("server invented client-origin capture set", err)
-			}
 			assertPersistedRun(t, r, result, true)
 		})
+	}
+}
+
+// assertLiveOneWayPopulation checks every eligible original attempt once, with exact directional counts.
+// Native unverified clocks may yield estimates or unavailable values; deterministic fixtures require estimates.
+func assertLiveOneWayPopulation(t *testing.T, oneWay *OneWayReport, client, server engine.Result, insufficient bool) {
+	t.Helper()
+	if oneWay.Calibrated != 0 || oneWay.BoundsVerified {
+		t.Fatalf("live run promoted unverified bounds: %+v", oneWay)
+	}
+	expected := [2]map[measure.Identity]bool{make(map[measure.Identity]bool), make(map[measure.Identity]bool)}
+	var eligible [2]int
+	for direction, evidence := range []engine.Result{client, server} {
+		for _, entry := range evidence.Entries {
+			if entry.Attempt != nil && *entry.Attempt < evidence.ObservationCutoff {
+				expected[direction][entry.Identity] = true
+				eligible[direction]++
+			}
+		}
+	}
+	total := eligible[0] + eligible[1]
+	if total == 0 || oneWay.Estimated+oneWay.Unavailable != total || len(oneWay.Results) != total || oneWay.OmittedResults != 0 {
+		t.Fatalf("live one-way population: eligible=%v estimated=%d unavailable=%d retained=%d omitted=%d", eligible, oneWay.Estimated, oneWay.Unavailable, len(oneWay.Results), oneWay.OmittedResults)
+	}
+	if strings.TrimSpace(oneWay.Reason) == "" || oneWay.Estimated == 0 && oneWay.Status != "unavailable" || oneWay.Estimated > 0 && oneWay.Status != "derived" {
+		t.Fatalf("live one-way report status differs from its population: %+v", oneWay)
+	}
+	var estimated, unavailable [2]int
+	for _, result := range oneWay.Results {
+		if result.Direction < 1 || result.Direction > 2 || !expected[result.Direction-1][result.Identity] {
+			t.Fatalf("unexpected or repeated live one-way identity: %+v", result)
+		}
+		direction := result.Direction - 1
+		delete(expected[direction], result.Identity)
+		interval := result.Interval
+		if strings.TrimSpace(interval.Reason) == "" {
+			t.Fatalf("live one-way state has no reason: %+v", result)
+		}
+		switch interval.Status {
+		case "estimate":
+			estimated[direction]++
+			if insufficient || result.ModelID == "" || result.Age == nil || len(interval.CalibrationIDs) == 0 || interval.Lower == nil || interval.Upper == nil || interval.Midpoint == nil || interval.Uncertainty == nil {
+				t.Fatalf("live one-way estimate lacks bounds or bypassed sample threshold: %+v", result)
+			}
+		case "unavailable":
+			unavailable[direction]++
+			if interval.Lower != nil || interval.Upper != nil || interval.Midpoint != nil || interval.Uncertainty != nil {
+				t.Fatalf("unavailable live one-way result invented bounds: %+v", result)
+			}
+			if insufficient && interval.Reason != "no causally available clock model" && interval.Reason != "insufficient recent valid clock samples" && interval.Reason != "missing or incompatible matched receiver capture" {
+				t.Fatalf("insufficient live sample result has an unexpected reason: %+v", result)
+			}
+		default:
+			t.Fatalf("invalid live one-way state: %+v", result)
+		}
+	}
+	for direction := range eligible {
+		counts := OneWayCounts{Direction: byte(direction + 1), Estimated: estimated[direction], Unavailable: unavailable[direction]}
+		if len(expected[direction]) != 0 || oneWay.Directions[direction] != counts || estimated[direction]+unavailable[direction] != eligible[direction] {
+			t.Fatalf("live one-way directional population: direction=%d eligible=%d counts=%+v report=%+v missing=%d", direction+1, eligible[direction], counts, oneWay.Directions[direction], len(expected[direction]))
+		}
+	}
+	if oneWay.Estimated != estimated[0]+estimated[1] || oneWay.Unavailable != unavailable[0]+unavailable[1] {
+		t.Fatalf("live one-way totals differ from retained states: %+v", oneWay)
+	}
+	if insufficient {
+		for _, revision := range oneWay.Models {
+			if revision.Status != "unavailable" || revision.Reason != "insufficient recent valid clock samples" {
+				t.Fatalf("insufficient live samples exposed a model: %+v", revision)
+			}
+		}
 	}
 }
 

@@ -24,6 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
@@ -48,6 +49,7 @@ type truthEvent struct {
 // The stale frame is retained only to verify a later run rejects an earlier run's bytes.
 type faultScenario struct {
 	mu                      sync.Mutex
+	clock                   faultClock
 	mode                    string
 	dataDrops, receiptDrops map[uint64]bool
 	truth                   []truthEvent
@@ -55,9 +57,15 @@ type faultScenario struct {
 	transports              []*faultTransport
 }
 
+// faultClock keeps fixture release floors in the production platform's elapsed
+// source; tests can freeze that source independently of operating-system timers.
+type faultClock interface {
+	Now() (uint64, error)
+}
+
 // newScenario freezes reproducible random and contiguous burst drops before any traffic.
-func newScenario(mode string) *faultScenario {
-	s := &faultScenario{mode: mode, dataDrops: map[uint64]bool{2: true, 3: true}, receiptDrops: map[uint64]bool{}}
+func newScenario(mode string, clock faultClock) *faultScenario {
+	s := &faultScenario{clock: clock, mode: mode, dataDrops: map[uint64]bool{2: true, 3: true}, receiptDrops: map[uint64]bool{}}
 	r := rand.New(rand.NewSource(20261013))
 	// A fixed-size random subset stays reproducible and cannot accidentally contain no random drops.
 	for _, i := range r.Perm(faultSlots) {
@@ -95,12 +103,12 @@ func (s *faultScenario) record(b []byte, role, action string, hold time.Duration
 // release is one copied datagram scheduled for the fixture consumer, with its captured local origin.
 type release struct {
 	bytes     []byte
-	seen, due time.Time
+	seen, due uint64
 	action    string
 }
 
 // transform applies faults only to main traffic; readiness and real socket addresses remain intact.
-func (s *faultScenario) transform(b []byte, role string, now time.Time) []release {
+func (s *faultScenario) transform(b []byte, role string, now uint64) []release {
 	f, ok := header(b)
 	out := []release{{bytes: bytes.Clone(b), seen: now, due: now, action: "deliver"}}
 	if !ok || f.Identity.Lifecycle != 2 {
@@ -117,15 +125,15 @@ func (s *faultScenario) transform(b []byte, role string, now time.Time) []releas
 		if seq == 3 || seq == 8 {
 			hold = 140 * time.Millisecond
 		}
-		out[0].due = now.Add(hold)
+		out[0].due = now + uint64(hold)
 	}
 	if s.mode == "duplicate" {
 		if role == "server" && f.Kind == probe.Data && f.Direction == 1 {
 			if seq == 1 {
-				out[0].due = now.Add(140 * time.Millisecond)
+				out[0].due = now + uint64(140*time.Millisecond)
 			}
 			if seq == 4 {
-				out = append(out, release{bytes: bytes.Clone(b), seen: now, due: now.Add(2 * time.Millisecond), action: "duplicate"})
+				out = append(out, release{bytes: bytes.Clone(b), seen: now, due: now + uint64(2*time.Millisecond), action: "duplicate"})
 			}
 			if seq == 0 {
 				s.mu.Lock()
@@ -133,17 +141,17 @@ func (s *faultScenario) transform(b []byte, role string, now time.Time) []releas
 				stale := bytes.Clone(s.stale)
 				s.mu.Unlock()
 				if len(stale) > 0 {
-					out = append(out, release{bytes: stale, seen: now, due: now.Add(time.Millisecond), action: "stale-replay"})
+					out = append(out, release{bytes: stale, seen: now, due: now + uint64(time.Millisecond), action: "stale-replay"})
 				}
 			}
 			if seq == 6 {
 				foreign := bytes.Clone(b)
 				foreign[12] ^= 1 // Preserve the original MAC so the tampered foreign run cannot authenticate.
-				out = append(out, release{bytes: foreign, seen: now, due: now.Add(time.Millisecond), action: "foreign-tamper"}, release{bytes: []byte("bad"), seen: now, due: now.Add(2 * time.Millisecond), action: "malformed"})
+				out = append(out, release{bytes: foreign, seen: now, due: now + uint64(time.Millisecond), action: "foreign-tamper"}, release{bytes: []byte("bad"), seen: now, due: now + uint64(2*time.Millisecond), action: "malformed"})
 			}
 		}
 		if role == "client" && f.Kind == probe.Receipt && f.Direction == 1 && seq == 5 {
-			out = append(out, release{bytes: bytes.Clone(b), seen: now, due: now.Add(2 * time.Millisecond), action: "duplicate"})
+			out = append(out, release{bytes: bytes.Clone(b), seen: now, due: now + uint64(2*time.Millisecond), action: "duplicate"})
 		}
 	}
 	return out
@@ -197,7 +205,8 @@ func (w *faultTransport) pump(input chan<- receiveResult) {
 	}
 }
 
-// dispatch maintains at most 256 copied releases; timers never intentionally release before due.
+// dispatch maintains at most 256 copied releases; timers only sleep, and the selected
+// elapsed source must reach each release floor before delivery, including on early wakes.
 // Faults are local application delivery actions after a genuine socket read, not IP packet impairment.
 func (w *faultTransport) dispatch(input <-chan receiveResult) {
 	defer w.wg.Done()
@@ -206,7 +215,7 @@ func (w *faultTransport) dispatch(input <-chan receiveResult) {
 	defer timer.Stop()
 	for {
 		sort.SliceStable(pending, func(i, j int) bool { // Stable equal-time release order makes duplicate truth reproducible.
-			return pending[i].due.Before(pending[j].due)
+			return pending[i].due < pending[j].due
 		})
 		var tick <-chan time.Time
 		if len(pending) > 0 {
@@ -216,7 +225,16 @@ func (w *faultTransport) dispatch(input <-chan receiveResult) {
 				default:
 				}
 			}
-			timer.Reset(max(0, time.Until(pending[0].due)))
+			now, err := w.scenario.clock.Now()
+			if err != nil {
+				w.fail(err)
+				return
+			}
+			delay := time.Duration(0)
+			if pending[0].due > now {
+				delay = time.Duration(pending[0].due - now)
+			}
+			timer.Reset(delay)
 			tick = timer.C
 		}
 		select {
@@ -227,33 +245,46 @@ func (w *faultTransport) dispatch(input <-chan receiveResult) {
 				return
 			}
 			if r.err != nil {
-				select {
-				case w.output <- r:
-				case <-w.stop:
-				}
+				w.fail(r.err)
 				return
 			}
-			pending = append(pending, w.scenario.transform(r.bytes, w.role, time.Now())...)
+			now, err := w.scenario.clock.Now()
+			if err != nil {
+				w.fail(err)
+				return
+			}
+			pending = append(pending, w.scenario.transform(r.bytes, w.role, now)...)
 			if len(pending) > 256 {
-				select {
-				case w.output <- receiveResult{err: errors.New("fixture release budget exhausted")}:
-				case <-w.stop:
-				}
+				w.fail(errors.New("fixture release budget exhausted"))
 				return
 			}
 		case <-tick:
 			r := pending[0]
-			if time.Now().Before(r.due) {
+			now, err := w.scenario.clock.Now()
+			if err != nil {
+				w.fail(err)
+				return
+			}
+			if now < r.due {
 				continue
 			}
 			pending = pending[1:]
 			select {
 			case w.output <- receiveResult{bytes: r.bytes}:
-				w.scenario.record(r.bytes, w.role, r.action, r.due.Sub(r.seen))
+				w.scenario.record(r.bytes, w.role, r.action, time.Duration(r.due-r.seen))
 			case <-w.stop:
 				return
 			}
 		}
+	}
+}
+
+// fail forwards a terminal native-I/O, selected-clock or budget error without
+// blocking fixture cancellation; the receive owner retains the original cause.
+func (w *faultTransport) fail(err error) {
+	select {
+	case w.output <- receiveResult{err: err}:
+	case <-w.stop:
 	}
 }
 
@@ -353,7 +384,11 @@ func newRig(t *testing.T, mode string) *validationRig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := newScenario(mode)
+	clock, err := elapsed.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := newScenario(mode, clock)
 	registry := adapter.NewRegistry()
 	udp, _ := adapter.Default().Get("udp")
 	if err = registry.Register(faultFactory{udp, state}); err != nil {
@@ -487,7 +522,7 @@ func (r *validationRig) retain(t *testing.T, result control.RunResult) {
 		Data     map[uint64]bool
 		Receipts map[uint64]bool
 		Truth    []truthEvent
-	}{"Fixture receive pump after authentic UDP socket read, before application arrival; Hold is minimum local release delay in ns. Packet loss/path MTU/cross-host one-way/native Linux are unproven.", r.state.mode, 20261013, result.Readiness, r.state.dataDrops, r.state.receiptDrops, truth}
+	}{"Fixture receive pump after authentic UDP socket read, before application arrival; Hold is minimum selected-platform elapsed-source release delay in ns. Packet loss/path MTU/cross-host one-way/native Linux are unproven.", r.state.mode, 20261013, result.Readiness, r.state.dataDrops, r.state.receiptDrops, truth}
 	b, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
 		t.Fatal(err)
@@ -528,8 +563,15 @@ func TestControlledDelaySpike(t *testing.T) {
 			continue
 		}
 		e := entries[truth.Identity]
-		if e.Attempt == nil || e.Receipt == nil || uint64(*e.Attempt) != truth.Attempt || truth.RunID != result.Readiness.RunID || truth.SessionID != result.Readiness.SessionID || time.Duration(*e.Receipt-*e.Attempt) < truth.Hold {
-			t.Fatalf("held datum identity/RTT floor mismatch: %+v %+v", truth, e)
+		if e.Attempt == nil || e.Receipt == nil {
+			t.Fatalf("held datum missing attempt/receipt: truth=%+v entry=%+v", truth, e)
+		}
+		if uint64(*e.Attempt) != truth.Attempt || truth.RunID != result.Readiness.RunID || truth.SessionID != result.Readiness.SessionID {
+			t.Fatalf("held datum identity mismatch: truth=%+v attempt_ns=%d receipt_ns=%d run=%s session=%s", truth, *e.Attempt, *e.Receipt, result.Readiness.RunID, result.Readiness.SessionID)
+		}
+		rtt := time.Duration(*e.Receipt - *e.Attempt)
+		if rtt < truth.Hold {
+			t.Fatalf("held datum RTT floor mismatch: identity=%+v attempt_ns=%d receipt_ns=%d rtt_ns=%d hold_ns=%d", truth.Identity, *e.Attempt, *e.Receipt, rtt, truth.Hold)
 		}
 		if truth.Hold == 140*time.Millisecond {
 			spikes++
