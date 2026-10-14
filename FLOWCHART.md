@@ -19,6 +19,8 @@ flowchart TD
 
 Sources: [checkout attributes](.gitattributes), [CI](.github/workflows/ci.yml), [release](.github/workflows/release.yml), [public packager](.github/scripts/package-release.ps1) (`Get-ReleaseBinaryInfo`, `Test-ReleaseCommands`, `Test-ReleaseExtraction`), [archive quickstart](.github/scripts/release-readme.md), [dashboard builder](build-dashboard.ps1), [embedded-helper equality](internal/control/helper_upload_test.go) (`TestPackagedHelper`). CI/package success covers hosted process/build scopes; full acceptance 35 and native/physical/clock/reference/live gates remain open.
 
+[Cancellation/control-loss fixtures](internal/control/run_test.go) (`afterRunProgress`, `TestFiniteCancellationAndControlLoss`) target elapsed time from the initial immutable engine progress snapshot, then join their polling/timer owner. Persisted-event publication is not the measurement epoch. Partial/cutoff/replay/cleanup assertions remain strict; [stops processed after the elapsed cutoff](internal/engine/finite_test.go) (`TestStopAfterElapsedCutoff`) preserve complete local evidence independently of later control failure.
+
 ## Adapter extension gate
 
 ```mermaid

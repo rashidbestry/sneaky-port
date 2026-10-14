@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"sneaky-port/internal/measure"
 )
 
 // finiteRig gives real SSH/carrier fixtures explicit schedulable windows, not product defaults.
@@ -73,16 +75,55 @@ func TestFiniteAuthenticatedRuns(t *testing.T) {
 	}
 }
 
+// afterRunProgress targets elapsed measurement time from the first immutable engine snapshot, excluding disk-publication delay.
+// Timer/poll latency can still delay the action; callers retain strict partial/cutoff assertions and join this owner.
+func afterRunProgress(t *testing.T, feed *measure.ProgressFeed, target time.Duration, action func()) func() {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { // Observe only this run-owned feed; progress does not change authoritative accounting or scheduling.
+		defer close(done)
+		tick := time.NewTicker(5 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			if progress := feed.Snapshot(); progress != nil {
+				remaining := target - time.Duration(progress.Elapsed)
+				if remaining < 0 {
+					remaining = 0
+				}
+				timer := time.NewTimer(remaining)
+				defer timer.Stop()
+				select {
+				case <-ctx.Done():
+				case <-timer.C:
+					action()
+				}
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+			}
+		}
+	}()
+	return func() { // Stop and join the fixture trigger before releasing its temporary endpoint stores.
+		cancel()
+		<-done
+	}
+}
+
 // TestFiniteCancellationAndControlLoss preserves partial cutoffs and bounds cancellation in warmup/main/grace.
 func TestFiniteCancellationAndControlLoss(t *testing.T) {
 	for _, kind := range []string{"udp", "tcp"} {
 		for _, stage := range []string{"warmup", "main", "grace", "control_loss", "revocation"} {
-			t.Run(kind+"/"+stage, func(t *testing.T) { // Observe lifecycle via the run lock and allow generous timer variation in fixtures.
+			t.Run(kind+"/"+stage, func(t *testing.T) { // Target run-local elapsed time; persisted events can first appear well into a phase.
 				r := finiteRig(t, kind)
 				r.plan.Warmup = 250e6
 				r.plan.Phases[0].Duration = 250e6
 				r.plan.Grace = 250e6
-				ctx, cancel := context.WithCancel(context.Background())
+				feed := &measure.ProgressFeed{}
+				ctx, cancel := context.WithCancel(measure.WithProgress(context.Background(), feed))
 				defer cancel()
 				delay := 100 * time.Millisecond
 				if stage == "main" {
@@ -90,7 +131,7 @@ func TestFiniteCancellationAndControlLoss(t *testing.T) {
 				} else if stage == "grace" {
 					delay = 650 * time.Millisecond
 				}
-				stopTrigger := afterRunEvidence(t, r.client.Root, delay, func() { // Trigger cancellation/control loss only after this run's measurement actually starts.
+				stopTrigger := afterRunProgress(t, feed, delay, func() { // Target cancellation/control loss within this run's measurement epoch.
 					if stage == "control_loss" {
 						r.stop()
 					} else if stage == "revocation" {
