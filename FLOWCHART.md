@@ -6,9 +6,10 @@ Updated: 2026-10-14. This describes **current foundations, authenticated readine
 
 ```mermaid
 flowchart TD
-    A[Branch push, pull request or manual CI] --> B[Windows and Linux owned-source tests, race, vet and Node harness]
+    A[Branch push, pull request or manual CI] --> L[Checkout Go source with LF attributes]
+    L --> B[Windows and Linux owned-source tests, race, vet and Node harness]
     T[Version tag or manual release] --> V[Validate exact tagged commit]
-    V --> B
+    V --> L
     B --> H[Build dashboards and verify matching helper]
     H --> P[Release only: package both public archives]
     P --> E[Extract, verify inventory and hashes, run native command smoke]
@@ -16,7 +17,7 @@ flowchart TD
     U --> R[Recheck tag, publish prerelease and verify asset digests]
 ```
 
-Sources: [CI](.github/workflows/ci.yml), [release](.github/workflows/release.yml), [public packager](.github/scripts/package-release.ps1) (`Get-ReleaseBinaryInfo`, `Test-ReleaseCommands`, `Test-ReleaseExtraction`), [archive quickstart](.github/scripts/release-readme.md), [dashboard builder](build-dashboard.ps1), [embedded-helper equality](internal/control/helper_upload_test.go) (`TestPackagedHelper`). CI/package success covers hosted process/build scopes; full acceptance 35 and native/physical/clock/reference/live gates remain open.
+Sources: [checkout attributes](.gitattributes), [CI](.github/workflows/ci.yml), [release](.github/workflows/release.yml), [public packager](.github/scripts/package-release.ps1) (`Get-ReleaseBinaryInfo`, `Test-ReleaseCommands`, `Test-ReleaseExtraction`), [archive quickstart](.github/scripts/release-readme.md), [dashboard builder](build-dashboard.ps1), [embedded-helper equality](internal/control/helper_upload_test.go) (`TestPackagedHelper`). CI/package success covers hosted process/build scopes; full acceptance 35 and native/physical/clock/reference/live gates remain open.
 
 ## Adapter extension gate
 

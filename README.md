@@ -20,6 +20,8 @@ Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TC
 
 [CI](.github/workflows/ci.yml) runs on branch pushes, pull requests and manual dispatch: Windows Server 2025/Ubuntu 24.04 x86-64 owned-source tests, native race checks, vet, formatting, the Node dashboard harness and packaged-helper checks. Hosted checks are separate from Windows 11 deployment, rendered-browser QA and the remaining native/live acceptance gates.
 
+[Repository attributes](.gitattributes) keep Go source as LF on both platforms so Windows checkout conversion does not create false `gofmt` failures.
+
 [Release preview](.github/workflows/release.yml) runs on a new `v*` version tag or manual dispatch with an existing tag. It validates the exact tagged revision, requires CI to pass, builds/verifies both archives and publishes a prerelease with GitHub's built-in token. All releases remain prereleases while full acceptance is incomplete. Commit and push these workflow files before creating a new tag; the tagged commit must include the packaging script. Existing releases are not overwritten.
 
 The shared [packager](.github/scripts/package-release.ps1) also runs locally: `./.github/scripts/package-release.ps1 -Platform windows -Version v0.1.0-alpha.2` (use `linux` on Linux). It writes only public binaries, examples, quickstart/build metadata and licenses to `build/release-assets/`, verifies extraction and refuses existing staging/output. [Automation flow](FLOWCHART.md#ci-and-release-packaging).

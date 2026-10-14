@@ -1,0 +1,2 @@
+# Keep Windows and Linux Go checkouts compatible with gofmt without changing user Git settings.
+*.go text eol=lf
