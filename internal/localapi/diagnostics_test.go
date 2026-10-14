@@ -167,7 +167,7 @@ func TestDiagnosticProtectedReplayAndPreflight(t *testing.T) {
 	}
 	out := savedRequest(t, s, "POST", "/api/v1/preflight", "timer", map[string]any{"duration_ns": "1000000", "interval_ns": "100000"}, 200)
 	b, _ = json.Marshal(out.Result)
-	if !strings.Contains(string(b), "source/resolution unverified") || !strings.Contains(string(b), "lag_p99_ns") {
+	if !strings.Contains(string(b), "accuracy bounds unverified") || !strings.Contains(string(b), "\"clock_details\"") || !strings.Contains(string(b), "\"independently_verified\":false") || !strings.Contains(string(b), "lag_p99_ns") {
 		t.Fatal("preflight clock limitations absent")
 	}
 	r := request(s, "POST", "/api/v1/preflight", "cancel", `{"schema_version":1,"request_id":"cancel","duration_ns":"1000000000","interval_ns":"1000000"}`)

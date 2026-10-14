@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/profile"
+	"sneaky-port/internal/schedule"
 )
 
 const CalibrationChannelType = "sneaky-port/calibration/v1"
@@ -94,13 +96,17 @@ func finiteRequestDemand(p profile.Plan) uint64 {
 	return total/uint64(p.Limits.HeartbeatInterval) + 8 + uint64(clockBudget(p))
 }
 
-// clockNow uses only Go's monotonic component; wall labels never enter elapsed timing.
-func clockNow(anchor time.Time) profile.Decimal { return profile.Decimal(max(0, time.Since(anchor))) }
+// clockNow captures the shared data epoch; callers check its sticky error before using evidence.
+// On failure only the last valid cutoff remains, and every run owner is interrupted.
+func clockNow(anchor *elapsed.Epoch) profile.Decimal { n, _ := anchor.Now(); return profile.Decimal(n) }
 
 // clockWrite charges serialization and channel writes separately with a small independent frame cap.
-func clockWrite(w io.Writer, e Envelope, anchor time.Time) (clockCosts, error) {
+func clockWrite(w io.Writer, e Envelope, anchor *elapsed.Epoch) (clockCosts, error) {
 	b, err := json.Marshal(e)
 	c := clockCosts{Encoded: clockNow(anchor)}
+	if clockErr := anchor.Err(); clockErr != nil {
+		return c, clockErr
+	}
 	if err != nil || len(b) == 0 || len(b) > clockFrameMax {
 		return c, errors.New("calibration frame exceeds budget")
 	}
@@ -108,6 +114,9 @@ func clockWrite(w io.Writer, e Envelope, anchor time.Time) (clockCosts, error) {
 	binary.BigEndian.PutUint32(f, uint32(len(b)))
 	copy(f[4:], b)
 	c.WriteStart = clockNow(anchor)
+	if clockErr := anchor.Err(); clockErr != nil {
+		return c, clockErr
+	}
 	for len(f) > 0 {
 		n, e := w.Write(f)
 		if n > 0 {
@@ -123,12 +132,12 @@ func clockWrite(w io.Writer, e Envelope, anchor time.Time) (clockCosts, error) {
 		}
 	}
 	c.WriteEnd = clockNow(anchor)
-	return c, err
+	return c, errors.Join(err, anchor.Err())
 }
 
 // clockRead captures arrival after complete frame bytes, before JSON validation.
 // A truncated/oversized frame has no complete-arrival capture; zero is paired with its error.
-func clockRead(r io.Reader, anchor time.Time) (Envelope, profile.Decimal, error) {
+func clockRead(r io.Reader, anchor *elapsed.Epoch) (Envelope, profile.Decimal, error) {
 	var e Envelope
 	var prefix [4]byte
 	if _, err := io.ReadFull(r, prefix[:]); err != nil {
@@ -141,6 +150,7 @@ func clockRead(r io.Reader, anchor time.Time) (Envelope, profile.Decimal, error)
 	b := make([]byte, n)
 	_, err := io.ReadFull(r, b)
 	at := clockNow(anchor)
+	err = errors.Join(err, anchor.Err())
 	if err != nil {
 		return e, 0, err
 	}
@@ -156,7 +166,7 @@ func clockRead(r io.Reader, anchor time.Time) (Envelope, profile.Decimal, error)
 type clockGate struct {
 	mu               sync.Mutex
 	active, admitted bool
-	anchor           time.Time
+	anchor           *elapsed.Epoch
 	ready            ReadyResult
 	plan             profile.Plan
 	channel          ssh.Channel
@@ -167,7 +177,7 @@ type clockGate struct {
 }
 
 // start publishes immutable run identity and the actual server data epoch before start acknowledgment.
-func (g *clockGate) start(anchor time.Time, ready ReadyResult, p profile.Plan) {
+func (g *clockGate) start(anchor *elapsed.Epoch, ready ReadyResult, p profile.Plan) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.anchor, g.ready, g.plan, g.active = anchor, ready, p, true
@@ -236,7 +246,7 @@ func (g *clockGate) stop() {
 
 // serveClock validates unique ordered epoch-bound requests and returns send costs in a second frame.
 // t3 precedes response serialization; the follow-up costs cannot retroactively alter t4.
-func serveClock(ch ssh.Channel, anchor time.Time, ready ReadyResult, p profile.Plan) {
+func serveClock(ch ssh.Channel, anchor *elapsed.Epoch, ready ReadyResult, p profile.Plan) {
 	var previous profile.Decimal
 	for i := 0; i < clockBudget(p); i++ {
 		e, t2, err := clockRead(ch, anchor)
@@ -246,6 +256,9 @@ func serveClock(ch ssh.Channel, anchor time.Time, ready ReadyResult, p profile.P
 		}
 		previous = r.T1
 		t3 := clockNow(anchor)
+		if anchor.Err() != nil {
+			return
+		}
 		cost, err := clockWrite(ch, message("clock", e.RequestID, e.RunID, e.SessionID, clockResponse{r.Hash, 1, r.T1, t2, t3}), anchor)
 		if err != nil {
 			return
@@ -260,7 +273,7 @@ func serveClock(ch ssh.Channel, anchor time.Time, ready ReadyResult, p profile.P
 type clockSampler struct {
 	cancel   context.CancelFunc
 	done     chan struct{}
-	anchor   time.Time
+	anchor   *elapsed.Epoch
 	p        profile.Plan
 	ready    ReadyResult
 	writer   *evidenceWriter
@@ -270,7 +283,7 @@ type clockSampler struct {
 }
 
 // startClock installs persistence's stop hook before engine finalization can close its event queue.
-func startClock(ctx context.Context, client *ssh.Client, anchor time.Time, p profile.Plan, ready ReadyResult, w *evidenceWriter) *clockSampler {
+func startClock(ctx context.Context, client *ssh.Client, anchor *elapsed.Epoch, p profile.Plan, ready ReadyResult, w *evidenceWriter) *clockSampler {
 	child, cancel := context.WithCancel(ctx)
 	s := &clockSampler{cancel: cancel, done: make(chan struct{}), anchor: anchor, p: p, ready: ready, writer: w}
 	s.client = client
@@ -354,12 +367,13 @@ func (s *clockSampler) run(ctx context.Context, client *ssh.Client) {
 		if at >= total {
 			return
 		}
-		timer := time.NewTimer(max(0, time.Until(s.anchor.Add(time.Duration(at)))))
-		select {
-		case <-ctx.Done():
-			timer.Stop()
+		waiting, waitErr := schedule.WaitEpoch(ctx.Done(), s.anchor, at)
+		if waitErr != nil {
+			s.terminal = "elapsed clock unavailable"
 			return
-		case <-timer.C:
+		}
+		if !waiting {
+			return
 		}
 		now := uint64(clockNow(s.anchor))
 		if now >= total {
@@ -385,9 +399,13 @@ func (s *clockSampler) run(ctx context.Context, client *ssh.Client) {
 			<-timedOut
 		}
 		c.Finished = clockNow(s.anchor)
+		err = errors.Join(err, s.anchor.Err())
 		c.Sent, c.Received = counted.sent-beforeSent, counted.received-beforeReceived
 		if err != nil {
 			c.Reason = "calibration exchange IO failed"
+			if s.anchor.Err() != nil {
+				c.Reason = "elapsed clock unavailable"
+			}
 			if err.Error() == "invalid calibration response" || err.Error() == "invalid calibration send costs" {
 				c.Reason = err.Error()
 			}

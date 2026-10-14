@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/platform"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
@@ -32,22 +33,24 @@ type Schedule struct {
 }
 
 // Config transfers an already bound/authenticated transport on successful
-// construction. Start/EpochStart are local monotonic anchors; Peer has no shared clock.
+// construction. Clock owns all local offsets; legacy Start/EpochStart fixtures retain Go's domain.
 // EventCapacity bounds in-memory records, independently of future persisted budgets.
 type Config struct {
-	Registry              *adapter.Registry // Startup registry; nil selects production adapters.
-	Transport             adapter.Transport
-	SendAuth, ReceiveAuth probe.Auth
-	Run, Session          [16]byte
-	Direction             byte
-	Epoch, PeerEpoch      uint32
-	EpochStart, Start     time.Time
-	ObservationEnd        time.Time // Optional finite half-open cutoff; read errors after it cannot truncate earlier evidence.
-	Local, Peer           Schedule
-	Windows               []Window // Optional frozen multi-phase timeline; replaces Local/Peer.
-	Limits                profile.Limits
-	EventCapacity         int
-	BeforeWrite           func(context.Context, uint64) (*platform.Marking, byte, uint32, error) // Optional writer-owned physical-phase marking.
+	Registry               *adapter.Registry // Startup registry; nil selects production adapters.
+	Transport              adapter.Transport
+	SendAuth, ReceiveAuth  probe.Auth
+	Run, Session           [16]byte
+	Direction              byte
+	Epoch, PeerEpoch       uint32
+	EpochStart, Start      time.Time
+	Clock                  *elapsed.Epoch // One source/domain shared by data, calibration, scheduling and cutoff owners.
+	StartNS, ObservationNS uint64         // Chosen-domain half-open offsets; production finite start is exactly zero.
+	ObservationEnd         time.Time      // Optional finite half-open cutoff; read errors after it cannot truncate earlier evidence.
+	Local, Peer            Schedule
+	Windows                []Window // Optional frozen multi-phase timeline; replaces Local/Peer.
+	Limits                 profile.Limits
+	EventCapacity          int
+	BeforeWrite            func(context.Context, uint64) (*platform.Marking, byte, uint32, error) // Optional writer-owned physical-phase marking.
 }
 
 // Event preserves local boundaries without treating socket acceptance as delivery.
@@ -86,6 +89,7 @@ type Endpoint struct {
 	queue                     *writer.Queue
 	events                    chan Event
 	done, scheduled, readDone chan struct{}
+	clockDone                 chan struct{}
 	mu                        sync.Mutex
 	admitMu                   sync.Mutex
 	err                       error
@@ -128,6 +132,9 @@ func NewRegistered(parent context.Context, c Config) (*Endpoint, error) {
 // newEndpoint validates explicit windows and starts shared independent real-I/O workers.
 // It performs no binding/start negotiation, marking, metrics or CLI lifecycle work.
 func newEndpoint(parent context.Context, c Config, contract transportContract) (*Endpoint, error) {
+	if err := c.NormalizeClock(); err != nil {
+		return nil, err
+	}
 	windows, localCount, peerCount, err := prepareWindows(c, contract.maxFrame)
 	if err != nil {
 		return nil, err
@@ -135,27 +142,36 @@ func newEndpoint(parent context.Context, c Config, contract transportContract) (
 	c.Local, c.Peer = windows[0].Local, windows[0].Peer
 	last := windows[len(windows)-1]
 	total := last.Offset + last.Local.Duration
-	startOffset := c.Start.Sub(c.EpochStart)
-	if parent == nil || c.Transport == nil || c.Run == ([16]byte{}) || c.Session == ([16]byte{}) || c.SendAuth.Key == ([32]byte{}) || c.ReceiveAuth.Key == ([32]byte{}) || c.SendAuth.Adapter != contract.id || c.ReceiveAuth.Adapter != contract.id || c.SendAuth.Plan != c.ReceiveAuth.Plan || c.SendAuth.Key == c.ReceiveAuth.Key || c.Direction < 1 || c.Direction > 2 || c.Epoch == 0 || c.PeerEpoch == 0 || c.EpochStart.IsZero() || c.EpochStart.After(time.Now()) || c.Start.IsZero() || startOffset < 0 || c.Local.Duration > uint64(math.MaxInt64-int64(startOffset)) || c.EventCapacity < 1 || c.EventCapacity > 1<<20 || c.Limits.LedgerMessages < 1 || c.Limits.LedgerMessages > 1<<20 || localCount+peerCount < localCount || localCount+peerCount > uint64(c.Limits.LedgerMessages) || c.Limits.Outstanding < 1 || c.Limits.Outstanding > c.Limits.LedgerMessages || uint64(c.Limits.MaxLag) > math.MaxInt64 {
+	startOffset := c.StartNS
+	if parent == nil || c.Transport == nil || c.Run == ([16]byte{}) || c.Session == ([16]byte{}) || c.SendAuth.Key == ([32]byte{}) || c.ReceiveAuth.Key == ([32]byte{}) || c.SendAuth.Adapter != contract.id || c.ReceiveAuth.Adapter != contract.id || c.SendAuth.Plan != c.ReceiveAuth.Plan || c.SendAuth.Key == c.ReceiveAuth.Key || c.Direction < 1 || c.Direction > 2 || c.Epoch == 0 || c.PeerEpoch == 0 || c.Local.Duration > uint64(math.MaxInt64)-startOffset || c.EventCapacity < 1 || c.EventCapacity > 1<<20 || c.Limits.LedgerMessages < 1 || c.Limits.LedgerMessages > 1<<20 || localCount+peerCount < localCount || localCount+peerCount > uint64(c.Limits.LedgerMessages) || c.Limits.Outstanding < 1 || c.Limits.Outstanding > c.Limits.LedgerMessages || uint64(c.Limits.MaxLag) > math.MaxInt64 {
 		return nil, errors.New("invalid measurement component configuration/budgets")
 	}
-	if total > uint64(math.MaxInt64-int64(startOffset)) {
+	if total > uint64(math.MaxInt64)-startOffset {
 		return nil, errors.New("measurement epoch/timeline overflow")
 	}
-	if !c.ObservationEnd.IsZero() && c.ObservationEnd.Before(c.Start) {
+	if c.ObservationNS != 0 && c.ObservationNS < c.StartNS {
 		return nil, errors.New("observation cutoff precedes local start")
 	}
 	for _, w := range windows {
-		if w.Deadline > uint64(math.MaxInt64-int64(startOffset))-w.Offset-w.Local.Duration {
+		if w.Deadline > uint64(math.MaxInt64)-startOffset-w.Offset-w.Local.Duration {
 			return nil, errors.New("measurement deadline epoch overflow")
 		}
 	}
 	ctx, cancel := context.WithCancel(parent)
-	u := &Endpoint{c: c, contract: contract, localCount: localCount, peerCount: peerCount, windows: windows, ctx: ctx, cancel: cancel, events: make(chan Event, c.EventCapacity), done: make(chan struct{}), scheduled: make(chan struct{}), readDone: make(chan struct{}), attempts: make([]attempt, localCount), seen: make([]bool, peerCount)}
+	u := &Endpoint{c: c, contract: contract, localCount: localCount, peerCount: peerCount, windows: windows, ctx: ctx, cancel: cancel, events: make(chan Event, c.EventCapacity), done: make(chan struct{}), scheduled: make(chan struct{}), readDone: make(chan struct{}), clockDone: make(chan struct{}), attempts: make([]attempt, localCount), seen: make([]bool, peerCount)}
 	u.genCtx, u.genCancel = context.WithCancel(ctx)
+	go func() { // A calibration/progress capture failure interrupts data even during a quiet window.
+		defer close(u.clockDone)
+		select {
+		case <-c.Clock.Failed():
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 	u.queue, err = writer.New(ctx, c.Limits, u.write)
 	if err != nil {
 		cancel()
+		<-u.clockDone
 		return nil, err
 	}
 	go u.shutdown()
@@ -200,14 +216,21 @@ func (u *Endpoint) Wait(ctx context.Context) error {
 	case <-u.done:
 		u.mu.Lock()
 		defer u.mu.Unlock()
-		return u.err
+		return errors.Join(u.err, u.c.Clock.Err())
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-// now captures host-local epoch offsets; these are not on-wire or cross-host times.
-func (u *Endpoint) now() uint64 { return uint64(time.Since(u.c.EpochStart)) }
+// now captures shared epoch offsets and cancels on failure without recursively taking worker locks.
+// A failed capture returns only the last valid stop boundary, never fresh timing evidence.
+func (u *Endpoint) now() uint64 {
+	n, err := u.c.Clock.Now()
+	if err != nil {
+		u.cancel()
+	} // Do not recurse through fail/recordStop or acquire u.mu from locked callers.
+	return n
+}
 
 // fail fixes the first operational error and interrupts all owned workers.
 func (u *Endpoint) fail(err error) {
@@ -222,6 +245,10 @@ func (u *Endpoint) fail(err error) {
 
 // emit never waits for a consumer; overflow remains visible through Wait's error.
 func (u *Endpoint) emit(e Event) bool {
+	if u.c.Clock.Err() != nil && e.Kind != "generation_end" && e.Kind != "observation_end" {
+		u.cancel()
+		return false
+	}
 	e.Frame.Content = nil
 	select {
 	case u.events <- e:
@@ -241,6 +268,7 @@ func (u *Endpoint) shutdown() {
 	u.c.Transport.Close()
 	<-u.scheduled
 	<-u.readDone
+	<-u.clockDone
 	u.queue.Wait(context.Background())
 	if len(u.c.Windows) > 0 {
 		u.emit(Event{Kind: "observation_end", At: u.stoppedAt()})
@@ -258,14 +286,22 @@ func (u *Endpoint) base(s Schedule, sequence uint64) probe.Frame {
 // A delayed wake emits one skipped range and at most the latest admissible datum.
 func (u *Endpoint) schedule() {
 	defer close(u.scheduled)
-	base := uint64(u.c.Start.Sub(u.c.EpochStart))
+	base := u.c.StartNS
 	for _, w := range u.windows {
 		p := w.Local.Traffic.Pattern()
 		next := uint64(0)
 		for next < w.localCount {
 			offset, _ := p.Offset(next, w.Local.Duration)
-			waiting := schedule.Wait(u.genCtx.Done(), u.c.Start, w.Offset+offset)
-			elapsed := uint64(time.Since(u.c.Start))
+			waiting, waitErr := schedule.WaitEpoch(u.genCtx.Done(), u.c.Clock, base+w.Offset+offset)
+			if waitErr != nil {
+				u.fail(waitErr)
+				return
+			}
+			now := u.now()
+			if u.c.Clock.Err() != nil {
+				return
+			}
+			elapsed := now - base
 			stopped := !waiting || u.genCtx.Err() != nil
 			if stopped {
 				stop := u.generationStop()
@@ -313,7 +349,12 @@ func (u *Endpoint) schedule() {
 		return
 	}
 	end := base + u.windows[len(u.windows)-1].Offset + u.windows[len(u.windows)-1].Local.Duration
-	if !schedule.Wait(u.genCtx.Done(), u.c.EpochStart, end) {
+	waiting, err := schedule.WaitEpoch(u.genCtx.Done(), u.c.Clock, end)
+	if err != nil {
+		u.fail(err)
+		return
+	}
+	if !waiting {
 		end = u.generationStop()
 	}
 	if stop := u.stoppedAt(); stop != 0 && stop < end {
@@ -372,7 +413,10 @@ func (u *Endpoint) write(ctx context.Context, f probe.Frame) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	if !u.c.ObservationEnd.IsZero() && u.now() >= uint64(u.c.ObservationEnd.Sub(u.c.EpochStart)) {
+	if err := u.c.Clock.Err(); err != nil {
+		return 0, err
+	}
+	if u.c.ObservationNS != 0 && u.now() >= u.c.ObservationNS {
 		u.admitMu.Lock()
 		u.emit(Event{Kind: "unattempted", Frame: f, At: u.now(), Reason: "observation_cutoff"})
 		u.admitMu.Unlock()
@@ -394,6 +438,10 @@ func (u *Endpoint) write(ctx context.Context, f probe.Frame) (int, error) {
 	}
 	u.admitMu.Lock()
 	at := u.now()
+	if err := u.c.Clock.Err(); err != nil {
+		u.admitMu.Unlock()
+		return 0, err
+	}
 	if f.Kind == probe.Data {
 		f.Attempt = at
 		u.mu.Lock()
@@ -429,8 +477,14 @@ func (u *Endpoint) write(ctx context.Context, f probe.Frame) (int, error) {
 		return 0, context.DeadlineExceeded
 	}
 	call := u.now()
+	if err := u.c.Clock.Err(); err != nil {
+		return 0, err
+	}
 	n, err := u.c.Transport.Write(b, budget)
 	completed := u.now()
+	if clockErr := u.c.Clock.Err(); clockErr != nil {
+		return n, clockErr
+	}
 	if ctx.Err() != nil {
 		err = ctx.Err()
 	} else if ne, ok := err.(net.Error); ok && ne.Timeout() {
@@ -497,7 +551,10 @@ func (u *Endpoint) receive() {
 		}
 		b, err := u.c.Transport.Read()
 		arrival := u.now()
-		pastCutoff := !u.c.ObservationEnd.IsZero() && arrival >= uint64(u.c.ObservationEnd.Sub(u.c.EpochStart))
+		if u.c.Clock.Err() != nil {
+			return
+		}
+		pastCutoff := u.c.ObservationNS != 0 && arrival >= u.c.ObservationNS
 		if err != nil {
 			// Partial reads expose only consumed bytes; complete authenticated frames alone arrive.
 			var partial interface{ ReadBytes() int }

@@ -37,7 +37,7 @@ func TestHelperUploadValidation(t *testing.T) {
 		t.Fatal("caller can mutate the upload")
 	}
 	if _, err = helperUploadCommand(binary); err == nil {
-		t.Fatal("ARM helper accepted while deferred")
+		t.Fatal("unsupported helper architecture accepted")
 	}
 }
 

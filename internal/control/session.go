@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/platform"
 	"sneaky-port/internal/probe"
@@ -498,9 +499,19 @@ func (s *Server) control(ctx context.Context, raw net.Conn, ch ssh.Channel, chan
 			reportPath = persistence.path
 			// Finite lifecycle now owns cancellation/drain; preparation must not close its socket early.
 			closePrepared()
-			anchor := time.Now()
+			anchor, clockErr := elapsed.New()
+			if clockErr != nil {
+				persistence.Finalize(engine.Result{})
+				fail(request, clockErr)
+				return
+			}
+			if clockErr = persistence.setClock(anchor); clockErr != nil {
+				persistence.Finalize(engine.Result{})
+				fail(request, clockErr)
+				return
+			}
 			clock.start(anchor, result, plan)
-			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: s.Registry, Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, EpochStart: anchor, Start: anchor}, plan, true, persistence)
+			measured, err = engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: s.Registry, Transport: t, SendAuth: sa, ReceiveAuth: ca, Run: run, Session: session, Direction: 2, Epoch: 1, PeerEpoch: 1, Clock: anchor, StartNS: 0}, plan, true, persistence)
 			if err != nil {
 				persistence.Finalize(engine.Result{})
 				fail(request, err)

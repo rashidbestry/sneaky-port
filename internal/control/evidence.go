@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
@@ -21,30 +22,49 @@ import (
 // EvidenceManifest identifies local files and frozen public settings; no authentication object is serialized.
 // Incomplete is the initial durable state; only a successful flush/publication can replace it.
 type EvidenceManifest struct {
-	Version         int              `json:"schema_version"`
-	RunID           string           `json:"run_id"`
-	SessionID       string           `json:"session_id"`
-	Endpoint        string           `json:"endpoint"`
-	PlanHash        string           `json:"plan_hash"`
-	Plan            profile.Plan     `json:"requested_plan"`
-	Settings        EvidenceSettings `json:"effective_settings"`
-	Created         string           `json:"created_utc"`
-	OS              string           `json:"os"`
-	Arch            string           `json:"arch"`
-	Go              string           `json:"go_version"`
-	Revision        string           `json:"tool_revision"`
-	Modified        string           `json:"tool_modified"`
-	AdapterContract int              `json:"adapter_contract_version"`
-	Clock           string           `json:"clock"`
-	State           string           `json:"state"`
-	Complete        bool             `json:"local_evidence_complete"`
-	Remote          string           `json:"remote_evidence_status"`
-	RawFile         string           `json:"raw_file"`
-	SummaryFile     string           `json:"summary_file,omitempty"`
-	RawBytes        profile.Decimal  `json:"raw_bytes"`
-	Events          profile.Decimal  `json:"raw_events"`
-	SHA256          string           `json:"raw_sha256,omitempty"`
-	Storage         string           `json:"storage_status"`
+	Version         int               `json:"schema_version"`
+	RunID           string            `json:"run_id"`
+	SessionID       string            `json:"session_id"`
+	Endpoint        string            `json:"endpoint"`
+	PlanHash        string            `json:"plan_hash"`
+	Plan            profile.Plan      `json:"requested_plan"`
+	Settings        EvidenceSettings  `json:"effective_settings"`
+	Created         string            `json:"created_utc"`
+	OS              string            `json:"os"`
+	Arch            string            `json:"arch"`
+	Go              string            `json:"go_version"`
+	Revision        string            `json:"tool_revision"`
+	Modified        string            `json:"tool_modified"`
+	AdapterContract int               `json:"adapter_contract_version"`
+	Clock           string            `json:"clock"`
+	ClockDetails    *elapsed.Metadata `json:"clock_details,omitempty"`
+	State           string            `json:"state"`
+	Complete        bool              `json:"local_evidence_complete"`
+	Remote          string            `json:"remote_evidence_status"`
+	RawFile         string            `json:"raw_file"`
+	SummaryFile     string            `json:"summary_file,omitempty"`
+	RawBytes        profile.Decimal   `json:"raw_bytes"`
+	Events          profile.Decimal   `json:"raw_events"`
+	SHA256          string            `json:"raw_sha256,omitempty"`
+	Storage         string            `json:"storage_status"`
+}
+
+// setClock durably records the finite epoch source before any data or calibration timestamp.
+// Existing reports without details retain their original provenance and replay unchanged.
+func (w *evidenceWriter) setClock(clock *elapsed.Epoch) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	details := clock.Metadata()
+	w.manifest.ClockDetails = &details
+	w.manifest.Clock = details.Source + "; endpoint-local epoch 1 zero at finite start; nanosecond offsets; uncalibrated; wall label is storage creation only"
+	b, err := json.Marshal(w.manifest)
+	if err != nil {
+		return err
+	}
+	if uint64(len(b)) > w.manifestReserve {
+		return errors.New("clock provenance exceeds reserved manifest budget")
+	}
+	return publishEvidence(w.path, "manifest.json", b, true)
 }
 
 // EvidenceSettings retains only frozen binding/marking settings, excluding later control counters and lifecycle status.

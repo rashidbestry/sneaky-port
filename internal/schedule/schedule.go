@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math/big"
 	"time"
+
+	"sneaky-port/internal/elapsed"
 )
 
 // Pattern represents explicit messages/second and optional active/gap intervals.
@@ -147,5 +149,37 @@ func Wait(done <-chan struct{}, anchor time.Time, offset uint64) bool {
 		return false
 	case <-t.C:
 		return true
+	}
+}
+
+// WaitEpoch uses timers only to sleep, rechecking the selected domain after every wake.
+// An early operating-system wake never admits a slot before its measurement-clock offset.
+func WaitEpoch(done <-chan struct{}, clock *elapsed.Epoch, offset uint64) (bool, error) {
+	if clock == nil || offset > 1<<63-1 {
+		return false, errors.New("invalid elapsed wait")
+	}
+	for {
+		now, err := clock.Now()
+		if err != nil {
+			return false, err
+		}
+		select {
+		case <-done:
+			return false, nil
+		default:
+		}
+		if now >= offset {
+			return true, nil
+		}
+		t := time.NewTimer(time.Duration(offset - now))
+		select {
+		case <-done:
+			t.Stop()
+			return false, nil
+		case <-clock.Failed():
+			t.Stop()
+			return false, clock.Err()
+		case <-t.C:
+		}
 	}
 }

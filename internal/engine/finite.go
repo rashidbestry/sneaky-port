@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/platform"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/worker"
@@ -29,7 +30,8 @@ type Finite struct {
 	done        chan struct{}
 	result      Result
 	err         error
-	end         time.Time
+	end         uint64
+	clock       *elapsed.Epoch
 	interrupted atomic.Bool
 }
 
@@ -64,7 +66,7 @@ func phaseMarker(t adapter.Transport, windows []worker.Window, start uint64) fun
 }
 
 // NewFinite freezes the plan, installs phase marking and owns generation/grace/cancellation.
-// Start/EpochStart are independently captured host-local anchors from authenticated control.
+// Clock is the endpoint-local source shared with authenticated calibration; StartNS is exact.
 // retain is for a control-owned server socket whose earlier cutoff must not truncate the peer.
 func NewFinite(parent context.Context, cfg worker.Config, p profile.Plan, retain bool) (*Finite, error) {
 	return NewFiniteWithEvidence(parent, cfg, p, retain, nil)
@@ -73,8 +75,11 @@ func NewFinite(parent context.Context, cfg worker.Config, p profile.Plan, retain
 // NewFiniteWithEvidence connects a pre-created secret-free store before workers can send data.
 // The caller owns finalizing the store if construction fails; successful runs finalize after join.
 func NewFiniteWithEvidence(parent context.Context, cfg worker.Config, p profile.Plan, retain bool, persistence Persistence) (*Finite, error) {
-	if parent == nil || cfg.Transport == nil || cfg.Start.Before(cfg.EpochStart) {
+	if parent == nil || cfg.Transport == nil {
 		return nil, errors.New("invalid finite lifecycle configuration")
+	}
+	if err := cfg.NormalizeClock(); err != nil {
+		return nil, err
 	}
 	if err := parent.Err(); err != nil {
 		return nil, err
@@ -89,9 +94,13 @@ func NewFiniteWithEvidence(parent context.Context, cfg worker.Config, p profile.
 		}
 		cfg.Transport = retainedTransport{cfg.Transport}
 	}
-	cfg.BeforeWrite = phaseMarker(cfg.Transport, ws, uint64(cfg.Start.Sub(cfg.EpochStart)))
+	cfg.BeforeWrite = phaseMarker(cfg.Transport, ws, cfg.StartNS)
 	cfg.EventCapacity = p.Limits.LedgerMessages
-	cfg.ObservationEnd = cfg.Start.Add(time.Duration(uint64(p.Warmup) + p.Duration() + uint64(p.Grace)))
+	total := uint64(p.Warmup) + p.Duration() + uint64(p.Grace)
+	if total > uint64(1<<63-1)-cfg.StartNS {
+		return nil, errors.New("finite elapsed timeline overflow")
+	}
+	cfg.ObservationNS = cfg.StartNS + total
 	ctx, cancel := context.WithCancel(parent)
 	// The I/O context survives lifecycle cancellation only for the explicit bounded drain.
 	ioCtx := context.WithoutCancel(parent)
@@ -100,37 +109,59 @@ func NewFiniteWithEvidence(parent context.Context, cfg worker.Config, p profile.
 		cancel()
 		return nil, err
 	}
-	f := &Finite{endpoint: endpoint, cancel: cancel, done: make(chan struct{}), end: cfg.ObservationEnd, persistence: persistence}
-	go f.finish(ctx, cfg.ObservationEnd, p)
+	f := &Finite{endpoint: endpoint, cancel: cancel, done: make(chan struct{}), end: cfg.ObservationNS, clock: cfg.Clock, persistence: persistence}
+	go f.finish(ctx, cfg.ObservationNS, p)
 	return f, nil
 }
 
 // finish bounds observation by the planned grace end, or cancellation plus min(grace, shutdown).
 // Worker failures are already joined; interrupted results never claim complete receiver evidence.
-func (f *Finite) finish(ctx context.Context, end time.Time, p profile.Plan) {
+func (f *Finite) finish(ctx context.Context, end uint64, p profile.Plan) {
 	defer close(f.done)
 	defer f.cancel()
-	timer := time.NewTimer(max(0, time.Until(end)))
-	defer timer.Stop()
 	var cause error
-	select {
-	case <-f.endpoint.done:
-	case <-timer.C:
-		f.endpoint.Close()
-	case <-ctx.Done():
-		if time.Now().Before(end) || f.interrupted.Load() {
-			cause = ctx.Err()
+observe:
+	for {
+		remaining, err := worker.Remaining(f.clock, end)
+		if err != nil {
+			cause = err
 			f.interrupted.Store(true)
-			f.endpoint.StopGeneration()
-			drain := min(time.Duration(p.Grace), time.Duration(p.Limits.ShutdownTimeout), max(0, time.Until(end)))
-			t := time.NewTimer(drain)
-			select {
-			case <-t.C:
-			case <-f.endpoint.done:
-			}
-			t.Stop()
+			f.endpoint.Close()
+			break
 		}
-		f.endpoint.Close()
+		if remaining == 0 {
+			f.endpoint.Close()
+			break
+		}
+		timer := time.NewTimer(remaining)
+		select {
+		case <-f.endpoint.done:
+			timer.Stop()
+			break observe
+		case <-f.clock.Failed():
+			timer.Stop()
+			cause = f.clock.Err()
+			f.interrupted.Store(true)
+			f.endpoint.Close()
+			break observe
+		case <-timer.C: // Recheck the measurement source; timer expiry alone never establishes cutoff.
+		case <-ctx.Done():
+			timer.Stop()
+			now, clockErr := f.clock.Now()
+			if clockErr != nil {
+				cause = clockErr
+				f.interrupted.Store(true)
+			}
+			if now < end || f.interrupted.Load() {
+				cause = errors.Join(cause, ctx.Err())
+				f.interrupted.Store(true)
+				f.endpoint.StopGeneration()
+				drain := min(uint64(p.Grace), uint64(p.Limits.ShutdownTimeout), end-min(end, now))
+				f.drain(now + drain)
+			}
+			f.endpoint.Close()
+			break observe
+		}
 	}
 	join, cancel := context.WithTimeout(context.Background(), time.Duration(p.Limits.ShutdownTimeout))
 	defer cancel()
@@ -152,9 +183,27 @@ func (f *Finite) finish(ctx context.Context, end time.Time, p profile.Plan) {
 	}
 }
 
+// drain waits only within the selected epoch and stops early on joined endpoint failure.
+func (f *Finite) drain(end uint64) {
+	for {
+		remaining, err := worker.Remaining(f.clock, end)
+		if err != nil || remaining == 0 {
+			return
+		}
+		t := time.NewTimer(remaining)
+		select {
+		case <-f.endpoint.done:
+			t.Stop()
+			return
+		case <-t.C:
+		}
+	}
+}
+
 // Cancel stops new generation immediately, allowing only the configured bounded drain.
 func (f *Finite) Cancel() {
-	if time.Now().Before(f.end) {
+	now, err := f.clock.Now()
+	if err != nil || now < f.end {
 		f.interrupted.Store(true)
 		f.endpoint.StopGeneration()
 		f.cancel()

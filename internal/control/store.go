@@ -233,11 +233,18 @@ func readObject(path string, out any) error {
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
 		return errors.New("store input must be a regular file")
 	}
-	f, err := os.Open(path)
+	f, err := openStoreObject(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+	info, err = f.Stat()
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("store input must be a regular file")
+	}
 	b, err := io.ReadAll(io.LimitReader(f, FrameMax+1))
 	if err != nil {
 		return err

@@ -1,11 +1,11 @@
 package engine
 
 import (
+	"errors"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/worker"
-	"time"
 )
 
 // trackProgress updates optional count contributions after successful authoritative accounting only.
@@ -35,7 +35,10 @@ func (c *Collector) publishProgress(feed *measure.ProgressFeed, cfg worker.Confi
 	if feed == nil {
 		return
 	}
-	now := uint64(max(0, time.Since(cfg.EpochStart)))
+	now, err := cfg.Clock.Now()
+	if err != nil {
+		c.err = errors.Join(c.err, err)
+	}
 	cutoff := min(now, c.finalEnd)
 	if c.observation > 0 {
 		c.live.Limit(c.observation)

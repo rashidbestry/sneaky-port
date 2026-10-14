@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/profile"
 )
@@ -144,7 +145,7 @@ func TestClockWindowAndExpiry(t *testing.T) {
 
 // TestClockFraming rejects oversized/truncated/ambiguous frames and retains complete-arrival boundaries.
 func TestClockFraming(t *testing.T) {
-	anchor := time.Now()
+	anchor := legacyClock(t, time.Now())
 	var b bytes.Buffer
 	cost, err := clockWrite(&b, message("clock", "clock-1", "run", "session", clockRequest{"hash", 1, 0}), anchor)
 	if err != nil || cost.Encoded > cost.WriteStart || cost.WriteStart > cost.WriteEnd {
@@ -230,9 +231,10 @@ func TestClockFaultsAndSkippedCadence(t *testing.T) {
 			p.Phases[0].Server.RateNumerator = 25
 			hash, _ := p.Hash()
 			ready.PlanHash = hex.EncodeToString(hash[:])
-			anchors := make(chan time.Time, 1)
+			anchors := make(chan *elapsed.Epoch, 1)
 			client := clockPeer(t, func(ctx context.Context, ch ssh.Channel) { // Fault at the actual complete-request/response boundary.
-				serverAnchor := (<-anchors).Add(-time.Second)
+				<-anchors
+				serverAnchor := legacyClock(t, time.Now().Add(-time.Second))
 				for i := 0; i < clockBudget(p); i++ {
 					e, t2, err := clockRead(ch, serverAnchor)
 					if err != nil {
@@ -271,7 +273,7 @@ func TestClockFaultsAndSkippedCadence(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Fixture setup and fsync are outside the sampler's local measurement epoch.
-			anchor := time.Now()
+			anchor := legacyClock(t, time.Now())
 			anchors <- anchor
 			s := startClock(context.Background(), client, anchor, p, ready, w)
 			select {
@@ -373,7 +375,7 @@ func TestClockChannelAndRequestGates(t *testing.T) {
 			if err != nil || ack.Type != "started" {
 				t.Fatal("start", err, string(ack.Body))
 			}
-			anchor := time.Now()
+			anchor := legacyClock(t, time.Now())
 			clock, requests, err := client.OpenChannel(CalibrationChannelType, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -533,7 +535,7 @@ func TestClockGateBlockedIO(t *testing.T) {
 			ch := &blockedClockChannel{release: raw.release, readEntered: make(chan struct{})}
 			incoming := &blockedClockIncoming{blockAccept: blockAccept, entered: make(chan struct{}), transport: raw, channel: ch}
 			gate := &clockGate{raw: raw}
-			gate.start(time.Now(), ready, p)
+			gate.start(legacyClock(t, time.Now()), ready, p)
 			gate.accept(context.Background(), incoming)
 			<-incoming.entered
 			if !blockAccept {
@@ -573,11 +575,11 @@ func TestClockRetentionFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	w.clockLimit = 0
-	anchors := make(chan time.Time, 1)
+	anchors := make(chan *elapsed.Epoch, 1)
 	client := clockPeer(t, func(_ context.Context, ch ssh.Channel) { // Use actual framing; only evidence admission is intentionally unavailable.
 		serveClock(ch, <-anchors, ready, p)
 	})
-	anchor := time.Now()
+	anchor := legacyClock(t, time.Now())
 	anchors <- anchor
 	s := startClock(context.Background(), client, anchor, p, ready, w)
 	select {
@@ -603,4 +605,14 @@ func TestClockRetentionFailure(t *testing.T) {
 	if replay.Clock == nil || replay.Clock.Attempts != 0 || replay.Clock.Reason != s.terminal || replay.Verification != "matched" {
 		t.Fatal("retention gap concealed on replay")
 	}
+}
+
+// legacyClock keeps framing/fault fixtures deliberately in their original Go timing domain.
+func legacyClock(t *testing.T, anchor time.Time) *elapsed.Epoch {
+	t.Helper()
+	e, err := elapsed.FromTime(anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return e
 }

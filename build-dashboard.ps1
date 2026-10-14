@@ -1,11 +1,12 @@
 param([ValidateSet('windows', 'linux')][string]$Platform = 'windows')
 
-# Build one self-contained x86-64 dashboard with the matching Linux SSH helper; ARM remains deferred.
+# Build one self-contained x86-64 dashboard and matching Linux helper at GOAMD64=v1 with CGO disabled.
 $ErrorActionPreference = 'Stop'
 $taskRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
 $taskOldDirectory = Get-Location
 $taskOldGOOS = $env:GOOS
 $taskOldGOARCH = $env:GOARCH
+$taskOldGOAMD64 = $env:GOAMD64
 $taskOldCGO = $env:CGO_ENABLED
 $taskOldCache = $env:GOCACHE
 try {
@@ -13,6 +14,7 @@ try {
     New-Item -ItemType Directory -Path (Join-Path $taskRoot 'build') -Force | Out-Null
     $env:GOCACHE = Join-Path $taskRoot '.cache\go-build'
     $env:GOARCH = 'amd64'
+    $env:GOAMD64 = 'v1'
     $env:GOOS = 'linux'
     $env:CGO_ENABLED = '0'
     $taskHelper = Join-Path $taskRoot 'build\sneaky-port-server-linux-amd64'
@@ -34,6 +36,7 @@ try {
 } finally {
     $env:GOOS = $taskOldGOOS
     $env:GOARCH = $taskOldGOARCH
+    $env:GOAMD64 = $taskOldGOAMD64
     $env:CGO_ENABLED = $taskOldCGO
     $env:GOCACHE = $taskOldCache
     Set-Location -LiteralPath $taskOldDirectory

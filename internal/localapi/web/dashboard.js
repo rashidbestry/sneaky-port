@@ -221,7 +221,9 @@ function previewPairing() {
 function readyDraft() { if (state.invalid.size) throw new Error("Check the highlighted settings before running or saving."); return clone(state.draft); }
 // showRun presents actual API states and nulls; final completeness is never inferred from HTTP success.
 function showRun(run) {
+  const previous = state.run;
   state.run = run; element("run-id").value = run.control_run_id; element("run-state").textContent = "Test " + run.status;
+  if (previous?.control_run_id === run.control_run_id && previous.status !== run.status && !["executing", "cancelling"].includes(run.status)) notice(run.local_complete ? "Test finished. Saved results load automatically." : "Test stopped with partial results. The observed window and missing evidence stay explicit.");
   readText("run-detail",JSON.stringify(run, null, 2)); renderLive(run); if(typeof rememberProgress==="function") { rememberProgress(run); void loadRunResult(run); } controls();
 }
 
@@ -272,7 +274,7 @@ async function bootstrapSession() {
   const envelope=await response.json(); if(!response.ok || envelope.schema_version!==1 || envelope.request_id!==id || !/^[a-f0-9]{64}$/.test(envelope.result?.session_token)) throw new Error("Could not open the local dashboard. Reload its exact local URL.");
   state.token=envelope.result.session_token; state.epoch++;
   state.session=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(state.token))),function fingerprintByte(b) { /* Retain a nonsecret API-process retry identity. */ return b.toString(16).padStart(2,"0"); }).join("");
-  try { const setup=await api("/api/v1/setup"); state.adapters=await catalog("adapters"); state.client=setup.client_enrollment; state.sshEnabled=setup.ssh_enabled; state.connection=setup.connection; selectProfile(setup.selected_profile,setup.saved); if(setup.active_run) { showRun(setup.active_run); schedulePoll(); } await refreshCatalogs(); readText("enrollment",state.client ? JSON.stringify(state.client,null,2) : "Connect creates a managed local identity automatically."); if(state.client) element("client-id").value=state.client.client_id; element("workspace").hidden=false; showConnection(); notice("Dashboard ready. Enter your server details and connect over SSH."); }
+  try { const setup=await api("/api/v1/setup"); state.adapters=await catalog("adapters"); state.client=setup.client_enrollment; state.sshEnabled=setup.ssh_enabled; state.connection=setup.connection; selectProfile(setup.selected_profile,setup.saved); if(setup.active_run) { showRun(setup.active_run); schedulePoll(); } await refreshCatalogs(); readText("enrollment",state.client ? JSON.stringify(state.client,null,2) : "Connect creates a managed local identity automatically."); if(state.client) element("client-id").value=state.client.client_id; element("workspace").hidden=false; showConnection(); notice(setup.active_run ? "Current test recovered. Results load automatically; Stop cancels active work." : state.connection?.status==="connected" ? "SSH connected. Configure your test, then press Run Test." : "Dashboard ready. Enter your server details and connect over SSH."); }
   catch(error) { disconnect(); throw error; }
 }
 // showConnection displays only public SSH/helper identity; credentials never enter a reader or profile.

@@ -54,7 +54,7 @@ func helperLaunchFailure(body []byte) error {
 	case "not_linux":
 		return errors.New("measurement server helper requires Linux")
 	case "unsupported_architecture":
-		return errors.New("automatic helper setup currently requires a Linux x86-64 server; ARM support is deferred")
+		return errors.New("automatic helper setup requires a Linux x86-64 server")
 	case "upload_tools_unavailable":
 		return errors.New("Linux SSH account needs standard shell tools: mktemp, head, sha256sum, chmod, rm and rmdir")
 	case "upload_storage_failed":

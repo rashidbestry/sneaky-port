@@ -28,7 +28,7 @@ import (
 
 // TestWindowsLinuxCLI is an explicitly enabled real-process WSL workflow gate.
 // It retains isolated artifacts, never enrolls into existing stores, and proves
-// this named virtual-network case only, not native ARM64 or live-path behavior.
+// this named virtual-network case only, not bare-metal Linux or live-path behavior.
 func TestWindowsLinuxCLI(t *testing.T) {
 	distro := os.Getenv("SNEAKY_PORT_TASK23_WSL")
 	if distro == "" {

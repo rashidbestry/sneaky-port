@@ -384,11 +384,10 @@ func newEndpoint(parent context.Context, cfg worker.Config, p profile.Plan, id s
 	if p.Adapter != id || cfg.SendAuth.Adapter != id || cfg.ReceiveAuth.Adapter != id {
 		return nil, errors.New("accounting adapter mismatch")
 	}
-	start := cfg.Start.Sub(cfg.EpochStart)
-	if start < 0 {
-		return nil, errors.New("invalid accounting start")
+	if err := cfg.NormalizeClock(); err != nil {
+		return nil, err
 	}
-	c, err := NewCollector(p, cfg.Direction, uint64(start), cfg.Registry)
+	c, err := NewCollector(p, cfg.Direction, cfg.StartNS, cfg.Registry)
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +466,8 @@ events:
 		}
 	}
 	err := u.worker.Wait(context.Background())
-	u.result, u.err = c.Finish(err, uint64(time.Since(cfg.EpochStart)))
+	now, clockErr := cfg.Clock.Now()
+	u.result, u.err = c.Finish(errors.Join(err, clockErr), now)
 	if c.live != nil {
 		c.live = measure.NewLiveAccounting()
 		for _, entry := range u.result.Entries {

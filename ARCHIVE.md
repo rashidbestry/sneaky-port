@@ -729,3 +729,20 @@ Task 16 milestone suggestion (still proposed): one-way results now retain uncert
 
 
 Task 21 milestone suggestion (still proposed): S06 can now use exact repeated delta ranges, per-trial incompatibility/completeness and phase failures to explain conflicting evidence without obscuring deadline outcomes. The inputs exist; the label vocabulary, per-metric applicability and validation of mixed/incomplete repetitions remain decisions. No confidence score, recommendation threshold or S06 implementation is accepted by this suggestion.
+
+
+## Retired native ARM acceptance checklist
+
+Archived 2026-10-13 after the user removed ARM from shipping scope. The following is the original, unexecuted task-24 checklist and its 2026-10-12 prerequisite state. It is historical planning, superseded by Windows/Linux x86-64 scope; task 25 was also unstarted. No native ARM acceptance is inferred.
+
+### Task 24: native Windows 11 ARM64 client
+
+**Deferred by user, incomplete; awaiting hardware, 2026-10-12.** F01/F07/F09, T08/T09/T12. The available host is x86-64 and the user confirmed no ARM64 machine is available. [Prerequisite audit](WORK_LOG.md#2026-10-12-native-arm64-client-prerequisite-audit). Resume only after a later selection when native hardware is available; task 25 is also deferred and has not started.
+
+- [ ] Record physical ARM64 hardware/model, Windows 11 version/build, native ARM64 process/toolchain and product binary hash; document the Linux server's OS/kernel/architecture, permissions and path. Build/emulation evidence cannot replace the native client run.
+- [ ] Use fresh isolated stores, endpoint-local keys, public enrollment/import and explicit profiles/ports; preserve existing services/settings. Validate UDP/TCP exact-plan readiness and explicit wrong-identity/bind-collision failures.
+- [ ] Run finite UDP/TCP completion with authenticated server evidence transfer/reconciliation; retain endpoint manifests, raw evidence and actual Windows/ARM64 identity. Preserve deadline misses and unsupported/unknown clock/outer observations.
+- [ ] Exercise setup/data/grace cancellation and repeated reuse; verify bounded partial reports, unknown remote delivery where evidence is missing, released reservations/ports and joined owned processes.
+- [ ] Replay and export JSON/JSONL/CSV through fresh processes on both endpoints; compare exact summaries/identities and record artifact locations, checks and gaps before marking complete.
+
+The [task 23 fixture](cmd/sneaky-port/cross_endpoint_windows_test.go) currently hardcodes `GOARCH=amd64` for both binaries and replay assertions. Adapt its architecture/build/evidence checks or use an equivalent reviewed native procedure when the actual endpoint is available; an unchanged rerun cannot validate ARM64. No fixture code or runtime behavior changed in this prerequisite audit.

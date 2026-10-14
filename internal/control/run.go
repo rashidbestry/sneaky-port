@@ -13,6 +13,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"sneaky-port/internal/adapter"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/engine"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
@@ -158,10 +159,16 @@ func executeRun(ctx context.Context, store *Store, raw net.Conn, exchange func(s
 	}
 	result.Readiness.MeasurementStarted, result.Readiness.Status = true, "started"
 	result.Status = "running"
-	anchor := time.Now()
+	anchor, err := elapsed.New()
+	if err != nil {
+		return err
+	}
+	if err = persistence.setClock(anchor); err != nil {
+		return err
+	}
 	clock := startClock(ctx, sshClient, anchor, p, result.Readiness, persistence)
 	defer clock.stop()
-	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: store.AdapterRegistry(), Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, EpochStart: anchor, Start: anchor}, p, false, persistence)
+	finite, err := engine.NewFiniteWithEvidence(ctx, worker.Config{Registry: store.AdapterRegistry(), Transport: t, SendAuth: ca, ReceiveAuth: sa, Run: run, Session: session, Direction: 1, Epoch: started.PeerEpoch, PeerEpoch: started.Epoch, Clock: anchor, StartNS: 0}, p, false, persistence)
 	if err != nil {
 		return err
 	}

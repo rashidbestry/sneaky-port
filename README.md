@@ -2,15 +2,15 @@
 
 A client/server measurement tool under development for comparing FPS connection quality on your network.
 
-It will compare real TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS data paths against one Linux server, using Windows 11 clients. Both operating systems target 64-bit ARM64 and x86-64, with broad Linux server coverage including CentOS, Ubuntu, Fedora, Arch, and other major distributions; exact version limits remain open. Selected ports and independent packet priority markings in both directions are part of the comparison. Protocol sessions are handled by the tool itself.
+It will compare real TCP, UDP, TLS, QUIC, WireGuard, Hysteria2, and DNS data paths between Windows 11 x86-64 clients and one Linux x86-64 server. Shipping targets use `GOARCH=amd64`, `GOAMD64=v1` and `CGO_ENABLED=0`. Broad Linux distribution coverage includes CentOS, Ubuntu, Fedora, Arch and other major distributions; supported version limits require evidence. Selected ports and independent packet priority markings in both directions are part of the comparison. Protocol sessions are handled by the tool itself.
 
 Connection quality means timely delivery, low p95/p99 latency, low jitter, and few spikes or stalls under sustained game-like traffic. Preferential treatment of DNS is a hypothesis to measure, not an assumed advantage.
 
 The protocol architecture uses startup descriptor/factory registration across shared measurement, configuration, dashboard and reporting contracts. The [adapter extension gate](#adapter-extension-gate) now passes with a test-only fixture.
 
-**Current status: finite authenticated UDP/TCP runs, evidence/replay/export, reconciliation, one-way estimates, protected local API, dashboard diagnostics and matched saved-run comparisons implemented within recorded scopes. Live client-local phase/counters and per-metric evidence presentation are implemented; verified clock bounds, rendered-browser QA and full acceptance remain pending.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
+**Current status: finite authenticated UDP/TCP runs, evidence/replay/export, reconciliation, one-way estimates, protected local API, dashboard diagnostics and matched saved-run comparisons implemented within recorded scopes. Live client-local phase/counters and per-metric evidence presentation are implemented; verified clock bounds and full acceptance remain pending; current Test dashboard Chrome QA passes.** A future gaming proxy, traffic shaping, and automatic route switching are separate from this repository's scope.
 
-Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Saved dashboard diagnostics and matched comparisons are implemented; live progress/evidence presentation are implemented; independently verified production clock bounds, rendered-browser QA and full acceptance remain pending. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
+Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TCP phases, reverse receipts, deadline/cutoff accounting, RTT/variation/spike/stall analysis, physical-phase marking and bounded cancellation. Both endpoints save raw evidence; replay/export, authenticated reconciliation and uncertainty-gated one-way estimates are available. `client-api` protects local run controls, saved profiles, public pairing/key operations and report replay/import/export. Saved dashboard diagnostics and matched comparisons are implemented; live progress/evidence presentation are implemented; independently verified production clock bounds and full acceptance remain pending; current Test dashboard Chrome QA passes. [Code flow](FLOWCHART.md), [contract](DESIGN.md#first-slice-implementation-contract), [roadmap](ROADMAP.md#first-slice-task-index).
 
 ## Adapter extension gate
 
@@ -32,21 +32,23 @@ go run ./cmd/sneaky-port preflight -duration-ns YOUR_DURATION -interval-ns YOUR_
 go run ./cmd/sneaky-port keygen -output NEW_PRIVATE_KEY_FILE
 ```
 
-All workload/timeout/budget settings are explicit; there is no automatically selected FPS profile. Preflight is local timer evidence. Key generation writes a new restricted file and prints only public enrollment material. Dependencies and [license notices](THIRD_PARTY_NOTICES.md) are pinned; native ARM64/live-network support remains unvalidated.
+All workload/timeout/budget settings are explicit; there is no automatically selected FPS profile. Preflight is local timer evidence. Key generation writes a new restricted file and prints only public enrollment material. Dependencies and [license notices](THIRD_PARTY_NOTICES.md) are pinned; supported Linux versions and live-network acceptance require their own evidence.
 
 ## Pair endpoints and check readiness
 
 `client-ready` verifies the exact plan, owned sockets and authentication, holds an optional lease, then stops. Success prints `"status": "readiness_checked"` and `"measurement_started": false`, actual endpoint bindings, marking evidence and client application-control byte counts. It sends no scheduled workload and produces no latency/loss report.
 
-1. **Build on Windows PowerShell**, from this checkout. These commands target an x86-64 Linux server; use `arm64` for an ARM64 server.
+1. **Build on Windows PowerShell**, from this checkout, for the Windows 11 x86-64 client and Linux x86-64 server.
 
    ```powershell
+   $env:GOOS = "windows"
+   $env:GOARCH = "amd64"
+   $env:GOAMD64 = "v1"
+   $env:CGO_ENABLED = "0"
    go build -o .\build\sneaky-port.exe ./cmd/sneaky-port
    $env:GOOS = "linux"
-   $env:GOARCH = "amd64"
-   $env:CGO_ENABLED = "0"
    go build -o .\build\sneaky-port-linux-amd64 ./cmd/sneaky-port
-   Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED
+   Remove-Item Env:GOOS, Env:GOARCH, Env:GOAMD64, Env:CGO_ENABLED
    .\build\sneaky-port.exe client-init -data-dir .\client-data -client-id example-client | Set-Content -Encoding utf8 client-public.json
    ```
 
@@ -127,7 +129,7 @@ Choose `json` for settings and recomputed summary, `jsonl` for a typed `local_re
 
 ### Cross-endpoint CLI validation
 
-Task 23 validates native Windows x86-64 CLI processes against an isolated Ubuntu x86-64 WSL2 server over its private virtual network. Pairing, UDP/TCP readiness/completion/console interruption, endpoint replay/exports and owned-resource cleanup pass; this is not native ARM64, bare-metal Linux or live ISP acceptance. [Recorded environment and results](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation).
+Task 23 validates native Windows x86-64 CLI processes against an isolated Ubuntu x86-64 WSL2 server over its private virtual network. Pairing, UDP/TCP readiness/completion/console interruption, endpoint replay/exports and owned-resource cleanup pass. Bare-metal Linux and live ISP acceptance remain separate. [Recorded environment and results](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation).
 
 To rerun the [opt-in fixture](cmd/sneaky-port/cross_endpoint_windows_test.go), select an existing WSL distribution with `python3` and a reachable non-loopback IPv4 address:
 
@@ -144,12 +146,12 @@ The fixture builds both current binaries and creates fresh stores/ports; it leav
 
 ### Dashboard setup and run controls
 
-The dashboard contains **Test** only: setup, **Run test / Stop / New test**, current-test metric cards and charts. Settings expand through **More settings / Adjust**; TCP, Burst and custom port/content choices reveal applicable controls. Saved results and Compare sections are removed; stored reports and protected APIs remain. Inline groups retain unfinished edits without sending measurement commands. Rendered layout/responsive/accessibility acceptance remains checkpoint 23c.
+The dashboard contains **Test** only: setup, **Run test / Stop / New test**, current-test metric cards and charts. Settings expand through **More settings / Adjust**; TCP, Burst and custom port/content choices reveal applicable controls. Saved results and Compare sections are removed; stored reports and protected APIs remain. Inline groups retain unfinished edits without sending measurement commands. [Completed Chrome checks](ROADMAP.md#23c-verify-the-rendered-dashboard) record rendered layout, interaction, keyboard and responsive evidence.
 
 After launching `client-api` below, open its exact `api_url`. The dashboard opens automatically, with no session key to copy or paste. An exact-origin POST grants the page-memory bearer; private API calls still require bearer/request identities and literal-loopback/Host/Origin/peer checks. No token enters a URL, cookie or browser storage.
 
 1. In the top bar, enter server IP, normal SSH port, username (editable default `sneak`) and password, then **Connect**. The first fingerprint is automatically trusted and saved after successful authentication. A changed saved fingerprint stops before password delivery and requires the inline replacement checkbox. Public pins live only in the application store, separate from system SSH.
-2. The packaged dashboard uploads its matching Linux x86-64 helper over SSH, verifies SHA-256 and starts it in an exclusively created owner-only temporary folder. There is no executable-path field or manual server copying. The SSH account must permit commands and forwarding to the private control listener; Linux needs standard `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir` tools. Only owned upload/helper folders are removed on disconnect; existing files/services/stores/system SSH remain intact. Startup has a 120-second budget, with fixed platform/storage/checksum/runtime failures. Passwords are cleared after authentication/failure and never saved in profiles/reports. **Refresh** recovers unknown acknowledgments or public setup progress; **Details** shows the helper digest and saved host fingerprint. ARM remains deferred.
+2. The packaged dashboard uploads its matching Linux x86-64 helper over SSH, verifies SHA-256 and starts it in an exclusively created owner-only temporary folder. There is no executable-path field or manual server copying. The SSH account must permit commands and forwarding to the private control listener; Linux needs standard `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir` tools. Only owned upload/helper folders are removed on disconnect; existing files/services/stores/system SSH remain intact. Startup has a 120-second budget, with fixed platform/storage/checksum/runtime failures. Passwords are cleared after authentication/failure and never saved in profiles/reports. **Refresh** recovers unknown acknowledgments or public setup progress; **Details** shows the helper digest and saved host fingerprint.
 3. Name the test, choose UDP/TCP and edit duration in seconds, receipt deadline in milliseconds, payload bytes and independent packet rates. **More settings** opens traffic/timing, ports/priority, phases, saved configuration, limits, clocks, payload content and protocol options. Main inputs edit the selected phase independently. **Automatically size test resources** covers evidence/storage plus heartbeat/calibration and report-transfer capacity without changing traffic or clock/heartbeat cadence. Manual limits remain explicit; insufficient duration budgets block start with guidance. **Clock & local timing / Check local timer** unlocks bounded local timer results.
 4. **Run test** validates/saves unsaved edits with revision checks, freezes that exact revision, and negotiates plan/effective settings/data binding with the server before traffic. Storage identities and run handles are managed internally; no UID or JSON is required. Test names derive safe saved names; an existing/stale name rejects without overwriting. Later edits affect the next test, while the running test retains its admitted settings. **Saved tests** loads/saves named configurations.
 5. **Stop** cancels the managed current test. Unknown start acknowledgments expose **Retry same request**, preserving the original ID/hash; **Refresh results** reads status and retries only result loading. Reload automatically recovers the admitted active run through protected setup. Terminal reports load automatically into the cards/RTT plot when available. **New test** resets the editable draft and display while retaining saved evidence and SSH connection. Disconnect remains disabled until active work/retries are resolved; API shutdown joins owned work.
@@ -193,7 +195,7 @@ The Test dashboard automatically loads its terminal client-origin main results. 
 
 Quantiles use every eligible completed raw sample, including late receipts strictly before cutoff. Missing/local groups stay marked; quiet phases invent no losses. Diagnostic time/ECDF projections use at most 128 groups retaining exact extrema/counts/ranks and phase boundaries; coordinates are approximate. General report diagnostics keep the 8-MiB aggregate cap. `GET /api/v1/runs/<handle>/diagnostics` uses a 64-MiB cap only for a terminal run report, verifies admitted plan/measurement identity and shares single-operation disk admission. Its response gets 30-second HTTP / 35-second browser budgets; filesystem calls remain noninterruptible. No replay occurs during traffic.
 
-**Optional local timer preflight** takes explicit positive decimal-string duration/interval ns: at most one second and 4,096 scheduled slots. It reports local wake lag/missed slots and exact nearest-rank tails without network probes or OS changes. Timer lag does not establish network delay or clock calibration; clock source/resolution remain unverified. Requests stop on disconnect/shutdown; interruption is explicit. Start/cancel retry deduplication does not apply to preflight.
+**Optional local timer preflight** takes explicit positive decimal-string duration/interval ns: at most one second and 4,096 scheduled slots. It reports local wake lag/missed slots and exact nearest-rank tails without network probes or OS changes. Source/tick provenance is reported; accuracy/drift bounds remain unverified. Windows finite runs and preflight use QPC/QPF; other platforms use Go monotonic timing. Reports retain optional `clock_details`, and different/missing provenance prevents matched comparison. Timer lag does not establish network delay or clock calibration. Requests stop on disconnect/shutdown; interruption is explicit. Start/cancel retry deduplication does not apply to preflight. [Clock flow and limits](FLOWCHART.md#endpoint-local-elapsed-clock).
 
 Protected routes: `GET /api/v1/reports/<id>/diagnostics?endpoint=local|server&scope=main|warmup|<index>` and `POST /api/v1/preflight` with `schema_version`, `request_id`, `duration_ns`, `interval_ns`. The existing token/Host/Origin/peer guards cover both. [Source flow](FLOWCHART.md#diagnostic-and-distribution-views), [evidence](WORK_LOG.md#2026-10-12-diagnostic-and-distribution-views).
 
@@ -244,4 +246,4 @@ Run status optionally includes `progress`: publication `as_of_ns`, strict `count
 
 The accounting owner incrementally maintains presentation counts/ranges and publishes copied atomic snapshots at most four times per second, plus a final update. Actual stopped cutoffs seal/rebase both counts and RTT; readers cannot mutate them or drive the engine. The browser coalesces one status poll per second, stops visibly on errors and recovers the active run through setup. Terminal replay loads automatically into the current cards/chart; partial or unavailable evidence stays explicit. Cancellation does not claim 100 percent completion. Rebuild/restart the owned API process and reload the page to load new embedded assets.
 
-Rendered-browser/visual/responsive QA remains unverified: browser inventory is empty and in-app browser creation is unavailable. Script/HTTP/loopback checks establish control/accounting behavior only. ARM versions and native ARM validation are deferred at the user's instruction; x86-64 and remaining clock/marking/impairment/live acceptance stay separate.
+Rendered Chrome QA is complete for the current Test dashboard: conditional settings, exact edits, keyboard controls, narrow layouts, live/final UDP/TCP results, active recovery, partial cancellation, timer preflight, saved-name conflicts and cleanup pass. Fixtures use real loopback SSH/carriers/reporting with modeled Linux upload/shell. Shipping scope is Windows 11 x86-64 clients and Linux x86-64 servers. Native baseline, clock accuracy, outer marking and live acceptance retain their own gates. [Browser/reference evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress), [remaining acceptance](ROADMAP.md#task-35-current-acceptance-review).

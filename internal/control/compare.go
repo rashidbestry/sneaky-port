@@ -366,7 +366,12 @@ func normalizedComparison(p profile.Plan, axes []string, differentAdapter bool) 
 
 // comparisonPlatform preserves declared build/host/clock identity independently of variable bindings.
 func comparisonPlatform(m EvidenceManifest) []string {
-	return []string{m.OS, m.Arch, m.Go, m.Revision, m.Modified, m.Clock}
+	details := ""
+	if m.ClockDetails != nil {
+		b, _ := json.Marshal(m.ClockDetails) // The fixed scalar provenance structure cannot fail JSON encoding.
+		details = string(b)
+	}
+	return []string{m.OS, m.Arch, m.Go, m.Revision, m.Modified, m.Clock, details}
 }
 
 // comparisonReasons names non-axis mismatches without using floating-point measurement quantities.

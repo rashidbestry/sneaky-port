@@ -126,15 +126,47 @@ func restrictDirectory(path string) error {
 	return verifyKeyACL(actual, sd)
 }
 
-// replaceFile publishes a same-directory replacement through the Windows filesystem API.
+// fileRenameInfo matches the variable-length FILE_RENAME_INFO header on either pointer width.
+type fileRenameInfo struct {
+	Flags          uint32
+	RootDirectory  windows.Handle
+	FileNameLength uint32
+	FileName       [1]uint16
+}
+
+// replaceFile atomically publishes an already synced same-directory restricted staging file.
+// POSIX replacement preserves open readers' old snapshots; unsupported filesystems fail explicitly.
+// It never unlinks the target first, bypasses ACL/read-only checks, or copies partially visible bytes.
 func replaceFile(source, target string) error {
-	from, err := windows.UTF16PtrFromString(source)
+	fromPath, err := windowsFilePath(source)
 	if err != nil {
 		return err
 	}
-	to, err := windows.UTF16PtrFromString(target)
+	from, err := windows.UTF16PtrFromString(fromPath)
 	if err != nil {
 		return err
 	}
-	return windows.MoveFileEx(from, to, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
+	toPath, err := windowsFilePath(target)
+	if err != nil {
+		return err
+	}
+	to, err := windows.UTF16FromString(toPath)
+	if err != nil {
+		return err
+	}
+	if len(to) > windows.MAX_LONG_PATH {
+		return windows.ERROR_FILENAME_EXCED_RANGE
+	}
+	handle, err := windows.CreateFile(from, windows.DELETE|windows.SYNCHRONIZE, windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE, nil, windows.OPEN_EXISTING, windows.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(handle)
+	var header fileRenameInfo
+	buffer := make([]byte, int(unsafe.Offsetof(header.FileName))+len(to)*2)
+	info := (*fileRenameInfo)(unsafe.Pointer(&buffer[0]))
+	info.Flags = windows.FILE_RENAME_REPLACE_IF_EXISTS | windows.FILE_RENAME_POSIX_SEMANTICS
+	info.FileNameLength = uint32((len(to) - 1) * 2)
+	copy(unsafe.Slice(&info.FileName[0], len(to)), to)
+	return windows.SetFileInformationByHandle(handle, windows.FileRenameInfoEx, &buffer[0], uint32(len(buffer)))
 }

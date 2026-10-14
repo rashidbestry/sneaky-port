@@ -204,6 +204,14 @@ func assertPersistedRun(t *testing.T, rig *testRig, result RunResult, complete b
 		if err != nil || replayed.Verification != "matched" {
 			t.Fatalf("local replay %s: %v; report=%+v", path, err, replayed)
 		}
+		if root := os.Getenv("SNEAKY_PORT_CANCELLATION_EVIDENCE"); root != "" && !complete {
+			// Retain only finalized public partial reports for acceptance review; never copy endpoint keys.
+			destination := filepath.Join(root, filepath.Base(path))
+			if err := os.CopyFS(destination, os.DirFS(path)); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("retained partial endpoint report: %s", destination)
+		}
 	}
 }
 

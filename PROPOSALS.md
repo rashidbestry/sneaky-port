@@ -6,15 +6,15 @@ Use this file to track forward: upcoming features, optional ideas, their decisio
 
 Accepted features reflect confirmed scope. S07-S11 were accepted for future scope on 2026-10-11. On 2026-10-12 the user limited resolution to the current UDP/TCP release: S06 design is accepted; S01-S05/S12 are deferred beyond it and remain future proposals. User explicitly authorized the agreed first slice on 2026-10-11; unrelated acceptance/plans do not expand execution scope.
 
-Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run, saved diagnostic/distribution and matched saved-comparison views exist; live client-local counters and S06 evidence presentation are implemented; rendered-browser/full acceptance remain pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
+Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticated reconciliation, one-way estimates and protected configuration/run/report API exist; dashboard setup/run, saved diagnostic/distribution and matched saved-comparison views exist; live client-local counters and S06 evidence presentation are implemented; current Test dashboard Chrome QA passes; full acceptance remains pending. [Saved API evidence](WORK_LOG.md#2026-10-11-saved-configuration-and-report-api), [code flow](FLOWCHART.md).
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23n are implemented within recorded scopes. Latest 23n shows numeric receipts and live RTT in ms; 23l/23m retains Test only and repaired long-run capacity/current results; 23c browser QA is pending tooling and native ARM is deferred. Production clock bounds, rendered-browser QA and full acceptance remain pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23n are implemented within recorded scopes. Latest 23n shows numeric receipts and live RTT in ms; 23l/23m retains Test only and repaired long-run capacity/current results; 23c browser QA is pending tooling. Shipping is Windows/Linux x86-64; the user retired architecture tasks 24/25 on 2026-10-13. Named controlled tasks 29-32 pass within recorded scopes. Production clock bounds, current Test dashboard Chrome QA passes; full acceptance remains pending; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
-| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, ARM64/x86-64 on both, managed endpoint/session lifecycle | Partial: pairing/SSH/finite CLI, protected API/dashboard and saved diagnostics implemented; four builds and named [Windows-to-Ubuntu x86-64 WSL2 CLI workflow](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation) pass; live client-local counters and section/subtab navigation and password SSH/edited Run Test flow implemented; native ARM64 deferred, Linux minima and full acceptance pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
+| F01 | Windows 11 clients, one Linux server across major distributions including CentOS/Ubuntu/Fedora/Arch, x86-64 on both, managed endpoint/session lifecycle | Partial: pairing/SSH/finite CLI, protected API/dashboard and saved diagnostics implemented; historical build checks and named [Windows-to-Ubuntu x86-64 WSL2 CLI workflow](WORK_LOG.md#2026-10-12-windows-to-linux-cli-validation) pass; live client-local counters and section/subtab navigation and password SSH/edited Run Test flow implemented; Linux minima/native deployment and full acceptance pending | [Scope](DESIGN.md#confirmed-intent-and-scope) |
 | F02 | Real TCP, UDP, TLS, and QUIC stream/datagram measurements | Partial: UDP/TCP readiness, queues and shared UDP/TCP phase/accounting pass Windows/WSL fixtures; finite CLI lifecycle implemented; TLS/QUIC later | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F03 | Tool-managed WireGuard and Hysteria2 with inner UDP/TCP test modes | Accepted; not started | [Protocols](DESIGN.md#authentic-protocol-coverage) |
 | F04 | DNS port controls, direct and recursive data paths, transport/downlink experiments | Accepted; not started | [DNS](DESIGN.md#dns-experiments) |
@@ -35,7 +35,7 @@ Detailed options/provenance belong in `CHOICES.md`; [WORK_LOG.md](ARCHIVE.md#202
 
 ## Suggestions and accepted additions
 
-S01-S05/S12 are deferred beyond the current release; S06 release design and derived presentation are implemented, with stable IDs preserved. S07-S11 were accepted together on 2026-10-11; S08/S09 have local preflight and saved diagnostic/distribution views; live client-local counters implemented; verified clock quality, rendered-browser QA and other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
+S01-S05/S12 are deferred beyond the current release; S06 release design and derived presentation are implemented, with stable IDs preserved. S07-S11 were accepted together on 2026-10-11; S08/S09 have local preflight and saved diagnostic/distribution views; live client-local counters implemented; current Test dashboard Chrome QA passes; verified clock quality and other additions remain pending. Acceptance alone did not authorize execution; the later first-slice instruction supplies that authorization.
 
 ### Reference review dispositions
 
@@ -43,14 +43,14 @@ Reviewed/answered: 2026-10-11, action 3b. User confirmed IRTT/iperf2/Crusader as
 
 | ID | Recommendation for the first-slice discussion | Decision / implementation state |
 | --- | --- | --- |
-| S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Accepted future scope by user, 2026-10-11; first-slice checks specified, not implemented or executed |
+| S07 | First-slice external cross-check gates: equivalent IRTT UDP, iperf2 receiver/TCP and Crusader path/load overlaps; exact builds/tolerances established before later execution. No product dependency. | Partial: artifact/license/version-help and inconclusive IRTT attempts recorded; compatible measured bands/held-out comparisons incomplete |
 | S08 | First-slice optional local scheduler preflight and evidence-based diagnostics; explicit duration/interval, no network data or OS tuning in the local preflight. | Partial: explicit CLI/dashboard local preflight, endpoint fault/local-miss counts and partial-stream/accounting evidence exist; clock source/resolution verification remains pending |
-| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: bounded SVG time/ECDF, exact phase/quantile/count and missing/local views exist; live client-local counters implemented; rendered-browser QA remains pending |
-| S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Accepted future scope by user, 2026-10-11; checks specified, no fixtures executed |
+| S09 | First-slice native SVG time/ECDF views and phase tables, exact final quantiles with bounded/labeled rendering and coalesced live updates. | Partial: bounded SVG time/ECDF, exact phase/quantile/count and missing/local views exist; live client-local counters implemented; current Test dashboard Chrome QA passes under [23c](ROADMAP.md#23c-verify-the-rendered-dashboard); legacy removed views are outside that scope |
+| S10 | First-slice external idle/upload/download/both-load validation gates; fixtures remain outside product, with resource/isolation/restoration and matched-workload evidence. | Partial prerequisites: isolated kernel impairment/MTU/rate cases executed; external contention/load reference cases remain pending |
 | S11 | Explicit continuous monitoring retained for a later slice; retention/windows/reconnect/eligibility remain future choices. | Accepted future scope by user, 2026-10-11; outside first slice, not implemented |
 | S01-S06 | Current release disposition: accept S06 per-metric evidence design; defer S01-S05 beyond this release. | Engineering selections under the 2026-10-12 scoped resolution instruction; S06 implemented within recorded component fixtures; future proposals retained |
 
-T19/T20 reference release baselines and band-establishment procedure are selected in [current release decisions](CHOICES.md#current-udptcp-release-decisions); actual artifact/license/native verification and numerical bands remain pending evidence. Basic S08/S09 and S07/S10 gates are settled in the first-slice contract; S11 remains later. Current code pins are separate from benchmark pins, and partial foundations do not fulfill runtime acceptance.
+T19/T20 reference release baselines and band-establishment procedure are selected in [current release decisions](CHOICES.md#current-udptcp-release-decisions). Pinned source/license and IRTT/Crusader native version-help evidence is recorded; remaining compatible builds, measured bands and held-out comparisons remain pending. Basic S08/S09 and S07/S10 gates are settled in the first-slice contract; S11 remains later. Product dependency pins are separate from benchmark pins, and scoped fixture evidence does not fulfill full runtime acceptance.
 
 ## S01: Staged experiment plan
 
@@ -122,7 +122,7 @@ Before adoption: decide the format and compatibility contract. Preserve requeste
 
 ## S06: Separate connection quality from measurement confidence
 
-- [x] Accepted design implemented as versioned derived report/API/dashboard/replay/export presentation, 2026-10-12. User selected per-metric labels/reasons; detailed policies are engineering selections. Rendered-browser and full release acceptance remain separate.
+- [x] Accepted design implemented as versioned derived report/API/dashboard/replay/export presentation, 2026-10-12. User selected per-metric labels/reasons; detailed policies are engineering selections. Current Test dashboard Chrome QA passes; full release acceptance remains separate.
 
 Quality/deadline values remain primary. Add independent, bounded evidence fields per metric, without a numeric confidence score, ranking formula or automatic winner:
 
@@ -136,7 +136,7 @@ Quality/deadline values remain primary. Add independent, bounded evidence fields
 
 Use a versioned derived presentation policy outside the frozen measurement plan. Display/export the policy version, selected targets and actual counts; overrides are explicit presentation preferences and do not change traffic, raw evidence or its hash. Per-metric known-reason vocabularies remain bounded and secret-free. Preserve observed outcomes beside limitations; unknown outer markings do not invalidate RTT, and complete receipts do not prove zero underlying packet loss.
 
-The separate implementation checkpoint must verify threshold boundaries, two/three-pair behavior, ties/mixed/partial/missing populations, quantile/gap/cutoff consistency, independent marking/clock limitations, unchanged quality values and secret-free API/dashboard/replay/export behavior. It is implemented and checked within the recorded component fixtures; rendered-browser and remaining release acceptance stay pending. Existing first-slice implementation/validation remains independently recorded.
+The separate implementation checkpoint must verify threshold boundaries, two/three-pair behavior, ties/mixed/partial/missing populations, quantile/gap/cutoff consistency, independent marking/clock limitations, unchanged quality values and secret-free API/dashboard/replay/export behavior. It is implemented and checked within the recorded component fixtures; current Test dashboard Chrome QA passes; remaining release acceptance stays pending. Existing first-slice implementation/validation remains independently recorded.
 
 Earlier task 16/21 suggestions and the initial presentation discussion are preserved in [ARCHIVE.md](ARCHIVE.md#s06-discussion-snapshot-before-release-resolution-2026-10-12); current [release policies](CHOICES.md#current-udptcp-release-decisions) supersede their unresolved status.
 
@@ -158,13 +158,13 @@ Recorded: 2026-10-11 during action 3a. This initial inventory captures useful id
 
 ### S07: Independent reference-tool cross-checks
 
-- [ ] Accepted future scope by user, 2026-10-11; implementation not started. [Decision/review evidence](ARCHIVE.md#2026-10-11-selective-reference-review-completed).
+- [ ] Accepted future scope by user, 2026-10-11; pinned artifacts, native iperf2 build/smokes, isolated Crusader scenarios and usable IRTT exploratory overlap recorded on 2026-10-13. Independent boundary allowances/baseline/held-out bands remain incomplete. [Evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress).
 
 Define a repeatable validation comparison against IRTT, iperf2, sockperf, Crusader or Flent where their measurements overlap ours. Retain tool/version, settings, raw evidence, endpoint/path, timing boundaries and observed workload; explain discrepancies rather than assuming either tool is ground truth.
 
 Purpose: independently check shared-engine timing, delivery accounting and report calculations for F02/F07. This extends validation evidence, not the product's normal managed endpoint workflow.
 
-Before execution: use the settled [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix), select compatible builds and establish empirical tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. First-slice UDP/TCP cross-checks are included in authorized [task 33](ROADMAP.md#queued-validation-tasks), with evidence pending; other-carrier checks retain future scope. No external CLI becomes a mandatory runtime dependency.
+Before execution: use the settled [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix), select compatible builds and establish empirical tolerances; match payload including metadata/receipts, actual offered rates, direction, warmup, cutoff/grace and load. Compare only equivalent quantities. First-slice UDP/TCP cross-checks are included in authorized [task 33](ROADMAP.md#queued-validation-tasks); artifact checks are recorded and measured overlap/bands remain pending; other-carrier checks retain future scope. No external CLI becomes a mandatory runtime dependency.
 
 ### S08: Timing preflight and diagnostic report
 
@@ -192,7 +192,7 @@ First-slice T13/T14/T18 native SVG time/ECDF views, exact quantiles and bounded 
 
 Document reproducible validation scenarios: idle, external upload load, external download load, simultaneous load, bulk TCP beside FPS traffic, and bounded non-responsive UDP contention. Add isolated queue-policy/DSCP-classification fixtures when relevant, with actual load and topology recorded separately from the measurement profile.
 
-Purpose: make F07's required externally busy-network validation reproducible, drawing on Flent and bufferbloat-lab; runtime evidence remains pending. This is a validation catalogue, not in-product background-load orchestration, bandwidth control or router configuration.
+Purpose: make F07's required externally busy-network validation reproducible, drawing on Flent and bufferbloat-lab. Isolated directional delay/rate/interruption/MTU kernel cases pass; external upload/download/both-load contention and matched reference evidence remain pending. [Evidence](WORK_LOG.md#2026-10-13-controlled-validation-and-x86-64-release-scope). This is a validation catalogue, not in-product background-load orchestration, bandwidth control or router configuration.
 
 Before execution: record T20 fixture ownership, isolation, resource budgets, restoration and matched repetitions; account for load-generator CPU and path bypass. First-slice external-contention gates are included in the authorized validation scope, with evidence pending. Preserve user-owned services/settings; temporary changes outside owned isolated fixtures need separate authorization. Local CAKE class observations do not prove ISP prioritization. Router queue telemetry is optional local evidence, not an inferred measurement of inaccessible ISP queues or per-game-packet delay.
 

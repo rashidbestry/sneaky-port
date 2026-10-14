@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"sneaky-port/internal/control"
+	"sneaky-port/internal/elapsed"
 	"sneaky-port/internal/measure"
 	"sneaky-port/internal/profile"
 )
@@ -321,7 +322,7 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request, id string) {
 		reject(w, 400, id, "invalid_request", "preflight", "duration 1..1000000000 ns, positive interval, at most 4096 slots required")
 		return
 	}
-	wakes, err := measure.Preflight(r.Context(), uint64(in.Duration), uint64(in.Interval))
+	wakes, metadata, err := measure.PreflightObserved(r.Context(), uint64(in.Duration), uint64(in.Interval))
 	lags := []uint64{}
 	var missed profile.Decimal
 	for _, wake := range wakes {
@@ -333,13 +334,14 @@ func (s *Server) preflight(w http.ResponseWriter, r *http.Request, id string) {
 		status = "interrupted"
 	}
 	reply(w, 200, id, struct {
-		Status   string          `json:"status"`
-		Clock    string          `json:"clock"`
-		Duration profile.Decimal `json:"duration_ns"`
-		Interval profile.Decimal `json:"interval_ns"`
-		Missed   profile.Decimal `json:"missed_slots"`
-		P95      *string         `json:"lag_p95_ns"`
-		P99      *string         `json:"lag_p99_ns"`
-		Wakes    []measure.Wake  `json:"wakes"`
-	}{status, "Go time.Since host-local monotonic clock; source/resolution unverified; timer lag is not network delay or calibration", in.Duration, in.Interval, missed, measure.Percentile(lags, 95), measure.Percentile(lags, 99), wakes}, nil)
+		Status       string            `json:"status"`
+		Clock        string            `json:"clock"`
+		ClockDetails *elapsed.Metadata `json:"clock_details,omitempty"`
+		Duration     profile.Decimal   `json:"duration_ns"`
+		Interval     profile.Decimal   `json:"interval_ns"`
+		Missed       profile.Decimal   `json:"missed_slots"`
+		P95          *string           `json:"lag_p95_ns"`
+		P99          *string           `json:"lag_p99_ns"`
+		Wakes        []measure.Wake    `json:"wakes"`
+	}{status, "Host-local selected elapsed clock; accuracy bounds unverified; clock details identify source/quantization only; timer lag is not network delay or calibration", metadata, in.Duration, in.Interval, missed, measure.Percentile(lags, 95), measure.Percentile(lags, 99), wakes}, nil)
 }
