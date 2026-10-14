@@ -10,7 +10,7 @@ Finite UDP/TCP lifecycle/accounting, bounded evidence/replay/export, authenticat
 
 ## Confirmed future features
 
-This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard checkpoints 23a-23b/23d-23n are implemented within recorded scopes. Latest 23n shows numeric receipts and live RTT in ms; 23l/23m retains Test only and repaired long-run capacity/current results; 23c browser QA is pending tooling. Shipping is Windows/Linux x86-64; the user retired architecture tasks 24/25 on 2026-10-13. Named controlled tasks 29-32 pass within recorded scopes. Production clock bounds, current Test dashboard Chrome QA passes; full acceptance remains pending; no F item is complete.
+This index tracks scope and partial progress, not a release schedule. [ROADMAP.md](ROADMAP.md#first-slice-task-index) splits the former umbrella into separately checked tasks; milestones 5-23 and dashboard implementation checkpoints pass within recorded scopes. Latest 23n shows numeric receipts and live RTT in ms; 23l/23m retains Test only and repaired long-run capacity/current results. Chrome QA 23c and named controlled cases 29-32 pass. Shipping is Windows/Linux x86-64; the user retired tasks 24/25 on 2026-10-13. Production clock bounds and remaining release gates stay incomplete; no F item is complete.
 
 | ID | Feature | Status | Design reference |
 | --- | --- | --- | --- |
