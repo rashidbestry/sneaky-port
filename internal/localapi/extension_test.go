@@ -18,6 +18,7 @@ import (
 	"sneaky-port/internal/adapter"
 	"sneaky-port/internal/control"
 	"sneaky-port/internal/engine"
+	"sneaky-port/internal/measure"
 	"sneaky-port/internal/probe"
 	"sneaky-port/internal/profile"
 	"sneaky-port/internal/testutil"
@@ -183,6 +184,148 @@ func extensionStatus(t *testing.T, b []byte) Status {
 	return out.Result
 }
 
+// extensionEndpointState reports bounded endpoint status and half-open receiver populations.
+// Raw observations and their original independently timed cutoff remain authoritative.
+func extensionEndpointState(r *control.ReplayedReport) string {
+	if r == nil {
+		return "missing"
+	}
+	outside := 0
+	for _, at := range r.Evidence.Receiver.Arrivals {
+		if at >= r.Evidence.Receiver.Cutoff {
+			outside++
+		}
+	}
+	return fmt.Sprintf("status=%s verification=%s adapter=%s complete=%t generation=%d observation=%d receiver_arrivals=%d receiver_outside=%d", r.Status, r.Verification, r.Manifest.Plan.Adapter, r.Evidence.Complete, r.Evidence.GenerationCutoff, r.Evidence.ObservationCutoff, len(r.Evidence.Receiver.Arrivals), outside)
+}
+
+// extensionDirectionAccounting checks raw identities and exact delivery at independent local cutoffs.
+// Only a matched cross-window attempt/receipt can justify unknown delivery in a completed live fixture.
+func extensionDirectionAccounting(origin, peer *control.ReplayedReport, derived *control.LocalRun) (bool, error) {
+	if derived == nil {
+		return false, fmt.Errorf("missing directional reconciliation")
+	}
+	if derived.Summary.TransportPacketLoss != nil {
+		return false, fmt.Errorf("directional accounting invented transport packet loss")
+	}
+	entries := make(map[measure.Identity]measure.Entry, len(origin.Evidence.Entries))
+	for _, entry := range origin.Evidence.Entries {
+		entries[entry.Identity] = entry
+	}
+	arrivals := make(map[measure.Identity]engine.Record, len(peer.Evidence.Receiver.Arrivals))
+	for _, raw := range peer.Evidence.Records {
+		var record engine.Record
+		if err := json.Unmarshal(raw, &record); err != nil {
+			return false, err
+		}
+		if record.Kind == "arrival" && record.FrameKind == probe.Data {
+			arrivals[record.Identity] = record
+		}
+	}
+	matched := func(id measure.Identity, entry measure.Entry, at uint64) bool { // Require an unchanged complete-frame capture before using either endpoint's cutoff.
+		arrival, ok := arrivals[id]
+		return ok && entry.Attempt != nil && arrival.At == profile.Decimal(at) && arrival.Attempt == *entry.Attempt && arrival.Epoch == origin.Evidence.Epoch && arrival.Direction == origin.Evidence.Direction
+	}
+	witness := false
+	for id, at := range peer.Evidence.Receiver.Arrivals {
+		if at >= uint64(peer.Evidence.ObservationCutoff) {
+			continue
+		}
+		entry, ok := entries[id]
+		if !ok || !matched(id, entry, at) {
+			return false, fmt.Errorf("eligible receiver identity does not match original attempt: %+v", id)
+		}
+		if *entry.Attempt >= origin.Evidence.ObservationCutoff {
+			witness = true
+		}
+	}
+	for _, entry := range origin.Evidence.Entries {
+		if entry.Receipt == nil || *entry.Receipt >= origin.Evidence.ObservationCutoff {
+			continue
+		}
+		at, ok := peer.Evidence.Receiver.Arrivals[entry.Identity]
+		if !ok || !matched(entry.Identity, entry, at) {
+			return false, fmt.Errorf("in-window receipt lacks matching retained receiver capture: %+v", entry.Identity)
+		}
+		if at >= uint64(peer.Evidence.ObservationCutoff) {
+			witness = true
+		}
+	}
+	if witness {
+		if derived.Summary.Received != nil || derived.Summary.MissingAtReceiver != nil {
+			return true, fmt.Errorf("cross-window identities became known directional delivery")
+		}
+		return true, nil
+	}
+	var received, missing profile.Decimal
+	for _, entry := range origin.Evidence.Entries {
+		if entry.Identity.Lifecycle != 2 || entry.Scheduled >= origin.Evidence.ObservationCutoff || entry.Attempt == nil || *entry.Attempt >= origin.Evidence.ObservationCutoff || entry.State == "skipped_local" {
+			continue
+		}
+		if at, ok := peer.Evidence.Receiver.Arrivals[entry.Identity]; ok && at < uint64(peer.Evidence.ObservationCutoff) {
+			received++
+		} else if entry.State == "written" && entry.WriteCompleted != nil && *entry.WriteCompleted < origin.Evidence.ObservationCutoff {
+			missing++
+		}
+	}
+	if derived.Summary.Received == nil || *derived.Summary.Received != received || derived.Summary.MissingAtReceiver == nil || *derived.Summary.MissingAtReceiver != missing {
+		return false, fmt.Errorf("compatible direction lost exact delivery: received=%d missing=%d derived=%+v", received, missing, derived.Summary)
+	}
+	return false, nil
+}
+
+// extensionAccountingWarning independently names the one proven directional reconciliation warning.
+// It follows only validated raw captures; ambiguous write completion does not imply missing delivery.
+func extensionAccountingWarning(origin, peer *control.ReplayedReport, role string, witness bool) string {
+	if witness {
+		for _, entry := range origin.Evidence.Entries {
+			at, ok := peer.Evidence.Receiver.Arrivals[entry.Identity]
+			if ok && at < uint64(peer.Evidence.ObservationCutoff) && entry.Attempt != nil && *entry.Attempt >= origin.Evidence.ObservationCutoff {
+				return role + ": receiver contains unmatched or outside-cutoff identity"
+			}
+		}
+		return role + ": origin receipt contradicts complete receiver ledger"
+	}
+	for _, entry := range origin.Evidence.Entries {
+		if entry.Attempt != nil && (entry.State != "written" || entry.WriteCompleted == nil || *entry.WriteCompleted >= origin.Evidence.ObservationCutoff) {
+			return role + ": failed/pending writes are excluded from missing-data claims; observed arrivals remain distinct"
+		}
+	}
+	return ""
+}
+
+// extensionRemoteAccounting requires successful registered replay and precise per-direction accounting.
+// Hosted scheduling may produce a proven independent-cutoff incompatibility; arbitrary unknowns still fail.
+func extensionRemoteAccounting(t *testing.T, r *control.ReplayedReport, run int) {
+	t.Helper()
+	peer, reconciliation := r.ServerReport, r.Reconciliation
+	if r.Status != "completed" || r.Verification != "matched" || !r.Evidence.Complete || !r.Evidence.Receiver.Complete || r.Evidence.Receiver.Cutoff != uint64(r.Evidence.ObservationCutoff) || peer == nil || reconciliation == nil || r.TransferReceipt == nil || r.TransferReceipt.Status != "verified" || peer.Status != "completed" || peer.Verification != "matched" || !peer.Evidence.Complete || !peer.Evidence.Receiver.Complete || peer.Evidence.Receiver.Cutoff != uint64(peer.Evidence.ObservationCutoff) || peer.Manifest.Plan.Adapter != extension.ID || !reflect.DeepEqual(r.Manifest.Plan, peer.Manifest.Plan) || !reflect.DeepEqual(r.Manifest.Settings, peer.Manifest.Settings) || r.Manifest.RunID != peer.Manifest.RunID || r.Manifest.SessionID != peer.Manifest.SessionID || r.Manifest.PlanHash != peer.Manifest.PlanHash || r.Evidence.Direction != 1 || peer.Evidence.Direction != 2 || r.Evidence.Epoch != 1 || peer.Evidence.Epoch != 1 || r.Evidence.PeerEpoch != 1 || peer.Evidence.PeerEpoch != 1 {
+		t.Fatalf("extension remote identity/accounting missing: run=%d client=[%s] peer=[%s] transfer=%+v reconciliation=%+v", run, extensionEndpointState(r), extensionEndpointState(peer), r.TransferReceipt, reconciliation)
+	}
+	clientWitness, clientErr := extensionDirectionAccounting(r, peer, reconciliation.Client)
+	serverWitness, serverErr := extensionDirectionAccounting(peer, r, reconciliation.Server)
+	if clientErr != nil || serverErr != nil {
+		t.Fatalf("extension remote accounting differs: run=%d client_error=%v server_error=%v client=[%s] peer=[%s] reconciliation=%+v", run, clientErr, serverErr, extensionEndpointState(r), extensionEndpointState(peer), reconciliation)
+	}
+	warnings := []string{}
+	for _, warning := range []string{extensionAccountingWarning(r, peer, "client", clientWitness), extensionAccountingWarning(peer, r, "server", serverWitness)} {
+		if warning != "" {
+			warnings = append(warnings, warning)
+		}
+	}
+	if !reflect.DeepEqual(reconciliation.Warnings, warnings) {
+		t.Fatalf("extension reconciliation warning differs: actual=%v want=%v", reconciliation.Warnings, warnings)
+	}
+	if clientWitness || serverWitness {
+		if reconciliation.Status != "unknown" || reconciliation.Reason != "unmatched receiver identities; directional delivery remains unknown where incompatible" {
+			t.Fatalf("independent cutoff incompatibility lost: %+v", reconciliation)
+		}
+		t.Logf("run=%d exact independent-cutoff witness client=%t server=%t; complete registered endpoint records retained with unknown affected delivery", run, clientWitness, serverWitness)
+	} else if reconciliation.Status != "reconciled" {
+		t.Fatalf("compatible extension did not reconcile: %+v", reconciliation)
+	}
+}
+
 // TestAdapterExtensionWorkflow crosses common config, HTTP, SSH, accounting, reports and cleanup.
 // The fixture is TCP-backed with distinct HMAC identity; no TLS/QUIC/DNS support is implied.
 func TestAdapterExtensionWorkflow(t *testing.T) {
@@ -273,8 +416,8 @@ func TestAdapterExtensionWorkflow(t *testing.T) {
 				if _, err := control.ReplayReport(path, 4<<20); err == nil {
 					t.Fatal("unregistered report silently substituted")
 				}
-				if i < 2 && (r.Reconciliation == nil || r.Reconciliation.Status != "reconciled" || r.ServerReport == nil || r.ServerReport.Manifest.Plan.Adapter != extension.ID || r.Reconciliation.Client.Summary.Received == nil) {
-					t.Fatal("extension remote accounting missing")
+				if i < 2 {
+					extensionRemoteAccounting(t, r, i)
 				}
 				writes := 0
 				for _, raw := range r.Evidence.Records {

@@ -139,10 +139,35 @@ function latencyChartCheck() {
   assert.ok(!nodes.some(function inventedLine(node) { /* Absent receipts/time bins cannot become a connecting latency line. */ return ["polyline","path","circle"].includes(node.tagName); }));
   assert.ok(ids["test-latency-note"].textContent.includes("Provisional"));
   evaluate("state.run.progress.rtt_time=[]; renderWorkspace()"); assert.ok(descendants(ids["test-rtt-chart"]).some(function noData(node) { /* No receipt is explicit rather than zero latency. */ return node.textContent==="No completed RTT samples yet."; }));
-  const view={complete:false,endpoint:"client",scope:"main",integrity:"verified",cutoff_ns:"3000000000",phases:[],summary:{Planned:"7",DeadlineMisses:"3",OnTime:"4",Late:"2",Pending:"0",RTTSamples:"3",RTTMedian:"1125000",RTTP95:"23500000"},time:ranges.map(function savedRange(range) { /* Match the authoritative diagnostic shape. */ return {start_ns:range.start_ns,end_ns:range.end_ns,rtt:{count:range.count,min_ns:range.min_ns,max_ns:range.max_ns},missing:"0",local:"0"}; })};
-  evaluate("state.run.status='partial'; workspace.result="+JSON.stringify(view)+"; renderWorkspace()"); assert.equal(ids["card-rtt"].textContent,"1.125 ms"); assert.ok(ids["test-latency-note"].textContent.startsWith("Partial"));
+  const labels={RTTMedian:{completed:"3",coverage:"partial",basis:"locally measured",reasons:["partial_observation"]},RTTP95:{completed:"3",coverage:"partial",basis:"locally measured",reasons:["partial_observation"]}};
+  const view={complete:false,endpoint:"client",scope:"main",integrity:"verified",cutoff_ns:"3000000000",phases:[],summary:{Planned:"7",DeadlineMisses:"5",OnTime:"2",Late:"1",Pending:"0",RTTSamples:"3",RTTMedian:"1125000",RTTP95:"23500000"},evidence_labels:labels,time:ranges.map(function savedRange(range) { /* Match the authoritative diagnostic shape. */ return {start_ns:range.start_ns,end_ns:range.end_ns,rtt:{count:range.count,min_ns:range.min_ns,max_ns:range.max_ns},missing:"0",local:"0"}; })};
+  evaluate("state.run.status='partial'; workspace.result="+JSON.stringify(view)+"; renderWorkspace()"); finalRTTCardsCheck(view,"sampled fixture"); assert.equal(ids["card-rtt"].textContent,"1.125 ms"); assert.equal(ids["card-tail"].textContent,"23.5 ms"); assert.ok(ids["test-latency-note"].textContent.startsWith("Partial"));
+  const empty={...view,complete:true,summary:{Planned:"7",DeadlineMisses:"7",OnTime:"0",Late:"0",Pending:"0",RTTSamples:"0",RTTMedian:null,RTTP95:null},evidence_labels:{RTTMedian:{completed:"0",coverage:"unavailable",basis:"locally measured",reasons:["no_eligible_samples"]},RTTP95:{completed:"0",coverage:"unavailable",basis:"locally measured",reasons:["no_eligible_samples"]}},time:[]};
+  evaluate("state.run.status='completed'; workspace.result="+JSON.stringify(empty)+"; renderWorkspace()"); finalRTTCardsCheck(empty,"empty completed fixture"); assert.equal(ids["card-tail-note"].textContent,"0 samples · unavailable · no eligible samples"); assert.ok(descendants(ids["test-rtt-chart"]).some(function emptyFinalChart(node) { /* A fully finalized empty population stays unavailable rather than zero latency. */ return node.textContent==="No completed RTT samples yet."; }));
   evaluate("state.run.control_run_id='next-latency-run'; rememberProgress(state.run)"); assert.equal(evaluate("workspace.result"),null); assert.equal(descendants(ids["test-rtt-chart"]).filter(function oldRange(node) { /* A new run cannot inherit old latency ranges. */ return node.attributes?.class==="sample-range"; }).length,0);
   evaluate("(function restoreLatencyFixture() { /* Restore normal workflow state without commands or retained synthetic observations. */ const previous="+original+"; state.run=previous.run; workspace.result=previous.result; workspace.resultRun=previous.resultRun; workspace.run=previous.workspaceRun; renderWorkspace(); })()"); assert.equal(requests.length,before);
+}
+// finalRTTCardsCheck binds final cards/ranges to replay's actual eligible population, including no completed receipts.
+// Real host scheduling supplies observations; deterministic fixtures above require both numeric and unavailable states.
+function finalRTTCardsCheck(view,source) {
+  const summary=view.summary,samples=BigInt(summary.RTTSamples),diagnostic=source+" "+JSON.stringify({samples:summary.RTTSamples,on_time:summary.OnTime,late:summary.Late,misses:summary.DeadlineMisses,pending:summary.Pending});
+  assert.equal(samples,BigInt(summary.OnTime)+BigInt(summary.Late),diagnostic);
+  let plotted=0n; for(const group of view.time) plotted+=BigInt(group.rtt.count);
+  assert.equal(plotted,samples,diagnostic);
+  for(const [id,key] of [["card-rtt","RTTMedian"],["card-tail","RTTP95"]]) {
+    const value=summary[key],label=view.evidence_labels[key];
+    assert.equal(label.completed,summary.RTTSamples,diagnostic); assert.ok(ids[id+"-note"].textContent.startsWith(summary.RTTSamples+" samples · "+label.coverage),diagnostic);
+    if(samples===0n) {
+      assert.equal(value,null,diagnostic); assert.equal(ids[id].textContent,"—",diagnostic); assert.equal(label.coverage,"unavailable",diagnostic); assert.ok(label.reasons.includes("no_eligible_samples"),diagnostic);
+    } else {
+      assert.notEqual(value,null,diagnostic);
+      const decimal=String(value).padStart(7,"0"),whole=BigInt(decimal.slice(0,-6)).toString(),fraction=decimal.slice(-6).replace(/0+$/,"");
+      assert.equal(ids[id].textContent,whole+(fraction ? "."+fraction : "")+" ms",diagnostic);
+    }
+  }
+  for(const [id,key] of [["card-on-time","OnTime"],["card-late","Late"],["card-misses","DeadlineMisses"],["card-pending","Pending"]]) assert.equal(ids[id].textContent,summary[key],diagnostic);
+  const envelopes=descendants(ids["test-rtt-chart"]).filter(function finalEnvelope(node) { /* Missing/local groups cannot invent completed RTT ranges. */ return node.attributes?.class==="sample-range"; });
+  assert.equal(envelopes.length,view.time.filter(function completedRange(group) { /* Count only groups with actual completed samples. */ return BigInt(group.rtt.count)>0n; }).length,diagnostic);
 }
 // main exercises actual script/API pairing, exact edits, revision conflicts and idempotent control recovery.
 async function main() {
@@ -299,7 +324,7 @@ async function guidedMain() {
     while(!evaluate('state.run && !["executing","cancelling"].includes(state.run.status)')) { if(Date.now()>end) throw Error("real guided run timeout"); await click("test-refresh"); await new Promise(function statusYield(resolve) { /* Yield to real finite cleanup; long trials are polled once per second. */ setTimeout(resolve,long ? 1000 : 20); }); }
     await evaluate("workspace.loading");
     if(!evaluate("!!workspace.result")) { await click("test-refresh"); await evaluate("workspace.loading"); }
-    assert.equal(evaluate("state.run.status"),"completed",ids["test-error"].textContent); assert.ok(evaluate("workspace.result"),ids.notice.textContent); assert.equal(evaluate("workspace.result.complete"),true); assert.ok(ids["card-tail"].textContent.endsWith(" ms")); assert.ok(ids["card-tail-note"].textContent.includes("samples"));
+    assert.equal(evaluate("state.run.status"),"completed",ids["test-error"].textContent); assert.ok(evaluate("workspace.result"),ids.notice.textContent); assert.equal(evaluate("workspace.result.complete"),true); finalRTTCardsCheck(evaluate("workspace.result"),protocol+" real guided run");
     assert.equal(evaluate("workspace.resultRun"),evaluate("state.run.control_run_id")); assert.equal(evaluate("state.draft.phases[0].client.rate_numerator"),long ? "60" : "2997");
     if(long) { assert.equal(evaluate("state.selected.profile.phases[0].duration_ns"),"60000000000"); assert.ok(BigInt(evaluate("state.run.progress.elapsed_ns"))>=60000000000n); }
     else { assert.equal(evaluate("state.selected.profile.phases.length"),2); assert.equal(evaluate("state.selected.profile.phases[1].deadline_ns"),"12125000"); assert.equal(evaluate("state.selected.profile.phases[0].client.mode"),"burst"); }

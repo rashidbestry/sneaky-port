@@ -41,6 +41,8 @@ Sources: [registry](internal/adapter/adapter.go) (`Register`, `Validate`, `Descr
 
 The [test-only TCP-backed factory](internal/testutil/extension/adapter.go) (`Register`, `Describe`, `Validate`, `Prepare`, `Dial`, `basePlan`) changes its private socket options while retaining the public/HMAC plan identity. [authentication identity fixture](internal/engine/finite_test.go) rejects direction tags that differ from the frozen plan before worker ownership. [HTTP/SSH workflow fixtures](internal/localapi/extension_test.go) cover IPv4/IPv6 completion, cancellation, framing-byte accounting, unregistered replay rejection, report import/export/comparison and listener/reservation reuse; [actual-script fixture](internal/localapi/web/dashboard_test.cjs) covers descriptor/options validation and saved/run controls. Production defaults still expose UDP/TCP only. Fixed logical-message overhead is not outer-packet evidence; rendered-browser/native/later-carrier/full acceptance remains pending. [Canonical boundary](README.md#adapter-extension-gate).
 
+The live extension's `extensionRemoteAccounting` checks compatible delivery exactly and requires matching raw captures to justify any independent-cutoff unknown. [Fixture guard cases](internal/localapi/extension_reconciliation_test.go) reject unexplained unknowns and altered/missing captures. A [deterministic registered-extension case](internal/control/extension_reconciliation_test.go) requires paired production collectors, persistence/replay and exact positive directional delivery without depending on host scheduling; its timestamps are synthetic.
+
 ## Start reading here
 
 ```mermaid
@@ -504,6 +506,8 @@ flowchart TD
 
 Sources: [transfer.go](internal/control/transfer.go) (`routeReportChannels`, `serveReportChannel`, `openReportSnapshot`, `serveReport`, `receiveServerReport`, `receiveReport`, `verifyTransferredFiles`), [reconcile.go](internal/control/reconcile.go) (`reconcileReports`, `reconcileOrigin`, `replayTransferred`), [replay.go](internal/control/replay.go), [exports](internal/control/export.go), [shared ledger](internal/measure/ledger.go) (`SummarizeSnapshot`), [fixtures](internal/control/transfer_test.go). Numbered frames/acks and final hashes bind exact ordered bytes to the existing enrolled-client/pinned-host session. Endpoint raw summaries remain unchanged; each observation cutoff belongs to its own clock. Lost receipts do not imply missing data; stream delivery never establishes zero network packet loss.
 
+Complete reads racing shutdown remain in raw evidence. `reconcileOrigin` excludes arrivals at or after the receiver's cutoff, matching the shared ledger's half-open window. Eligible arrivals still require matching origin attempts and raw identities; an eligible origin receipt without an eligible peer arrival remains incompatible. [Exact boundary regressions](internal/control/reconcile_cutoff_test.go) cover both directions, retained evidence and contradictions. Completed endpoints alone do not establish compatible directional delivery.
+
 The per-endpoint file cap (maximum 1 GiB), remaining request budget after lifecycle/calibration reservations and whole network-transfer timeout bound work. Offline input budgets include both remote hash/replay passes; they are not heap caps. Interrupted transfer stays unknown; saved receipts are local provenance, not transferable attestations. Additional recovery/report-dashboard and native/live/impairment acceptance remain pending.
 
 ## Live SSH clock sampling
@@ -733,6 +737,8 @@ flowchart TD
 ```
 
 Sources: [live range/accounting/copies](internal/measure/progress.go) (`addRTT`, `RTTRanges`, `Limit`, `Publish`, `Snapshot`), [engine publication](internal/engine/progress.go) (`publishProgress`), [terminal rebuild](internal/engine/endpoint.go) (`collect`), [numeric cards/live-final replacement](internal/localapi/web/workspace.js) (`rememberProgress`, `latencyPlot`, `renderWorkspace`), [ms/seconds axes](internal/localapi/web/diagnostics.js) (`plot`), [main markup/layout](internal/localapi/web/index.html), [viewport sizing](internal/localapi/web/dashboard.css). Late first receipts remain eligible; warmup/duplicates/local or missing outcomes produce no RTT sample. Old buckets age out of the labeled provisional window without reducing total counts; final replay retains its existing full-scope range/quantile gates. No interpolation, cross-host subtraction or live quantiles. [Range/cutoff/ownership tests](internal/measure/progress_test.go), [real finite UDP/TCP progress](internal/engine/progress_test.go), [actual-script numeric/axis/replacement checks](internal/localapi/web/dashboard_test.cjs) (`latencyChartCheck`). Rendered-browser acceptance remains 23c.
+
+The actual-script `finalRTTCardsCheck` requires exact replay sample/count/range conservation and nanosecond-to-millisecond card values. Deterministic sampled and empty completed cases cover numeric values and explicit unavailable labels; real UDP/TCP trials assert their actual eligible populations without requiring a scheduler-dependent RTT sample.
 
 ## Test-only dashboard and sixty-second runs
 

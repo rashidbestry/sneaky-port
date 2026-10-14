@@ -84,9 +84,15 @@ func reconcileOrigin(origin engine.Result, peer engine.Result, warnings *[]strin
 		}
 	}
 	for id, at := range receiver.Arrivals {
+		// A complete read racing endpoint stop remains raw evidence, but cannot
+		// invalidate or join the receiver's half-open eligible population.
+		// The origin-receipt check below still rejects contradictory claims.
+		if at >= receiver.Cutoff {
+			continue
+		}
 		e, ok := entries[id]
 		arrival, recorded := arrivals[id]
-		if at >= receiver.Cutoff || !ok || e.Attempt == nil || uint64(*e.Attempt) >= uint64(origin.ObservationCutoff) || !recorded || arrival.At != profile.Decimal(at) || arrival.Attempt != *e.Attempt || arrival.Epoch != origin.Epoch || arrival.Direction != origin.Direction {
+		if !ok || e.Attempt == nil || uint64(*e.Attempt) >= uint64(origin.ObservationCutoff) || !recorded || arrival.At != profile.Decimal(at) || arrival.Attempt != *e.Attempt || arrival.Epoch != origin.Epoch || arrival.Direction != origin.Direction {
 			*warnings = append(*warnings, role+": receiver contains unmatched or outside-cutoff identity")
 			return out
 		}
