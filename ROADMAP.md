@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-14. Shipping targets are Windows 11 x86-64 clients and Linux x86-64 servers. The user authorized the remaining release tasks together and removed ARM from scope. Chrome QA 23c and named controlled cases 29-32 are complete; 24-25 are retired. Baseline 26, remaining marking 27, clock bounds 28, reference comparisons 33 and live-path 34 still gate full acceptance 35. [Current evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress), [requirements](DESIGN.md), [choices](CHOICES.md), [feature status](PROPOSALS.md).
+Updated: 2026-10-15. Shipping targets are Windows 11 x86-64 clients and Linux x86-64 servers. The user authorized the remaining release tasks together and removed ARM from scope. Chrome QA 23c and named controlled cases 29-32 are complete; 24-25 are retired. Baseline 26, remaining marking 27, clock bounds 28, reference comparisons 33 and live-path 34 still gate full acceptance 35. A supplied Ubuntu 24.04.4 VMware guest now passes SSH/sudo inventory; deployment trials remain pending. [Guest access](WORK_LOG.md#2026-10-15-vmware-ubuntu-access-check), [current evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress), [requirements](DESIGN.md), [choices](CHOICES.md), [feature status](PROPOSALS.md).
 
 Keep each task separately checkable and update its status/evidence before moving on. The 2026-10-13 user instruction authorizes this remaining release batch; future work retains the normal selected-task workflow. Historical four-target builds below are dated evidence, not current shipping requirements.
 
@@ -264,12 +264,12 @@ The full-population reports above are retained named cases. Current CI separates
 | Gate | Current state / remaining prerequisite |
 | --- | --- |
 | 23c browser | Completed for the current Test dashboard in connected Chrome above. Native Linux shell/sshd, clock accuracy and live-network qualification remain separate. |
-| 26 Linux baseline | Available Ubuntu 24.04.4 WSL2 is a separate process/kernel case. User confirmed no native server is available; selected Ubuntu 22.04.5 qualification remains unrun. |
+| 26 Linux baseline | Supplied Ubuntu 24.04.4 x86-64 VMware guest passes SSH/password/sudo inventory, kernel 6.17.0-14-generic; deployment qualification remains unrun. This guest and the existing WSL2 case are separate from selected Ubuntu 22.04.5 qualification, which remains unrun. |
 | 27 marking/ports | Independent Linux loopback packet capture passes with zero capture-socket drops. Windows PktMon driver access, physical endpoint/NAT capture and observation limits still require evidence. |
 | 28 clocks | Synthetic/causal gates and coherent QPC elapsed-source repair pass focused checks. Independent observations confirm the former Go timestamp plateaus. Production timestamp/model/drift bounds remain unqualified; one-way stays estimated/unavailable. |
 | 29-32 controlled cases | Completed in their named scopes above; retained raw truth/reports do not imply native deployment or live ISP evidence. |
 | 33 references | Pinned iperf2 native build/smokes retain pacing warnings; four isolated Crusader scenarios complete. Supported IRTT loopback alias fixes its MTU receive-buffer failure: ten exploratory pairs retain 200 product/199 reference completions and one reference skip. Independent boundary allowances and valid baseline/held-out trials remain incomplete. |
-| 34 live path | User confirmed no native server is available; repeated matched live-path trials and offered-workload/environment evidence remain unavailable. |
+| 34 live path | Supplied VMware guest is reachable over non-loopback IPv4 SSH. Repeated matched UDP/TCP trials, achieved workload and topology/capture evidence remain unrun; a virtual/LAN path does not establish Internet/ISP behavior. |
 | Shipping architecture | Windows/Linux x86-64 only. Retired tasks 24-25 are absent from acceptance requirements. |
 
 The full first slice remains incomplete. Further work resumes at these prerequisites; later carriers, DNS and monitoring keep their existing status.
