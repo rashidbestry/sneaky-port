@@ -29,7 +29,7 @@ Search by date, feature/choice ID or heading before reading an excerpt. Preserve
 ### 2026-10-10 21:28 UTC+03:00 — Documentation consolidation and persistent work tracking
 
 - Consolidated confirmed requirements, protocol/DNS coverage, ports/priority, measurement methods, and acceptance checks into [DESIGN.md](DESIGN.md).
-- Simplified [AGENTS.md](AGENTS.md), added this work log, and linked both from [README.md](README.md). Future work checks the current-state index and relevant history before assuming a feature is absent or complete.
+- Simplified [AGENTS.md](AGENTS.md), added this work log, and linked both from [README.md](../README.md). Future work checks the current-state index and relevant history before assuming a feature is absent or complete.
 - Removed the unused Claude entrypoint, superseded `docs/` documents, and redundant repository-local skill. Preserved the optional backlog with its links updated.
 - Preserved the existing `.gitignore` unchanged; it currently excludes Markdown documents from Git unless already tracked.
 - State: documentation cleanup and tracking only. Application implementation remains on hold; all runtime features remain unimplemented.
@@ -39,7 +39,7 @@ Search by date, feature/choice ID or heading before reading an excerpt. Preserve
 
 - Renamed `NotImplementedYet.md` to [PROPOSALS.md](PROPOSALS.md), preserving S01-S06 and their unapproved status.
 - Added F01-F07 to index the already accepted future scope; all remain not started. No new feature acceptance or implementation authorization was inferred.
-- Updated [AGENTS.md](AGENTS.md), [README.md](README.md), and [DESIGN.md](DESIGN.md) links and tracking rules. Forward statuses/decisions belong in `PROPOSALS.md`; completed changes and validation belong here, linked by feature/proposal identifier.
+- Updated [AGENTS.md](AGENTS.md), [README.md](../README.md), and [DESIGN.md](DESIGN.md) links and tracking rules. Forward statuses/decisions belong in `PROPOSALS.md`; completed changes and validation belong here, linked by feature/proposal identifier.
 - Simplified this current-state index to actual repository/implementation state; future feature details now live in the proposals index.
 - State: documentation only; application code and runtime features remain unimplemented. The implementation hold and existing `.gitignore` are unchanged.
 - Validation: rename/old-file absence, five-file inventory, local links and section anchors, S01-S06/F01-F07 uniqueness, trailing whitespace, and `git diff --check` all passed. No application tests or network experiments were run.
@@ -297,7 +297,7 @@ Recorded: 2026-10-11 11:00:55 UTC+03:00 (Europe/Istanbul).
 
 Use this file for technical questions, options, recommendations, and confirmed decisions. [DESIGN.md](DESIGN.md) contains product requirements, [PROPOSALS.md](PROPOSALS.md) tracks future features, and [WORK_LOG.md](WORK_LOG.md) records completed work and decision history.
 
-A recommendation is not user acceptance, and a confirmed technology choice alone is not implementation permission. Preserve stable T identifiers. User explicitly authorized the first slice on 2026-10-11; [foundation pins/checks](THIRD_PARTY_NOTICES.md) and [actual progress](ARCHIVE.md#2026-10-11-first-implementation-foundations) supersede earlier historical hold statements.
+A recommendation is not user acceptance, and a confirmed technology choice alone is not implementation permission. Preserve stable T identifiers. User explicitly authorized the first slice on 2026-10-11; [foundation pins/checks](THIRD_PARTY_NOTICES.md) and [actual progress](#2026-10-11-first-implementation-foundations) supersede earlier historical hold statements.
 
 ## Technical decisions
 
@@ -329,7 +329,7 @@ For T05, the current preferred candidates are:
 
 For T11, [Windows QOSSetFlow](https://learn.microsoft.com/en-us/windows/win32/api/qos2/nf-qos2-qossetflow) and its [DSCP operation](https://learn.microsoft.com/en-us/windows/win32/api/qos2/ne-qos2-qos_set_flow) are candidate mechanisms, not proven support across every adapter. Inspect actual socket ownership, OS permissions, and DSCP/ECN behavior before finalizing the backend. Preserve explicit unavailable/unknown outcomes and the existing requirement for independent directions.
 
-The earlier source inspection was design evidence only. The subsequently authorized foundation pins/license notices and build/fixture results are in [WORK_LOG.md](ARCHIVE.md#2026-10-11-first-implementation-foundations); they do not validate future protocol integrations.
+The earlier source inspection was design evidence only. The subsequently authorized foundation pins/license notices and build/fixture results are in [WORK_LOG.md](#2026-10-11-first-implementation-foundations); they do not validate future protocol integrations.
 
 ## Foundation discussion
 
@@ -355,7 +355,7 @@ T12 requires broad mainstream Linux server coverage, with CentOS, Ubuntu, Fedora
 
 ## Remaining technical choices
 
-Action 4's first-slice decisions are settled in [final decisions](#first-slice-final-decisions) and the [design contract](DESIGN.md#first-slice-implementation-contract). Foundation dependency pins, retained licenses and four builds are recorded in [notices](THIRD_PARTY_NOTICES.md) and [WORK_LOG.md](ARCHIVE.md#2026-10-11-first-implementation-foundations); native environments/Linux support minima, reference-tool builds and empirical timing bands remain pending. Workload/resource/calibration values are explicit configurable inputs. Future carriers/DNS, TLS credential lifecycle, named QoS presets, continuous-monitoring mechanics and automatic-recommendation/confidence alternatives remain outside this slice and open where applicable; these future features are not implemented or runtime-validated.
+Action 4's first-slice decisions are settled in [final decisions](#first-slice-final-decisions) and the [design contract](DESIGN.md#first-slice-implementation-contract). Foundation dependency pins, retained licenses and four builds are recorded in [notices](THIRD_PARTY_NOTICES.md) and [WORK_LOG.md](#2026-10-11-first-implementation-foundations); native environments/Linux support minima, reference-tool builds and empirical timing bands remain pending. Workload/resource/calibration values are explicit configurable inputs. Future carriers/DNS, TLS credential lifecycle, named QoS presets, continuous-monitoring mechanics and automatic-recommendation/confidence alternatives remain outside this slice and open where applicable; these future features are not implemented or runtime-validated.
 
 T19/T20 additionally track selective reference-tool reuse and independent validation choices. IRTT/iperf2/Crusader design/external-validation-only use and S07-S11 future scope are confirmed; other components, exact builds/dependencies, detailed mechanics and experiments remain open.
 
@@ -383,7 +383,7 @@ T12 and T13 have partial answers recorded below; other answers and numerical def
 
 ## Measurement contract discussion
 
-Historical action 2 discussion, completed as documentation on 2026-10-11. The [conceptual contract](DESIGN.md#measurement-contract-draft) records confirmed T14 data/receipt, T15 configurable traffic/phase and T18 presentation answers. Proposed/open mechanics and absent setup helpers below describe that milestone; the later [first-slice decisions](#first-slice-final-decisions) and [implementation evidence](ARCHIVE.md#2026-10-11-ssh-pairing-and-readiness) supersede them for UDP/TCP. Numerical examples were not accepted as defaults.
+Historical action 2 discussion, completed as documentation on 2026-10-11. The [conceptual contract](DESIGN.md#measurement-contract-draft) records confirmed T14 data/receipt, T15 configurable traffic/phase and T18 presentation answers. Proposed/open mechanics and absent setup helpers below describe that milestone; the later [first-slice decisions](#first-slice-final-decisions) and [implementation evidence](#2026-10-11-ssh-pairing-and-readiness) supersede them for UDP/TCP. Numerical examples were not accepted as defaults.
 
 | Choice | Recommendation | Alternatives / unresolved details | Answer status |
 | --- | --- | --- | --- |
@@ -401,7 +401,7 @@ Roadmap action 2's outcome is now documented: a configurable example profile and
 
 ## Integration constraints review
 
-Historical source/API review: 2026-10-11, roadmap action 3. No dependency was installed/pinned or build/endpoint/capture/experiment/test run during that review. Candidate/open states below describe its findings; [final first-slice decisions](#first-slice-final-decisions) and [foundation evidence](ARCHIVE.md#2026-10-11-first-implementation-foundations) supersede them for selected UDP/TCP components. Branch-head sources remain snapshots; future-carrier/DNS mechanics and exact Linux support minima remain open.
+Historical source/API review: 2026-10-11, roadmap action 3. No dependency was installed/pinned or build/endpoint/capture/experiment/test run during that review. Candidate/open states below describe its findings; [final first-slice decisions](#first-slice-final-decisions) and [foundation evidence](#2026-10-11-first-implementation-foundations) supersede them for selected UDP/TCP components. Branch-head sources remain snapshots; future-carrier/DNS mechanics and exact Linux support minima remain open.
 
 ### Managed protocols, sockets, and ports (T05, T11)
 
@@ -478,7 +478,7 @@ Before the selected slice is implemented, resolve only its needed choices: compa
 
 ## Reference-tool reuse and validation
 
-Recorded: 2026-10-11. The user agreed to selectively learn from functionality in the researched tools and improve it where useful, explicitly requesting planning only. This confirms an evaluation direction under T19, not every proposal, a dependency, a license choice, code copying or execution. [Candidate mapping and S07-S11](PROPOSALS.md#reference-tool-candidates), [roadmap review](ROADMAP.md#3b-evaluate-selective-reuse-and-validation-baselines-completed), [decision evidence](ARCHIVE.md#2026-10-11-reference-tool-planning-recorded).
+Recorded: 2026-10-11. The user agreed to selectively learn from functionality in the researched tools and improve it where useful, explicitly requesting planning only. This confirms an evaluation direction under T19, not every proposal, a dependency, a license choice, code copying or execution. [Candidate mapping and S07-S11](PROPOSALS.md#reference-tool-candidates), [roadmap review](ROADMAP.md#3b-evaluate-selective-reuse-and-validation-baselines-completed), [decision evidence](#2026-10-11-reference-tool-planning-recorded).
 
 | Choice | Alternatives and recommendation | Remaining decision |
 | --- | --- | --- |
@@ -543,7 +543,7 @@ At this review milestone, T14/T15 queue/phase/receipt schemas, T09 trust, T21 re
 
 ## Protocol extensibility choices
 
-User confirmed the requirement on 2026-10-11: protocols must be easy to add in later releases without broadly rewriting shared modules. See [design contract](DESIGN.md#protocol-extensibility), F08 in [PROPOSALS.md](PROPOSALS.md), and [decision evidence](ARCHIVE.md#2026-10-11-protocol-extensibility-requirement-recorded). This extends T06's confirmed adapter boundaries; it does not select additional protocols or authorize implementation.
+User confirmed the requirement on 2026-10-11: protocols must be easy to add in later releases without broadly rewriting shared modules. See [design contract](DESIGN.md#protocol-extensibility), F08 in [PROPOSALS.md](PROPOSALS.md), and [decision evidence](#2026-10-11-protocol-extensibility-requirement-recorded). This extends T06's confirmed adapter boundaries; it does not select additional protocols or authorize implementation.
 
 | ID | Question | State |
 | --- | --- | --- |
@@ -553,7 +553,7 @@ Selected: compile-time registration, explicitly confirmed by user on 2026-10-11 
 
 ## Control connection and one-way timing choices
 
-Confirmed requirement on 2026-10-11: communicate the intended traffic to the server and maintain clock calibration for directional one-way measurements (F09). See [design](DESIGN.md#control-connection-and-clock-calibration) and [decision evidence](ARCHIVE.md#2026-10-11-control-and-clock-calibration-requirements-recorded). This supersedes the earlier optional status of one-way support; trustworthy values remain gated by calibration evidence. User selected tool-owned key-only SSH and partial termination during action 4; final first-slice framing/lifecycle/calibration policy is recorded below. Runtime behavior remains unvalidated.
+Confirmed requirement on 2026-10-11: communicate the intended traffic to the server and maintain clock calibration for directional one-way measurements (F09). See [design](DESIGN.md#control-connection-and-clock-calibration) and [decision evidence](#2026-10-11-control-and-clock-calibration-requirements-recorded). This supersedes the earlier optional status of one-way support; trustworthy values remain gated by calibration evidence. User selected tool-owned key-only SSH and partial termination during action 4; final first-slice framing/lifecycle/calibration policy is recorded below. Runtime behavior remains unvalidated.
 
 | ID | Question | State |
 | --- | --- | --- |
@@ -564,7 +564,7 @@ Initial recommendation: application-local clock mapping, preserving monotonic me
 
 ## StarTrinity documentation review
 
-Reviewed: 2026-10-11. User requested checking StarTrinity as another reference. This is vendor-documentation research, not a source-code audit, feature acceptance, implementation or execution. Existing confirmed IRTT/iperf2/Crusader dispositions, S07-S11 acceptance, F08 extensibility and F09 control/calibrated one-way requirements remain intact. [Candidate mapping/S12](PROPOSALS.md#s12-classified-degradation-episodes-and-observed-availability), [review evidence](ARCHIVE.md#2026-10-11-startrinity-reference-review-recorded).
+Reviewed: 2026-10-11. User requested checking StarTrinity as another reference. This is vendor-documentation research, not a source-code audit, feature acceptance, implementation or execution. Existing confirmed IRTT/iperf2/Crusader dispositions, S07-S11 acceptance, F08 extensibility and F09 control/calibrated one-way requirements remain intact. [Candidate mapping/S12](PROPOSALS.md#s12-classified-degradation-episodes-and-observed-availability), [review evidence](#2026-10-11-startrinity-reference-review-recorded).
 
 | Product / evidence | Useful mapping | Limits and recommended disposition |
 | --- | --- | --- |
@@ -584,7 +584,7 @@ Recommend retaining raw local scheduling/arrival evidence and existing RTT varia
 
 ## First implementation slice discussion
 
-Completed as planning: 2026-10-11, action 4. Scope/policies settled before the subsequent action 5 authorization. Discussion batches retain historical recommendations/answers; [final decisions](#first-slice-final-decisions) supersede earlier pending options. [Initial discussion](ARCHIVE.md#2026-10-11-first-slice-discussion-started), [scope answers](ARCHIVE.md#2026-10-11-first-slice-scope-and-ssh-control-confirmed), [planning completion](ARCHIVE.md#2026-10-11-first-slice-planning-completed).
+Completed as planning: 2026-10-11, action 4. Scope/policies settled before the subsequent action 5 authorization. Discussion batches retain historical recommendations/answers; [final decisions](#first-slice-final-decisions) supersede earlier pending options. [Initial discussion](#2026-10-11-first-slice-discussion-started), [scope answers](#2026-10-11-first-slice-scope-and-ssh-control-confirmed), [planning completion](#2026-10-11-first-slice-planning-completed).
 
 ### Proposed deliverable
 
@@ -625,7 +625,7 @@ T09/T22 next batch, recommendations only:
 
 Feasibility references: Go's [SSH package](https://pkg.go.dev/golang.org/x/crypto/ssh) exposes client/server and session stdin/stdout operations; [OpenSSH server documentation](https://man.openbsd.org/sshd.8) describes authenticated command execution and key access restrictions. These support candidate designs, not a selected package version or validated lifecycle/platform behavior. Remote exec must constrain/quote commands and separate framing from login diagnostics. Do not assume SSH process termination reliably cleans measurement listeners; the server needs its own bounded lifecycle/lease.
 
-**User answers, 2026-10-11:** server mode hosts its own SSH endpoint; SSH keys only; control failure stops new data, performs bounded drain/cleanup and saves a partial report, without automatic reconnect. Existing-system-SSH remote exec and password authentication are unselected alternatives. The exec/quoting concerns above apply only to that alternative, not the chosen embedded endpoint. [Decision evidence](ARCHIVE.md#2026-10-11-tool-owned-ssh-lifecycle-confirmed).
+**User answers, 2026-10-11:** server mode hosts its own SSH endpoint; SSH keys only; control failure stops new data, performs bounded drain/cleanup and saves a partial report, without automatic reconnect. Existing-system-SSH remote exec and password authentication are unselected alternatives. The exec/quoting concerns above apply only to that alternative, not the chosen embedded endpoint. [Decision evidence](#2026-10-11-tool-owned-ssh-lifecycle-confirmed).
 
 ### Pairing, extensibility and backpressure discussion
 
@@ -635,7 +635,7 @@ Next T09/T14/T21 batch, recommendations only:
 2. **Adapter registration (T21):** recommend compile-time descriptors/registration with stable identifiers, options/capabilities and shared lifecycle/events. New releases can add an adapter without broad core/UI/report rewrites. Alternative: runtime plugin loading, adding ABI/version/loading concerns without being required by F08.
 3. **Backpressure (T14/T15):** recommend bounded per-direction writers/queues and accounting for each planned slot. If a slot cannot be admitted within the agreed policy, record a local skip/failure and continue the schedule without catch-up bursts. Alternative: stop the affected run as partial on resource saturation. Both retain blocked/partial-write evidence and bound receipts/logging; neither silently reduces offered rate or abandons part of a TCP frame and resumes framing as if nothing happened. Exact limits/write timeout and receipt admission policy remain open.
 
-**User answers, 2026-10-11:** generate the private SSH key on the client; transfer/import its public authorization key to the application server and the public server pairing bundle to the client through a trusted channel. On queue saturation, record the local skip and continue scheduling without catch-up. Exact storage/revocation/bounds remain open. User requested an explanation of registration, so T21 remains unselected. [Decision evidence](ARCHIVE.md#2026-10-11-client-local-keys-and-skip-accounting-confirmed).
+**User answers, 2026-10-11:** generate the private SSH key on the client; transfer/import its public authorization key to the application server and the public server pairing bundle to the client through a trusted channel. On queue saturation, record the local skip and continue scheduling without catch-up. Exact storage/revocation/bounds remain open. User requested an explanation of registration, so T21 remains unselected. [Decision evidence](#2026-10-11-client-local-keys-and-skip-accounting-confirmed).
 
 Registration explanation: with compile-time registration, an adapter's code/descriptors are built into the executable. Adding an adapter means writing it against the shared contract, registering it and shipping new executables; capability-driven validation/dashboard/reporting discovers it without broad shared-module changes. With runtime plugins, the main executable loads a separate adapter artifact after installation, requiring loading and compatibility rules. F08 requires easy additions across releases, not installation without an executable update. Recommend compile-time registration for the confirmed one-executable packaging. Go's [standard plugin documentation](https://pkg.go.dev/plugin) lists Linux/FreeBSD/macOS support, not Windows, and requires matching builds/dependencies; a portable runtime approach would need a different mechanism and its own review. This limitation applies to Go's standard plugin mechanism, not to every possible plugin design. No loader/package selected.
 
@@ -672,7 +672,7 @@ Action 4's discussion is concluded by the final decisions below. Planning comple
 
 ### First-slice final decisions
 
-Settled: 2026-10-11. User explicitly answered **compile-time registration** and instructed completion of task 4. This authorizes finishing the documentation/design work using engineering judgment. Prior explicit scope/SSH/key/skip answers remain confirmed user decisions; the remaining policies below are design selections under that completion instruction, not claims that the user individually chose each new detail. [Product contract](DESIGN.md#first-slice-implementation-contract), [completion evidence](ARCHIVE.md#2026-10-11-first-slice-planning-completed).
+Settled: 2026-10-11. User explicitly answered **compile-time registration** and instructed completion of task 4. This authorizes finishing the documentation/design work using engineering judgment. Prior explicit scope/SSH/key/skip answers remain confirmed user decisions; the remaining policies below are design selections under that completion instruction, not claims that the user individually chose each new detail. [Product contract](DESIGN.md#first-slice-implementation-contract), [completion evidence](#2026-10-11-first-slice-planning-completed).
 
 | Choices / scope | Final first-slice disposition |
 | --- | --- |
@@ -690,7 +690,7 @@ Settled: 2026-10-11. User explicitly answered **compile-time registration** and 
 
 All workload/rate/port/deadline/resource/lease/calibration-quality values required by the profile must be supplied and validated explicitly. The 1 MiB frame/document caps, 92-byte header/124-byte overhead and four-per-second dashboard limit are engineering contract choices, not FPS optimum defaults or experimentally validated capacities. No experimental millisecond tolerance, oscillator accuracy, benchmark build or Linux release minimum is invented.
 
-The acceptance table completes task 4's **documented success criteria**, not runtime acceptance. Wire/schema/count fixtures, loopback, native priority/calibration, impairment, independent references and live paths remain separate gates. F09 cannot be completed merely because estimates exist. User subsequently authorized the original action 5; foundations, SSH/readiness and bounded queues are partial delivery, with engine/calibration/report/UI gates pending. Its execution is now split into bounded [roadmap tasks](ROADMAP.md#first-slice-task-index). [Readiness evidence](ARCHIVE.md#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [pins/licenses](THIRD_PARTY_NOTICES.md).
+The acceptance table completes task 4's **documented success criteria**, not runtime acceptance. Wire/schema/count fixtures, loopback, native priority/calibration, impairment, independent references and live paths remain separate gates. F09 cannot be completed merely because estimates exist. User subsequently authorized the original action 5; foundations, SSH/readiness and bounded queues are partial delivery, with engine/calibration/report/UI gates pending. Its execution is now split into bounded [roadmap tasks](ROADMAP.md#first-slice-task-index). [Readiness evidence](#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [pins/licenses](THIRD_PARTY_NOTICES.md).
 
 ## Protocol traffic-tweak choices
 
@@ -745,4 +745,4 @@ Archived 2026-10-13 after the user removed ARM from shipping scope. The followin
 - [ ] Exercise setup/data/grace cancellation and repeated reuse; verify bounded partial reports, unknown remote delivery where evidence is missing, released reservations/ports and joined owned processes.
 - [ ] Replay and export JSON/JSONL/CSV through fresh processes on both endpoints; compare exact summaries/identities and record artifact locations, checks and gaps before marking complete.
 
-The [task 23 fixture](cmd/sneaky-port/cross_endpoint_windows_test.go) currently hardcodes `GOARCH=amd64` for both binaries and replay assertions. Adapt its architecture/build/evidence checks or use an equivalent reviewed native procedure when the actual endpoint is available; an unchanged rerun cannot validate ARM64. No fixture code or runtime behavior changed in this prerequisite audit.
+The [task 23 fixture](../cmd/sneaky-port/cross_endpoint_windows_test.go) currently hardcodes `GOARCH=amd64` for both binaries and replay assertions. Adapt its architecture/build/evidence checks or use an equivalent reviewed native procedure when the actual endpoint is available; an unchanged rerun cannot validate ARM64. No fixture code or runtime behavior changed in this prerequisite audit.

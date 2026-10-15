@@ -104,7 +104,7 @@ try {
         throw 'Staging or archive already exists; inspect it or choose a new version instead of overwriting.'
     }
     $taskPublicFiles = @(
-        'examples/readiness-udp.yaml', 'examples/readiness-policy.json', 'THIRD_PARTY_NOTICES.md',
+        'examples/readiness-udp.yaml', 'examples/readiness-policy.json', 'docs/THIRD_PARTY_NOTICES.md',
         'licenses/go-crypto-LICENSE', 'licenses/go-sys-LICENSE', 'licenses/go-term-LICENSE',
         'licenses/go-yaml-LICENSE', 'licenses/go-yaml-NOTICE', 'licenses/go-yaml-libyaml-LICENSE'
     )
@@ -136,8 +136,8 @@ try {
         Copy-Item -LiteralPath (Join-Path $taskRoot $taskPublicFile) -Destination $taskDestination
     }
     Copy-Item -LiteralPath $taskRuntimeLicense -Destination (Join-Path $taskStage 'licenses/go-runtime-LICENSE')
-    $taskNotices = Get-Content -LiteralPath (Join-Path $taskStage 'THIRD_PARTY_NOTICES.md') -Raw
-    Write-ReleaseText -Path (Join-Path $taskStage 'THIRD_PARTY_NOTICES.md') -Text ($taskNotices.TrimEnd() + "`n`nThe compiled Go runtime and standard library retain the [Go BSD-style license](licenses/go-runtime-LICENSE), built with $taskGoVersion.`n")
+    $taskNotices = Get-Content -LiteralPath (Join-Path $taskStage 'docs/THIRD_PARTY_NOTICES.md') -Raw
+    Write-ReleaseText -Path (Join-Path $taskStage 'docs/THIRD_PARTY_NOTICES.md') -Text ($taskNotices.TrimEnd() + "`n`nThe compiled Go runtime and standard library retain the [Go BSD-style license](../licenses/go-runtime-LICENSE), built with $taskGoVersion.`n")
     foreach ($taskBinary in $taskBinaryNames) {
         Copy-Item -LiteralPath (Join-Path $taskRoot "build/$taskBinary") -Destination $taskStage
         if ($Platform -eq 'linux' -and $taskHostOS -eq 'linux') {
@@ -150,7 +150,7 @@ try {
     } else {
         "chmod +x ./sneaky-port-dashboard-linux-amd64 ./sneaky-port-server-linux-amd64`n./sneaky-port-dashboard-linux-amd64 client-api -data-dir ./client-data -profile ./examples/readiness-udp.yaml"
     }
-    $taskReadme = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-readme.md') -Raw
+    $taskReadme = Get-Content -LiteralPath (Join-Path $taskRoot 'docs/release-readme.md') -Raw
     $taskReadme = $taskReadme.Replace('@@VERSION@@', $Version).Replace('@@PLATFORM@@', $Platform).Replace('@@REPOSITORY@@', $Repository).Replace('@@REVISION@@', $taskRevision).Replace('@@START_COMMAND@@', $taskStartCommand)
     Write-ReleaseText -Path (Join-Path $taskStage 'README.md') -Text $taskReadme
     $taskNativeSmoke = $taskHostOS -eq $Platform
