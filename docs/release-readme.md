@@ -10,11 +10,11 @@ Extract the archive into a writable folder and run this command from that folder
 @@START_COMMAND@@
 ```
 
-Open the exact `api_url` printed in the terminal. Enter your Linux server's IP, SSH port, username and password, then Connect. The dashboard uploads, verifies and starts its matching Linux x86-64 helper. The SSH account must allow commands and forwarding, with `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir` available. The selected UDP/TCP data port must be reachable between the endpoints.
+Windows startup needs no arguments and creates/reuses `%APPDATA%\sneaky-port\client`; `-data-dir FOLDER` optionally selects an existing store. Open the exact `api_url` printed in the terminal. Enter your Linux server's IP, SSH port, username and password, then Connect. The dashboard uploads, verifies and starts its matching Linux x86-64 helper. The SSH account must allow commands and forwarding, with `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir` available. The selected UDP/TCP data port must be reachable between the endpoints.
 
 The first SSH fingerprint is trusted after successful authentication; a changed saved fingerprint requires explicit replacement. Passwords are cleared and are not saved. Keep your application store and reports private.
 
-Choose UDP/TCP and edit the server, workload, duration, deadline, rates, payload and ports before Run test. The included profile contains editable example values. Stop cancels the owned test; Ctrl+C shuts down the application.
+Startup uses editable built-in test settings; `-profile FILE` optionally supplies a complete YAML/JSON override. Choose UDP/TCP and review the server, workload, duration, deadline, rates, payload and ports before Run test. Stop cancels the owned test; Ctrl+C shuts down the application.
 
 Receipt outcomes are application observations. The chart shows client attempt-to-receipt RTT in milliseconds over elapsed seconds. Live results are provisional; terminal replay supplies final or partial results. Production clock calibration and on-wire priority claims remain unverified.
 

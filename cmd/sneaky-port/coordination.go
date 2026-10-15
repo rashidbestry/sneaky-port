@@ -15,7 +15,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 	"sneaky-port/internal/control"
-	"sneaky-port/internal/profile"
 )
 
 // coordination dispatches explicit application-store, readiness and finite measurement operations.
@@ -43,7 +42,7 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		f.StringVar(&bundlePath, "bundle", "", "trusted public server bundle JSON")
 		f.BoolVar(&replace, "replace", false, "explicitly replace existing host trust")
 	case "client-ready", "client-run":
-		f.StringVar(&planPath, "profile", "", "explicit YAML/JSON profile")
+		f.StringVar(&planPath, "profile", "", "optional YAML/JSON profile; omitted uses built-in starter settings")
 		if args[0] == "client-ready" {
 			f.StringVar(&hold, "hold-ns", "", "explicit readiness-only hold duration, including zero")
 		}
@@ -86,12 +85,8 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 			return errors.New("-pairing-id and -bundle required")
 		}
 	case "client-ready":
-		if planPath == "" || hold == "" {
-			return errors.New("-profile and explicit -hold-ns required")
-		}
-	case "client-run":
-		if planPath == "" {
-			return errors.New("client-run requires -profile")
+		if hold == "" {
+			return errors.New("explicit -hold-ns required")
 		}
 	case "server":
 		if runtime.GOOS != "linux" {
@@ -204,12 +199,7 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 				return err
 			}
 		}
-		file, err := os.Open(planPath)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		plan, err := profile.Decode(file)
+		plan, err := loadProfile(planPath)
 		if err != nil {
 			return err
 		}

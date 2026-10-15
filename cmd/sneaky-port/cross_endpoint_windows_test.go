@@ -97,16 +97,8 @@ func TestWindowsLinuxCLI(t *testing.T) {
 	lbin, ldata := lroot+"/server", lroot+"/server-data"
 	linux("cp", mount+"/server", lbin)
 	linux("chmod", "700", lbin)
-	policyBytes, err := os.ReadFile(filepath.Join(workspace, "examples", "readiness-policy.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var policy control.ServerPolicy
-	if err = json.Unmarshal(policyBytes, &policy); err != nil {
-		t.Fatal(err)
-	}
-	policy.ControlListen = net.JoinHostPort(ip, ports[0])
-	policy.DataBindIP, policy.PortMin, policy.PortMax = ip, dataPort, dataPort
+	policy := control.DefaultServerPolicy(net.JoinHostPort(ip, ports[0]), ip)
+	policy.PortMin, policy.PortMax = dataPort, dataPort
 	task23JSON(t, filepath.Join(root, "policy.json"), policy)
 	cdata := filepath.Join(root, "client-data")
 	task23Save(t, filepath.Join(root, "client-public.json"), task23Command(t, ctx, exe, "client-init", "-data-dir", cdata, "-client-id", "task23-client"))
@@ -166,14 +158,7 @@ func TestWindowsLinuxCLI(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	task23Console(t)
-	profileBytes, err := os.ReadFile(filepath.Join(workspace, "examples", "readiness-udp.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := profile.Decode(bytes.NewReader(profileBytes))
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := profile.Default()
 	p.ServerAddress, p.DestinationPort = ip, dataPort
 	// This functional gate measures a small explicit workload, not performance or recommended FPS settings.
 	p.Phases[0].Duration, p.Phases[0].Client.RateNumerator, p.Phases[0].Server.RateNumerator = 2e9, 30, 20

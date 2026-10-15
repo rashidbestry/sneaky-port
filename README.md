@@ -9,10 +9,10 @@ Get the [Windows or Linux x86-64 preview](https://github.com/rashidbestry/sneaky
 From the extracted Windows archive:
 
 ```powershell
-.\sneaky-port-dashboard.exe client-api -data-dir .\client-data -profile .\examples\readiness-udp.yaml
+.\sneaky-port-dashboard.exe
 ```
 
-Open the printed `api_url`. Enter your Linux server's normal SSH details (usually port **22**) and select **Connect**; the dashboard uploads its matching temporary helper. Choose UDP/TCP, review the test settings, then **Run test**. The selected data port must be reachable.
+No arguments are required. Open the printed `api_url`; settings and a private user-data folder are selected automatically. Enter your Linux server's normal SSH details (usually port **22**) and select **Connect**; the dashboard uploads its matching temporary helper. Review settings, then **Run test**. The selected data port must be reachable. [Optional startup settings](docs/USAGE.md#default-configuration).
 
 ## Start the standalone Linux server
 

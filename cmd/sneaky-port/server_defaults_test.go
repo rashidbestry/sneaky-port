@@ -38,14 +38,7 @@ func TestServerInitBuiltInPolicy(t *testing.T) {
 			if err != nil || identity.Policy.ControlListen != tc.listen || identity.Policy.DataBindIP != tc.bind {
 				t.Fatalf("built-in binding: %+v %v", identity.Policy, err)
 			}
-			b, err := os.ReadFile(filepath.Join("..", "..", "examples", "readiness-udp.yaml"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			plan, err := profile.Decode(bytes.NewReader(b))
-			if err != nil {
-				t.Fatal(err)
-			}
+			plan := profile.Default()
 			if tc.name == "ipv6" {
 				plan.Family, plan.ServerAddress = "ipv6", "::1"
 			}
@@ -111,7 +104,9 @@ func TestServerInitExplicitPolicy(t *testing.T) {
 	for _, malformed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "constrained", true: "malformed"}[malformed], func(t *testing.T) { // Override failures must not create a usable default identity.
 			root := t.TempDir()
-			b, err := os.ReadFile(filepath.Join("..", "..", "examples", "readiness-policy.json"))
+			policy := control.DefaultServerPolicy("0.0.0.0:22220", "0.0.0.0")
+			policy.PortMin, policy.PortMax = 32000, 32010
+			b, err := json.Marshal(policy)
 			if err != nil {
 				t.Fatal(err)
 			}

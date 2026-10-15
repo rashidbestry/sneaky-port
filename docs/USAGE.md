@@ -10,7 +10,7 @@ Detailed commands and measurement/reporting contracts for the current UDP/TCP im
 
 [Release preview](../.github/workflows/release.yml) runs on a new `v*` version tag or manual dispatch with an existing tag. It validates the exact tagged revision, requires CI to pass, builds/verifies both archives and publishes a prerelease with GitHub's built-in token. All releases remain prereleases while full acceptance is incomplete. Commit and push these workflow files before creating a new tag; the tagged commit must include the packaging script. Existing releases are not overwritten.
 
-The shared [packager](../.github/scripts/package-release.ps1) also runs locally: `./.github/scripts/package-release.ps1 -Platform windows -Version v0.1.0-alpha.2` (use `linux` on Linux). It writes only public binaries, examples, quickstart/build metadata and licenses to `build/release-assets/`, verifies extraction and refuses existing staging/output. [Automation flow](FLOWCHART.md#ci-and-release-packaging).
+The shared [packager](../.github/scripts/package-release.ps1) also runs locally: `./.github/scripts/package-release.ps1 -Platform windows -Version v0.1.0-alpha.2` (use `linux` on Linux). It writes only public binaries, quickstart/build metadata and licenses to `build/release-assets/`, verifies extraction and refuses existing staging/output. [Automation flow](FLOWCHART.md#ci-and-release-packaging).
 
 ## Adapter extension gate
 
@@ -32,7 +32,15 @@ go run ./cmd/sneaky-port preflight -duration-ns YOUR_DURATION -interval-ns YOUR_
 go run ./cmd/sneaky-port keygen -output NEW_PRIVATE_KEY_FILE
 ```
 
-All workload/timeout/budget settings are explicit; there is no automatically selected FPS profile. Preflight is local timer evidence. Key generation writes a new restricted file and prints only public enrollment material. Dependencies and [license notices](THIRD_PARTY_NOTICES.md) are pinned; supported Linux versions and live-network acceptance require their own evidence.
+Preflight is local timer evidence. Key generation writes a new restricted file and prints only public enrollment material. Dependencies and [license notices](THIRD_PARTY_NOTICES.md) are pinned; supported Linux versions and live-network acceptance require their own evidence.
+
+## Default configuration
+
+Windows startup requires no arguments: run or double-click the dashboard executable. It creates/reuses `%APPDATA%\sneaky-port\client` for private keys, saved settings and reports, independently of the current folder. Optional flags work directly, for example `sneaky-port-dashboard.exe -data-dir .\client-data` to reuse an existing store. Explicit `client-api` remains available on both platforms; its default store on Linux is `${XDG_CONFIG_HOME:-$HOME/.config}/sneaky-port/client`. Existing stores are not migrated automatically. Linux no-command startup retains the standalone server role.
+
+`client-api`, `validate`, `client-ready` and `client-run` accept an optional `-profile FILE`. Without it, the binary supplies an editable `default-udp` plan: 10 seconds, UDP/IPv4, 60 packets/s and 32-byte payloads per direction, port 32000, DSCP 0, a 100-ms receipt deadline and 100-ms grace. Dashboard SSH setup selects the real server; direct CLI defaults use `127.0.0.1` and pairing `lab-server`. Use an explicit profile for a different CLI target/workload. Specialized CLI identity/readiness/run commands retain their explicit data-directory and applicable hold inputs.
+
+No command automatically reads local `readiness.yaml`. Opening the dashboard or validating settings sends no measurement traffic; `client-run` explicitly starts a run after authentication. A saved dashboard profile with the selected ID still takes precedence; otherwise settings remain transient until explicitly saved. Supplied files must remain complete and valid: unreadable/malformed overrides reject. The frozen plan and reports contain every resolved value. No sample configuration folder is shipped; create an optional override from the resolved `validate` plan as shown below. Starter values are editable examples; production clock bounds remain unverified. [Compiled settings](../internal/profile/defaults.go).
 
 ## Start the standalone Linux server
 
@@ -84,24 +92,27 @@ Implementation/build and Windows checks are recorded in [server startup evidence
    ./sneaky-port-linux-amd64 server-export -data-dir "$server_state" > server-public.json
    ```
 
-   Transfer only `server-public.json` back to Windows through your trusted channel. Existing explicit `server-init` and `-data-dir` workflows remain supported; `server-init -policy` is an optional legacy override, with [an example](../examples/readiness-policy.json). An invalid explicit override rejects instead of falling back to defaults.
+   Transfer only `server-public.json` back to Windows through your trusted channel. Existing explicit `server-init` and `-data-dir` workflows remain supported; `server-init -policy` optionally accepts a complete legacy override matching the [server policy schema](../internal/control/store.go). An invalid explicit override rejects instead of falling back to defaults.
 
 4. **Import and check on Windows**, with `server-public.json` in this checkout:
 
    ```powershell
    .\build\sneaky-port.exe client-import -data-dir .\client-data -pairing-id lab-server -bundle .\server-public.json
-   Copy-Item .\examples\readiness-udp.yaml .\readiness.yaml
-   notepad .\readiness.yaml
+   New-Item -ItemType Directory -Path .\profiles-local -Force | Out-Null
+   $plan = (.\build\sneaky-port.exe validate | ConvertFrom-Json).plan
+   $plan.server_address = "YOUR_SERVER_IPV4"
+   $plan | ConvertTo-Json -Depth 20 | Set-Content -Encoding utf8 .\profiles-local\run.json
+   notepad .\profiles-local\run.json
    ```
 
    Set `server_address` to the same reachable server IPv4 address. Save, then run:
 
    ```powershell
-   .\build\sneaky-port.exe validate -profile .\readiness.yaml
-   .\build\sneaky-port.exe client-ready -data-dir .\client-data -profile .\readiness.yaml -hold-ns 1000000000
+   .\build\sneaky-port.exe validate -profile .\profiles-local\run.json
+   .\build\sneaky-port.exe client-ready -data-dir .\client-data -profile .\profiles-local\run.json -hold-ns 1000000000
    ```
 
-   For TCP, change `adapter_id: tcp` and `adapter_options: {tcp_no_delay: true}`, then rerun validation/readiness. All other requested inputs stay explicit. A hold of `0` stops immediately after readiness; a positive hold sends heartbeats within the profile's control-request budget. Failed readiness exits nonzero.
+   For TCP, change `"adapter_id": "tcp"` and `"adapter_options": {"tcp_no_delay": true}`, then rerun validation/readiness. All other requested inputs stay explicit. A hold of `0` stops immediately after readiness; a positive hold sends heartbeats within the profile's control-request budget. Failed readiness exits nonzero.
 
 Initialization creates each private key locally and refuses existing identities/key destinations. Add `-key EXISTING_PRIVATE_KEY` to `client-init` or `server-init` to reference an existing compatible key unchanged; encrypted keys prompt in an interactive terminal without echo. Public imports accept UTF-8 with an optional BOM. The app directories are restricted; keep private keys on their originating endpoints.
 
@@ -114,10 +125,10 @@ Keep local pairing exports and edited profiles out of Git. The root `client-publ
 After pairing and readiness, review every workload, deadline, grace and resource value in the explicit profile, then run:
 
 ```powershell
-.\build\sneaky-port.exe client-run -data-dir .\client-data -profile .\readiness.yaml
+.\build\sneaky-port.exe client-run -data-dir .\client-data -profile .\profiles-local\run.json
 ```
 
-`file_bytes` must leave room for reserved summaries, manifests and clock evidence as well as raw records. Increasing `ledger_messages` increases that reservation even in a short run. The example uses 1,024 ledger entries within its 8 MiB file ceiling; older copies with 10,000 entries must reduce that cap or increase the file budget and matching server ceiling. Readiness-only checks do not exercise evidence storage.
+`file_bytes` must leave room for reserved summaries, manifests and clock evidence as well as raw records. Increasing `ledger_messages` increases that reservation even in a short run. The built-in plan uses 4,096 ledger entries and a 64 MiB file ceiling; smaller explicit budgets must retain sufficient reservation space. Readiness-only checks do not exercise evidence storage.
 
 The server stays running between finite trials. Both endpoints process an authenticated frozen-plan start and use independent local monotonic anchors; they do not claim simultaneous starts. Warmup, phases and grace come from the profile. Each FIFO writer applies the current physical phase's directional DSCP before outgoing data or receipts; queued identities remain attributed to their original phase, and grace retains the last phase setting. A frame already being written cannot be remarked mid-frame. API application is separate from unobserved outer packets.
 
@@ -179,14 +190,14 @@ After launching `client-api` below, open its exact `api_url`. The dashboard open
 
 Protocol controls use actual registry contracts; unsupported complex extension values remain unchanged and require CLI editing. Receipt outcomes are numbers, including late receipts within missed deadlines. One latency chart shows client attempt-to-receipt RTT in **milliseconds** against elapsed **seconds**. Live ranges retain completed min/max/count in up to 128 one-second buckets; missing receipts create no latency sample. Final or partial replay replaces provisional ranges and supplies exact RTT/variation quantiles and coverage notes. Pending receipts/missed deadlines are not packet loss. Run failure reasons appear on the main page. Current results load through the admitted handle under a 64-MiB aggregate replay cap and 30-second HTTP / 35-second browser budgets. Ordinary saved/import/compare caps remain unchanged. Requested markings are not capture evidence; richer controls remain open under T25. [Current run flow](FLOWCHART.md#test-only-dashboard-and-sixty-second-runs), [latency flow](FLOWCHART.md#numeric-receipts-and-live-latency).
 
-Build a self-contained Windows dashboard from this checkout (PowerShell; use `-Platform linux` for a Linux x86-64 dashboard), then launch with an explicit application-owned client store and profile. Ordinary untagged CLI builds do not contain the upload payload:
+Build a self-contained Windows dashboard from this checkout (PowerShell; use `-Platform linux` for a Linux x86-64 dashboard), then launch without arguments. Ordinary untagged CLI builds do not contain the upload payload:
 
 ```powershell
 .\build-dashboard.ps1
-.\build\sneaky-port-dashboard.exe client-api -data-dir .\client-data -profile .\examples\readiness-udp.yaml
+.\build\sneaky-port-dashboard.exe
 ```
 
-The example profile needs your explicit server/workload settings. Startup JSON returns `api_url`, a fresh `session_token`, `profile_id` and `profile_revision` (canonical selected plan hash). A saved profile with that ID takes precedence; otherwise the launch file is a transient fallback. Startup does not save profiles or generate keys; dashboard SSH Connect generates a managed identity if absent. The token is retained for external API clients; the dashboard obtains it automatically. Each request needs `Authorization: Bearer <session_token>` and a safe `X-Request-ID` (1-64 letters, digits, `_` or `-`). Browser requests must use the exact returned origin; no CORS access or token-in-URL bootstrap is provided. `-listen` accepts a literal loopback IP only, defaulting to `127.0.0.1:0`; `[::1]:0` supports IPv6. Ctrl+C cancels and joins owned work within `-shutdown-timeout` (default 10s), reporting expiration explicitly.
+Review the built-in settings in the dashboard, or append `-profile FILE` for an explicit override. Startup JSON returns `api_url`, a fresh `session_token`, `profile_id` and `profile_revision` (canonical selected plan hash). A saved profile with that ID takes precedence; otherwise the compiled or file-loaded plan is a transient fallback. Startup does not save profiles or generate keys; dashboard SSH Connect generates a managed identity if absent. The token is retained for external API clients; the dashboard obtains it automatically. Each request needs `Authorization: Bearer <session_token>` and a safe `X-Request-ID` (1-64 letters, digits, `_` or `-`). Browser requests must use the exact returned origin; no CORS access or token-in-URL bootstrap is provided. `-listen` accepts a literal loopback IP only, defaulting to `127.0.0.1:0`; `[::1]:0` supports IPv6. Ctrl+C cancels and joins owned work within `-shutdown-timeout` (default 10s), reporting expiration explicitly.
 
 | Route | Request / result |
 | --- | --- |

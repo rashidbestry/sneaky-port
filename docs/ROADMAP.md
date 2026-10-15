@@ -212,6 +212,16 @@ Checkpoints 23g/23h were authorized together by the user on 2026-10-12 and are c
 
 **Implemented; Linux runtime validation deferred by the user, 2026-10-15.** Linux no-argument startup (or `server`) opens app SSH on 22022 and initializes private state automatically. Compiled limits are shared by standalone initialization and the managed helper; client profiles still determine tests after existing keyed authentication. Existing identities, authorizations and explicit bindings/overrides remain unchanged. Windows ordinary/vet/focused race checks and Linux cross-build pass; native/WSL runtime acceptance is not complete. The user explicitly stopped Linux testing for this change. [Evidence](WORK_LOG.md#2026-10-15-built-in-server-defaults-and-port-22022), [source flow](FLOWCHART.md#built-in-server-defaults-and-startup), [operator startup](USAGE.md#start-the-standalone-linux-server).
 
+### 23p. Start clients with an optional profile file (completed)
+
+**Complete for shared configuration loading and Windows startup checks, 2026-10-15.** Omitted `-profile` uses a compiled editable UDP starter for dashboard startup, validation, readiness and finite runs. Explicit overrides remain strict; saved dashboard edits retain precedence for the selected profile ID. Full Windows owned-source ordinary/vet, focused race, packaged no-profile API startup, both dashboard builds and helper equality pass. Linux runtime checks remain user-deferred; builds do not qualify those gates. [Defaults](USAGE.md#default-configuration), [source flow](FLOWCHART.md#optional-profile-and-built-in-client-settings), [checks and limits](WORK_LOG.md#2026-10-15-optional-profile-and-built-in-client-settings).
+
+The user subsequently removed the shared sample folder; tests and archives now use the compiled defaults. Optional local overrides remain supported. [Cleanup checks](WORK_LOG.md#2026-10-15-sample-configuration-folder-removed).
+
+### 23q. Start the Windows client without arguments (completed)
+
+**Complete for Windows client startup, 2026-10-15.** Windows no-command/option-only startup selects the dashboard with a default per-user store. Explicit commands/data directories remain supported; Linux retains its server role. Affected Windows ordinary/vet/comment checks, focused race, real packaged zero-argument startup/protected setup/default-directory creation, both platform builds and helper equality pass. Linux runtime remains user-deferred. [Startup settings](USAGE.md#default-configuration), [evidence](WORK_LOG.md#2026-10-15-zero-argument-windows-client-startup).
+
 ## Queued validation tasks
 
 Statuses below distinguish completed named cases, partial evidence and remaining prerequisites. Use [acceptance gates](DESIGN.md#validation-before-supportperformance-claims), the [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix) and [resolved release baselines/policies](CHOICES.md#current-udptcp-release-decisions). Record one named environment/scenario at a time; split multi-case work into explicit checklist items before execution. Build, loopback, native, impairment and live evidence stay distinct. These tasks do not authorize changing user-owned settings or substituting new reference dependencies. The user authorized the remaining release validation on 2026-10-13; Windows/Linux x86-64 are the shipping targets.

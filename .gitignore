@@ -7,7 +7,7 @@
 /server-data/
 *.exe
 
-# Local pairing exports and edited profiles; reusable examples remain tracked.
+# Local pairing exports and edited profiles stay private.
 /client-public.json
 /server-public.json
 /readiness.yaml

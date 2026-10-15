@@ -58,8 +58,8 @@ function Test-ReleaseCommands {
         $taskExecutable = Join-Path $Directory $taskBinary
         & $taskExecutable adapters | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Adapters smoke failed: $taskBinary" }
-        & $taskExecutable validate -profile (Join-Path $Directory 'examples/readiness-udp.yaml') | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "Profile validation smoke failed: $taskBinary" }
+        & $taskExecutable validate | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Built-in profile validation smoke failed: $taskBinary" }
     }
 }
 
@@ -104,7 +104,7 @@ try {
         throw 'Staging or archive already exists; inspect it or choose a new version instead of overwriting.'
     }
     $taskPublicFiles = @(
-        'examples/readiness-udp.yaml', 'examples/readiness-policy.json', 'docs/THIRD_PARTY_NOTICES.md',
+        'docs/THIRD_PARTY_NOTICES.md',
         'licenses/go-crypto-LICENSE', 'licenses/go-sys-LICENSE', 'licenses/go-term-LICENSE',
         'licenses/go-yaml-LICENSE', 'licenses/go-yaml-NOTICE', 'licenses/go-yaml-libyaml-LICENSE'
     )
@@ -146,9 +146,9 @@ try {
         }
     }
     $taskStartCommand = if ($Platform -eq 'windows') {
-        '.\sneaky-port-dashboard.exe client-api -data-dir .\client-data -profile .\examples\readiness-udp.yaml'
+        '.\sneaky-port-dashboard.exe'
     } else {
-        "chmod +x ./sneaky-port-dashboard-linux-amd64 ./sneaky-port-server-linux-amd64`n./sneaky-port-dashboard-linux-amd64 client-api -data-dir ./client-data -profile ./examples/readiness-udp.yaml"
+        "chmod +x ./sneaky-port-dashboard-linux-amd64 ./sneaky-port-server-linux-amd64`n./sneaky-port-dashboard-linux-amd64 client-api"
     }
     $taskReadme = Get-Content -LiteralPath (Join-Path $taskRoot 'docs/release-readme.md') -Raw
     $taskReadme = $taskReadme.Replace('@@VERSION@@', $Version).Replace('@@PLATFORM@@', $Platform).Replace('@@REPOSITORY@@', $Repository).Replace('@@REVISION@@', $taskRevision).Replace('@@START_COMMAND@@', $taskStartCommand)

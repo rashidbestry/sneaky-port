@@ -93,14 +93,7 @@ func TestAutomaticServerClientPlans(t *testing.T) {
 	if err = client.ImportPairing("lab-server", identity.Bundle, false); err != nil {
 		t.Fatal(err)
 	}
-	b, err := os.ReadFile(filepath.Join("..", "..", "examples", "readiness-udp.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	p, err := profile.Decode(bytes.NewReader(b))
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := profile.Default()
 	data, err := net.ListenPacket("udp4", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +103,7 @@ func TestAutomaticServerClientPlans(t *testing.T) {
 	p.Phases[0].Duration, p.Phases[0].Client.RateNumerator, p.Phases[0].Server.RateNumerator = 600e6, 20, 20
 	p.Calibration.Cadence = 200e6
 	planPath := filepath.Join(t.TempDir(), "plan.json")
-	b, err = json.Marshal(p)
+	b, err := json.Marshal(p)
 	if err != nil || os.WriteFile(planPath, b, 0600) != nil {
 		t.Fatal("client plan fixture", err)
 	}

@@ -19,6 +19,8 @@ flowchart TD
 
 Sources: [checkout attributes](../.gitattributes), [CI](../.github/workflows/ci.yml), [release](../.github/workflows/release.yml), [public packager](../.github/scripts/package-release.ps1) (`Get-ReleaseBinaryInfo`, `Test-ReleaseCommands`, `Test-ReleaseExtraction`), [archive quickstart](release-readme.md), [dashboard builder](../build-dashboard.ps1), [embedded-helper equality](../internal/control/helper_upload_test.go) (`TestPackagedHelper`). CI/package success covers hosted process/build scopes; full acceptance 35 and native/physical/clock/reference/live gates remain open.
 
+Archives contain binaries, quickstart/build metadata and licenses; configuration comes from compiled defaults or explicit user overrides. Native command smoke validates the [built-in plan](../internal/profile/defaults.go) after staging and extraction. Tests use typed defaults with case-specific limits; [evidence-budget cases](../internal/control/evidence_test.go) (`TestDefaultProfileEvidenceBudget`) retain both the starter and 8 MiB reservation/finalization checks without external sample files.
+
 [Cancellation/control-loss fixtures](../internal/control/run_test.go) (`afterRunProgress`, `TestFiniteCancellationAndControlLoss`) target elapsed time from the initial immutable engine progress snapshot, then join their polling/timer owner. Persisted-event publication is not the measurement epoch. Partial/cutoff/replay/cleanup assertions remain strict; [stops processed after the elapsed cutoff](../internal/engine/finite_test.go) (`TestStopAfterElapsedCutoff`) preserve complete local evidence independently of later control failure.
 
 ## Adapter extension gate
@@ -663,6 +665,28 @@ flowchart TD
 ```
 
 Sources: [navigation](../internal/localapi/web/navigation.js) (`navigate`, `tabKeys`, `navigationControls`, `pageFields`, `drawFields`, `pager`, `readText`, `drawReader`, `refreshReaders`, `clearReaders`, `tablePageSize`, `livePageSize`), [editor/run controls](../internal/localapi/web/dashboard.js) (`controls`, `renderEditor`, `renderPhases`, `showPhase`, `transmitPending`, `renderLive`, `disconnect`), [current plots/local timer](../internal/localapi/web/diagnostics.js) (`plot`, `tablePage`, `renderPreflight`), [HTML](../internal/localapi/web/index.html), [viewport CSS](../internal/localapi/web/dashboard.css), [asset/security guards](../internal/localapi/dashboard_test.go), [actual-script/API fixture](../internal/localapi/web/dashboard_test.cjs) (`navigationCheck`). Navigation/page/resize changes issue no API commands, preserve malformed input nodes and never mutate frozen settings. Compact table reasons have complete independently labeled evidence in dedicated detail views; no quantiles or deltas are recalculated. Main page vertical scrolling is disabled; JSON editors retain internal scrolling and narrow tables retain horizontal scrolling. HTTP/script fixtures validate navigation, keyboard focus, retained edits, exact values, full reader reachability and retry/status/cancellation. Browser geometry, focus rendering, accessibility and responsive acceptance remain checkpoint 23c.
+
+## Optional profile and built-in client settings
+
+```mermaid
+flowchart TD
+    A[validate / client-api / client-ready / client-run] --> B{Profile file supplied?}
+    B -->|yes| C[Read complete YAML/JSON; reject errors]
+    B -->|no| D[Fresh compiled editable UDP starter]
+    C --> E[Shared plan and adapter validation]
+    D --> E
+    E --> F{Command}
+    F -->|validate| G[Print resolved plan/hash; no sockets]
+    F -->|client-api| H[Protected API; saved selected ID takes precedence]
+    H --> I[User edits/saves and explicitly starts]
+    F -->|client-ready / client-run| J[Existing client identity and pinned pairing]
+    I --> J
+    J --> K[Validate/freeze exact plan before endpoint preparation]
+```
+
+Sources: [compiled starter](../internal/profile/defaults.go) (`Default`), [optional file loader](../cmd/sneaky-port/profile.go) (`loadProfile`), [validation dispatch](../cmd/sneaky-port/main.go) (`run`), [API startup](../cmd/sneaky-port/api.go) (`clientAPI`), [readiness/run dispatch](../cmd/sneaky-port/coordination.go) (`coordination`), [saved selection](../internal/localapi/saved.go) (`selectedProfile`). Startup does not read a working-directory profile implicitly, save settings automatically or bypass authentication. Explicit file errors reject. [Starter round-trip/isolation checks](../internal/profile/defaults_test.go), [real protected startup/override checks](../cmd/sneaky-port/profile_defaults_test.go); [operator defaults](USAGE.md#default-configuration).
+
+Windows no-command or option-only [dispatch](../cmd/sneaky-port/main.go) selects `client-api`. Its optional data directory resolves through [per-user startup storage](../cmd/sneaky-port/client_start.go) (`defaultClientDirectory`) before opening the protected store; an explicit directory bypasses discovery. This does not migrate existing stores or start a measurement. Linux retains its server default. The same API regression cases cover empty arguments, leading flags and explicit-directory preservation.
 
 ## Built-in server defaults and startup
 

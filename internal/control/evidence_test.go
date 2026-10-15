@@ -323,32 +323,31 @@ func readEvidence(t *testing.T, dir string) (EvidenceManifest, EvidenceSummary, 
 	return m, s, events
 }
 
-// TestExampleProfileEvidenceBudget verifies the shipped UDP profile can reserve and
-// finalize local evidence on both endpoints; readiness alone never exercises storage.
-func TestExampleProfileEvidenceBudget(t *testing.T) {
-	f, err := os.Open(filepath.Join("..", "..", "examples", "readiness-udp.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	p, err := profile.Decode(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	store, _, ready := evidenceFixture(t)
-	hash, err := p.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ready.PlanHash = hex.EncodeToString(hash[:])
-	for _, endpoint := range []string{"client", "server"} {
-		w, err := newEvidence(store, p, ready, endpoint)
-		if err != nil {
-			t.Fatalf("%s example storage reservation: %v", endpoint, err)
-		}
-		if err := w.Finalize(engine.Result{}); err != nil {
-			t.Fatalf("%s example incomplete finalization: %v", endpoint, err)
-		}
+// TestDefaultProfileEvidenceBudget verifies built-in and constrained UDP plans can reserve
+// and finalize local evidence on both endpoints; readiness alone never exercises storage.
+func TestDefaultProfileEvidenceBudget(t *testing.T) {
+	for _, constrained := range []bool{false, true} {
+		t.Run(map[bool]string{false: "built-in", true: "8-MiB"}[constrained], func(t *testing.T) { // Retain the smaller-budget regression independently of startup defaults.
+			p := profile.Default()
+			if constrained {
+				p.Limits.LedgerMessages, p.Limits.EventBytes, p.Limits.FileBytes = 1024, 4<<20, 8<<20
+			}
+			store, _, ready := evidenceFixture(t)
+			hash, err := p.Hash()
+			if err != nil {
+				t.Fatal(err)
+			}
+			ready.PlanHash = hex.EncodeToString(hash[:])
+			for _, endpoint := range []string{"client", "server"} {
+				w, err := newEvidence(store, p, ready, endpoint)
+				if err != nil {
+					t.Fatalf("%s storage reservation: %v", endpoint, err)
+				}
+				if err := w.Finalize(engine.Result{}); err != nil {
+					t.Fatalf("%s incomplete finalization: %v", endpoint, err)
+				}
+			}
+		})
 	}
 }
 
