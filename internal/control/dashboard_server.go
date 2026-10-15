@@ -57,7 +57,7 @@ func DashboardServer(ctx context.Context, in io.ReadCloser, out io.Writer) (retE
 	if net.ParseIP(q.Address).To4() == nil {
 		bind = "::"
 	}
-	policy := ServerPolicy{Version: 1, ControlListen: listener.Addr().String(), DataBindIP: bind, PortMin: 1, PortMax: 65535, SetupTimeout: 30_000_000_000, ShutdownTimeout: 30_000_000_000, AuthPoll: 1_000_000_000, MaxConnections: 4, MaxAuthTries: 3, MaxControlRequests: 1 << 20, MaxBindAttempts: 16, MaxQueueBytes: 1 << 30, MaxLedgerMessages: 1 << 20, MaxEventBytes: 1 << 30, MaxFileBytes: 1 << 30}
+	policy := DefaultServerPolicy(listener.Addr().String(), bind)
 	bundle, err := store.InitServer("dashboard-server", q.Address, port, policy, "")
 	if err != nil {
 		return err

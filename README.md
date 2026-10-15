@@ -14,6 +14,8 @@ Implementation was authorized on 2026-10-11. `client-run` connects shared UDP/TC
 
 ## Download the preview
 
+The [Ubuntu 24.04.4 VMware case](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation) passes real OpenSSH/helper deployment, direct Windows UDP/TCP, cancellation, native report replay/exports and on-link port comparisons. Windows Npcap and guest captures observe directional markings in their named scopes. Selected Ubuntu 22.04.5, clock/reference and broader network acceptance remain pending.
+
 [v0.1.0-alpha.1](https://github.com/rashidbestry/sneaky-port/releases/tag/v0.1.0-alpha.1) provides Windows and Linux x86-64 archives with the dashboard, matching embedded Linux helper, examples and dependency licenses. Extract your platform's archive and follow its included README; Go is not required to run the binaries. This is a prerelease with the [remaining acceptance gates](ROADMAP.md#task-35-current-acceptance-review) still open.
 
 ## GitHub Actions
@@ -48,6 +50,21 @@ go run ./cmd/sneaky-port keygen -output NEW_PRIVATE_KEY_FILE
 
 All workload/timeout/budget settings are explicit; there is no automatically selected FPS profile. Preflight is local timer evidence. Key generation writes a new restricted file and prints only public enrollment material. Dependencies and [license notices](THIRD_PARTY_NOTICES.md) are pinned; supported Linux versions and live-network acceptance require their own evidence.
 
+## Start the standalone Linux server
+
+Run the Linux server binary with no arguments:
+
+```sh
+chmod +x ./sneaky-port-server-linux-amd64
+./sneaky-port-server-linux-amd64
+```
+
+It starts the app's embedded SSH listener on **TCP 22022**, using built-in service/resource limits. No server policy file or test profile is required. First start generates private identity and authorization state under `${XDG_CONFIG_HOME:-$HOME/.config}/sneaky-port/server`; restarts preserve existing identity, clients and bindings. Authorized clients send their complete test settings before data sockets are prepared. First-time key pairing remains the authentication step below.
+
+Ubuntu's normal SSH service on port 22 is independent. The dashboard's password-based **SSH Connect** continues to target that normal Linux SSH service and manages its disposable helper; direct standalone app connections use the existing keyed CLI/pairing flow on 22022. For a fresh standalone state, optional `server -listen IP:PORT -advertise CLIENT_REACHABLE_IP:PORT` handles explicit bindings/public addresses; automatic discovery uses a local address of the selected family.
+
+Implementation/build and Windows checks are recorded in [server startup evidence](WORK_LOG.md#2026-10-15-built-in-server-defaults-and-port-22022). Linux runtime validation for this change is deferred at the user's request.
+
 ## Pair endpoints and check readiness
 
 `client-ready` verifies the exact plan, owned sockets and authentication, holds an optional lease, then stops. Success prints `"status": "readiness_checked"` and `"measurement_started": false`, actual endpoint bindings, marking evidence and client application-control byte counts. It sends no scheduled workload and produces no latency/loss report.
@@ -66,18 +83,24 @@ All workload/timeout/budget settings are explicit; there is no automatically sel
    .\build\sneaky-port.exe client-init -data-dir .\client-data -client-id example-client | Set-Content -Encoding utf8 client-public.json
    ```
 
-2. **Transfer through a trusted channel**: copy the Linux binary, [readiness-policy.json](examples/readiness-policy.json) and `client-public.json` into your working directory on the owned Linux server. Review the policy's explicit bindings, ports, timeouts and resource ceilings; its numbers are examples. The server must be reachable on TCP 22220 for SSH and on the selected data port/protocol.
+2. **Transfer through a trusted channel**: copy the Linux binary and `client-public.json` into your working directory on the owned Linux server. The app must be reachable on TCP 22022 and on the client-selected data port/protocol. A server policy JSON is unnecessary.
 
-3. **Initialize and start on Linux**, replacing `YOUR_SERVER_IPV4` with the client-reachable IPv4 address:
+3. **Start on Linux** in one terminal:
 
    ```sh
    chmod +x ./sneaky-port-linux-amd64
-   ./sneaky-port-linux-amd64 server-init -data-dir ./server-data -server-id lab-server -advertise YOUR_SERVER_IPV4:22220 -policy ./readiness-policy.json > server-public.json
-   ./sneaky-port-linux-amd64 server-enroll -data-dir ./server-data -enrollment ./client-public.json
-   ./sneaky-port-linux-amd64 server -data-dir ./server-data
+   ./sneaky-port-linux-amd64
    ```
 
-   The final command remains in the foreground; Ctrl+C stops the owned endpoint. Existing system SSH settings are not used. Transfer only `server-public.json` back to Windows through your trusted channel.
+   This remains in the foreground; Ctrl+C stops the owned endpoint. In a second terminal, authorize the client's public key and export the server's public identity:
+
+   ```sh
+   server_state="${XDG_CONFIG_HOME:-$HOME/.config}/sneaky-port/server"
+   ./sneaky-port-linux-amd64 server-enroll -data-dir "$server_state" -enrollment ./client-public.json
+   ./sneaky-port-linux-amd64 server-export -data-dir "$server_state" > server-public.json
+   ```
+
+   Transfer only `server-public.json` back to Windows through your trusted channel. Existing explicit `server-init` and `-data-dir` workflows remain supported; `server-init -policy` is an optional legacy override, with [an example](examples/readiness-policy.json). An invalid explicit override rejects instead of falling back to defaults.
 
 4. **Import and check on Windows**, with `server-public.json` in this checkout:
 

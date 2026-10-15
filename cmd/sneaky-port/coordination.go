@@ -23,14 +23,14 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 	f := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	f.SetOutput(out)
 	dir := f.String("data-dir", "", "explicit application-owned data directory")
-	var id, key, address, policyPath, enrollmentPath, bundlePath, pairing, planPath, hold string
+	var id, key, address, policyPath, enrollmentPath, bundlePath, pairing, planPath, hold, listen string
 	var replace bool
 	switch args[0] {
 	case "server-init":
 		f.StringVar(&id, "server-id", "", "explicit server ID")
 		f.StringVar(&key, "key", "", "existing local private key reference; omitted generates a new key")
 		f.StringVar(&address, "advertise", "", "public control IP:port")
-		f.StringVar(&policyPath, "policy", "", "explicit JSON server policy")
+		f.StringVar(&policyPath, "policy", "", "optional JSON override of the built-in server policy")
 	case "client-init":
 		f.StringVar(&id, "client-id", "", "explicit client ID")
 		f.StringVar(&key, "key", "", "existing local private key reference; omitted generates a new key")
@@ -47,12 +47,22 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		if args[0] == "client-ready" {
 			f.StringVar(&hold, "hold-ns", "", "explicit readiness-only hold duration, including zero")
 		}
-	case "server", "server-export":
+	case "server":
+		f.StringVar(&listen, "listen", "", "initial SSH listener (default 0.0.0.0:22022); existing bindings are preserved")
+		f.StringVar(&address, "advertise", "", "optional initial public IP:port; otherwise use a local address")
+	case "server-export":
 	default:
 		return fmt.Errorf("unknown coordination command %q", args[0])
 	}
 	if err := f.Parse(args[1:]); err != nil {
 		return err
+	}
+	if args[0] == "server" && *dir == "" && runtime.GOOS == "linux" {
+		var err error
+		*dir, err = defaultServerDirectory()
+		if err != nil {
+			return err
+		}
 	}
 	if *dir == "" || f.NArg() != 0 {
 		return errors.New("explicit -data-dir required; unexpected positional arguments rejected")
@@ -60,8 +70,8 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 	// Validate required inputs before creating the application directories.
 	switch args[0] {
 	case "server-init":
-		if id == "" || address == "" || policyPath == "" {
-			return errors.New("server-init requires -server-id, -advertise and -policy")
+		if id == "" || address == "" {
+			return errors.New("server-init requires -server-id and -advertise")
 		}
 	case "client-init", "server-disable":
 		if id == "" {
@@ -94,10 +104,6 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 	}
 	switch args[0] {
 	case "server-init":
-		var policy control.ServerPolicy
-		if err = control.ReadObject(policyPath, &policy); err != nil {
-			return err
-		}
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
 			return err
@@ -105,6 +111,16 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		n, err := strconv.Atoi(port)
 		if err != nil {
 			return err
+		}
+		bind := "0.0.0.0"
+		if ip := net.ParseIP(host); ip != nil && ip.To4() == nil {
+			bind = "::"
+		}
+		policy := control.DefaultServerPolicy(net.JoinHostPort(bind, port), bind)
+		if policyPath != "" {
+			if err = control.ReadObject(policyPath, &policy); err != nil {
+				return err
+			}
 		}
 		pass, err := keyPassphrase(key)
 		if err != nil {
@@ -157,7 +173,7 @@ func coordination(ctx context.Context, args []string, out io.Writer) error {
 		}
 		return writeJSON(out, map[string]string{"status": "imported", "pairing_id": pairing, "host_key_fingerprint": bundle.HostFingerprint})
 	case "server":
-		id, err := store.Server()
+		id, err := loadOrInitServer(store, listen, address)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"runtime"
 	"testing"
 )
 
@@ -16,6 +17,9 @@ func TestImplementedCommands(t *testing.T) {
 		t.Fatal("missing real adapter descriptors")
 	}
 	for _, args := range [][]string{nil, {"server"}, {"client"}, {"client-api"}, {"client-api", "-shutdown-timeout", "0s"}, {"validate"}, {"keygen"}, {"preflight"}, {"report-replay"}, {"report-export"}, {"report-export", "-report", "unused", "-max-bytes", "100", "-format", "xml"}} {
+		if runtime.GOOS == "linux" && (len(args) == 0 || args[0] == "server") {
+			continue // Linux's intentional server startup is covered with an isolated store/listener.
+		}
 		if err := run(context.Background(), args, &out); err == nil {
 			t.Fatalf("unsupported/incomplete invocation %v succeeded", args)
 		}

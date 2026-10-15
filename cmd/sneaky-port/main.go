@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 
@@ -33,6 +34,9 @@ func main() {
 // run dispatches only implemented operations; no measurement result is fabricated.
 func run(ctx context.Context, args []string, out io.Writer) error {
 	if len(args) == 0 {
+		if runtime.GOOS == "linux" {
+			return coordination(ctx, []string{"server"}, out)
+		}
 		return errors.New("usage: sneaky-port adapters | validate | preflight | keygen | server-init | client-init | server-enroll | server-disable | server-export | client-import | server | client-ready | client-run | client-api | report-replay | report-export\nUse COMMAND -h for flags. client-run saves local evidence; client-api opens the local dashboard with SSH setup and run controls")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)

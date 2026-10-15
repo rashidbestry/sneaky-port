@@ -664,6 +664,25 @@ flowchart TD
 
 Sources: [navigation](internal/localapi/web/navigation.js) (`navigate`, `tabKeys`, `navigationControls`, `pageFields`, `drawFields`, `pager`, `readText`, `drawReader`, `refreshReaders`, `clearReaders`, `tablePageSize`, `livePageSize`), [editor/run controls](internal/localapi/web/dashboard.js) (`controls`, `renderEditor`, `renderPhases`, `showPhase`, `transmitPending`, `renderLive`, `disconnect`), [current plots/local timer](internal/localapi/web/diagnostics.js) (`plot`, `tablePage`, `renderPreflight`), [HTML](internal/localapi/web/index.html), [viewport CSS](internal/localapi/web/dashboard.css), [asset/security guards](internal/localapi/dashboard_test.go), [actual-script/API fixture](internal/localapi/web/dashboard_test.cjs) (`navigationCheck`). Navigation/page/resize changes issue no API commands, preserve malformed input nodes and never mutate frozen settings. Compact table reasons have complete independently labeled evidence in dedicated detail views; no quantiles or deltas are recalculated. Main page vertical scrolling is disabled; JSON editors retain internal scrolling and narrow tables retain horizontal scrolling. HTTP/script fixtures validate navigation, keyboard focus, retained edits, exact values, full reader reachability and retry/status/cancellation. Browser geometry, focus rendering, accessibility and responsive acceptance remain checkpoint 23c.
 
+## Built-in server defaults and startup
+
+```mermaid
+flowchart TD
+    A[Linux binary without arguments or server command] --> B[Open private application state]
+    B --> C{Existing server identity?}
+    C -->|yes| D[Preserve identity, authorization and saved bindings]
+    C -->|no| E[Generate host identity; compiled limits; SSH port 22022]
+    E --> F[Empty allowlist requires trusted client enrollment]
+    D --> G[Embedded SSH application listener]
+    F --> G
+    G --> H[Authenticate client key]
+    H --> I[Receive, validate and freeze client test plan]
+    I --> J[Prepare actual UDP/TCP data sockets and run]
+    J --> K[Bounded stop, evidence and cleanup]
+```
+
+Sources: [dispatch](cmd/sneaky-port/main.go) (`run`), [startup/state/address selection](cmd/sneaky-port/server_start.go) (`defaultServerDirectory`, `serverAdvertiseAddress`, `loadOrInitServer`), [commands](cmd/sneaky-port/coordination.go) (`coordination`), [compiled policy](internal/control/default_policy.go) (`DefaultServerPolicy`), [SSH and client plan](internal/control/session.go) (`Server.Serve`, `Server.control`), [shared helper policy](internal/control/dashboard_server.go) (`DashboardServer`). Built-in limits do not select or rewrite client workloads. New private keys are generated locally; existing stores are preserved. Normal OS SSH 22 remains separate from app SSH 22022. [Initialization/authorization regressions](cmd/sneaky-port/server_defaults_test.go), [Linux lifecycle/client-plan cases](cmd/sneaky-port/server_start_linux_test.go); Linux runtime execution is deferred by user, with [checks and gaps](WORK_LOG.md#2026-10-15-built-in-server-defaults-and-port-22022).
+
 ## Dashboard password SSH workflow
 
 The latest top-bar/automatic-first-trust and bundled-upload path is shown [below](#bundled-helper-and-top-connection-bar). The exact-origin [bootstrap](internal/localapi/bootstrap.go) still grants only the page-memory bearer; literal-loopback/Host/Origin/peer/request identity guards remain. [SSH ownership](internal/control/ssh_dashboard.go) forwards only helper control/calibration/reports; measured UDP/TCP traffic is direct. [Run Test](internal/localapi/web/dashboard.js) validates/saves the edited revision and retains existing exact plan/effective-setting/bind agreement. Original keyed CLI stores/services remain supported.
@@ -696,7 +715,7 @@ flowchart TD
 
 Sources: [packaging](build-dashboard.ps1), [tagged bundle](internal/control/helper_bundle_packaged.go) (`bundledHelper`), [upload](internal/control/helper_upload.go) (`validateHelperBinary`, `SetHelperBinary`, `helperUploadCommand`), [SSH](internal/control/ssh_dashboard.go) (`Connect`, `connectionStage`, `Status`, `rememberSSHHost`), [protected route](internal/localapi/ssh.go), [top bar/dialog](internal/localapi/web/index.html), [connection script](internal/localapi/web/dashboard.js) (`connectServer`, `showConnection`), [navigation](internal/localapi/web/navigation.js) (`navigate`, `showUtility`, `closeUtility`). Connection controls stay above the main console; advanced public pairing/identity readers remain in the top Details dialog. Setup has a 120-second connection budget / 130-second HTTP write budget / 135-second browser budget. Public connecting stages permit recovery without a duplicate Connect. Upload bytes and normal SSH work remain outside measured traffic/counters and frozen profiles.
 
-Checks: [upload/fault/cancellation/packaged bytes](internal/control/helper_upload_test.go), [native Linux uploaded helper/direct run/cleanup](internal/control/helper_launch_shell_test.go), [first/repeated/changed trust and UDP/TCP agreement](internal/control/ssh_dashboard_test.go), [actual script/HTTP/navigation/changed-key response model](internal/localapi/web/dashboard_test.cjs), [CLI public shell boundary](cmd/sneaky-port/finite_test.go). Native Linux shell/SSH fixtures differ from system sshd deployment, rendered-browser/accessibility/responsive QA, live-path/full acceptance; these gates remain separate.
+Checks: [upload/fault/cancellation/packaged bytes](internal/control/helper_upload_test.go), [native Linux uploaded helper/direct run/cleanup](internal/control/helper_launch_shell_test.go), [first/repeated/changed trust and UDP/TCP agreement](internal/control/ssh_dashboard_test.go), [actual script/HTTP/navigation/changed-key response model](internal/localapi/web/dashboard_test.cjs), [CLI public shell boundary](cmd/sneaky-port/finite_test.go). The [Ubuntu 24.04.4 VMware case](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation) additionally exercises system OpenSSH, matching helper upload, direct data, authenticated transfer, native replay/exports, cancellation and cleanup; paired guest/Windows captures and port comparisons retain explicit observation limits. Other Linux baselines, clock bounds, independent reference bands and broader live-path/full acceptance remain separate.
 
 ## Usable test dashboard and automatic results
 

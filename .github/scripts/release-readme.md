@@ -20,7 +20,7 @@ Receipt outcomes are application observations. The chart shows client attempt-to
 
 ## CLI and evidence
 
-The dashboard executable also provides the CLI commands. The Linux archive includes `sneaky-port-server-linux-amd64` for the standalone server/CLI workflow. Replace the executable name in the [operator documentation](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/README.md) with the binary from this archive. Standalone pairing/server examples use `examples/readiness-policy.json`.
+The dashboard executable also provides the CLI commands. Run the Linux archive's `./sneaky-port-server-linux-amd64` without arguments to start the standalone app SSH listener on TCP 22022 with built-in limits; no server policy file is needed. Generated identity/authorization state is kept in the user's application directory. The [operator documentation](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/README.md) describes first-time key pairing and client-supplied test profiles. Normal Linux SSH on port 22 and the dashboard's managed-helper workflow remain separate.
 
 `BUILD_INFO.json` records actual source revision and dirty state, toolchain, compiled build settings, binary sizes and SHA-256 hashes. [Remaining acceptance gates](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/ROADMAP.md#task-35-current-acceptance-review) distinguish package checks from platform qualification and live-network acceptance. TLS, QUIC, WireGuard, Hysteria2 and DNS are future work.
 

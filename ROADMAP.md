@@ -1,6 +1,6 @@
 # First actions
 
-Updated: 2026-10-15. Shipping targets are Windows 11 x86-64 clients and Linux x86-64 servers. The user authorized the remaining release tasks together and removed ARM from scope. Chrome QA 23c and named controlled cases 29-32 are complete; 24-25 are retired. Baseline 26, remaining marking 27, clock bounds 28, reference comparisons 33 and live-path 34 still gate full acceptance 35. A supplied Ubuntu 24.04.4 VMware guest now passes SSH/sudo inventory; deployment trials remain pending. [Guest access](WORK_LOG.md#2026-10-15-vmware-ubuntu-access-check), [current evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress), [requirements](DESIGN.md), [choices](CHOICES.md), [feature status](PROPOSALS.md).
+Updated: 2026-10-15. Shipping targets are Windows 11 x86-64 clients and Linux x86-64 servers. Chrome QA 23c, named controlled cases 29-32 and the VMware subcases below pass; architecture 24-25 is retired. Full acceptance 35 still needs the selected Ubuntu 22.04.5 baseline, remaining marking/clock/reference and broader path evidence. [VMware deployment/capture/matched trials](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation), [requirements](DESIGN.md), [choices](CHOICES.md), [feature status](PROPOSALS.md).
 
 Keep each task separately checkable and update its status/evidence before moving on. The 2026-10-13 user instruction authorizes this remaining release batch; future work retains the normal selected-task workflow. Historical four-target builds below are dated evidence, not current shipping requirements.
 
@@ -208,6 +208,10 @@ Checkpoints 23g/23h were authorized together by the user on 2026-10-12 and are c
 
 **Complete for implementation, actual-script/API and real finite UDP/TCP loopback fixtures; user-selected 2026-10-13.** Removed the count chart and show on-time/late/pending/missed outcomes numerically. One chart displays client attempt-to-receipt RTT in ms versus elapsed seconds, using copied main-only one-second min/max/count ranges bounded to 128 recent buckets; strict cutoff/warmup/duplicate/absent-receipt rules remain. Final replay replaces live ranges. Owned-source test/vet/build, focused race and rebuilt matching-helper checks pass. [Evidence](WORK_LOG.md#2026-10-13-numeric-receipts-and-live-latency), [source](FLOWCHART.md#numeric-receipts-and-live-latency). Chrome QA 23c is complete; remaining native/clock/reference/live gates are recorded in task 35.
 
+### 23o. Use built-in server defaults and port 22022
+
+**Implemented; Linux runtime validation deferred by the user, 2026-10-15.** Linux no-argument startup (or `server`) opens app SSH on 22022 and initializes private state automatically. Compiled limits are shared by standalone initialization and the managed helper; client profiles still determine tests after existing keyed authentication. Existing identities, authorizations and explicit bindings/overrides remain unchanged. Windows ordinary/vet/focused race checks and Linux cross-build pass; native/WSL runtime acceptance is not complete. The user explicitly stopped Linux testing for this change. [Evidence](WORK_LOG.md#2026-10-15-built-in-server-defaults-and-port-22022), [source flow](FLOWCHART.md#built-in-server-defaults-and-startup), [operator startup](README.md#start-the-standalone-linux-server).
+
 ## Queued validation tasks
 
 Statuses below distinguish completed named cases, partial evidence and remaining prerequisites. Use [acceptance gates](DESIGN.md#validation-before-supportperformance-claims), the [reference matrix](DESIGN.md#reference-comparison-acceptance-matrix) and [resolved release baselines/policies](CHOICES.md#current-udptcp-release-decisions). Record one named environment/scenario at a time; split multi-case work into explicit checklist items before execution. Build, loopback, native, impairment and live evidence stay distinct. These tasks do not authorize changing user-owned settings or substituting new reference dependencies. The user authorized the remaining release validation on 2026-10-13; Windows/Linux x86-64 are the shipping targets.
@@ -219,14 +223,14 @@ Statuses below distinguish completed named cases, partial evidence and remaining
 | 24 | Retired client architecture case | Removed from shipping scope by user, 2026-10-13; ID retained for history |
 | 25 | Retired server architecture case | Removed from shipping scope by user, 2026-10-13; ID retained for history |
 | 26 | Establish a Linux support-baseline case | Start with the selected Ubuntu 22.04.5 LTS server case; record actual OS/kernel/native workflow and qualify the supported minimum only from evidence; additional claims get separate cases |
-| 27 | Native directional marking and port evidence | Partial: Linux UDP/TCP IPv4/IPv6 loopback capture passes; Windows capture access is denied and physical/NAT evidence remains missing |
+| 27 | Native directional marking and port evidence | Partial: guest ens33 and Windows Npcap Wi-Fi IPv4 observations pass for both carriers; server DSCP12/client DSCP0 observed. Windows DSCP46 requests reject at qWave. Remaining privilege/NAT/IPv6/observation limits stay explicit |
 | 28 | Validate clock bounds and directional delay | Independently justified timing/error bounds and controlled offset/drift/asymmetry cases support or limit one-way classifications |
 | 29 | Controlled delay/spike case | [Complete for named kernel and application-boundary cases](#task-29-controlled-delays-and-spikes-completed) |
 | 30 | Controlled loss/delivery case | [Complete for exact seeded/burst data and separate receipt drops](#task-30-controlled-data-and-receipt-loss-completed) |
 | 31 | Controlled duplicate/reorder case | [Complete for authenticated known-identity UDP cases](#task-31-duplicates-reordering-and-invalid-replay-completed) |
 | 32 | Stream blockage, MTU and interruption cases | [Complete for named local stream/kernel/cancellation cases](#task-32-stream-mtu-rate-and-interruption-cases-completed) |
 | 33 | Independent reference overlap cases | Partial: pinned artifacts/licenses, native iperf2 build/smokes and four isolated Crusader scenarios retained. Ten repaired-clock IRTT alias pairs retain 200 product/199 reference completed samples; independent boundary allowances, 2 held-out pairs and frozen bands remain |
-| 34 | Matched live-path case | Repeated matched trials retain environment, offered workload and uncertainty; incompatible/incomplete results remain inconclusive |
+| 34 | Matched live-path case | Named on-link VMware subcase passes three alternating port pairs per carrier, including actual local skips; broader path/load/uncertainty qualification remains pending |
 | 35 | Review first-slice acceptance evidence | [Reviewed; full acceptance incomplete](#task-35-current-acceptance-review) until 26-28/33-34 have their required evidence |
 
 F10's [protocol traffic controls](DESIGN.md#protocol-specific-traffic-controls) retain task 19's common editor and fixed version-1 framing for this release. T25's richer fragmentation/header/padding mechanisms are deferred beyond it; future work must first select a compatible adapter/layer/schema outcome. The accepted wider F10 intent is preserved.
@@ -238,6 +242,20 @@ F10's [protocol traffic controls](DESIGN.md#protocol-specific-traffic-controls) 
 **Removed from release requirements by the user, 2026-10-13.** Windows/Linux x86-64 are the shipping targets. Stable IDs remain reserved; these cases are retired, not validated or marked completed. [Original checklist and prerequisite evidence](ARCHIVE.md#retired-native-arm-acceptance-checklist).
 
 Later carriers, DNS and monitoring keep their existing future status in [PROPOSALS.md](PROPOSALS.md). No release date or acceptance result is inferred from this breakdown.
+
+### Task 26a: Ubuntu 24.04.4 VMware workflow (completed)
+
+**Complete for the named guest/runtime case, 2026-10-15.** Windows 11 x86-64 connects through the guest's real OpenSSH daemon, uploads/verifies the matching helper and runs direct UDP/TCP. Fourteen completed and two cancelled runs retain native Linux and Windows replay/three-format exports; helper/upload/capture staging cleanup passes. All 16 owned test packages pass as cross-built Go processes on Ubuntu 24.04.4, kernel 6.17.0-14-generic, ordinary UID 1000. Native compiler/race and selected Ubuntu 22.04.5 qualification remain separate. [Evidence](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation).
+
+### Task 27a: IPv4 guest and Windows endpoint captures (completed)
+
+**Complete for the named observation points, 2026-10-15.** Guest ens33 retains 2,768 packets; Windows Npcap Wi-Fi retains 5,536 records, including 2,768 identical capture records. Both report zero capture drops; raw duplicates are retained separately from network-duplication claims. Run-associated main data show server DSCP12/client DSCP0 and ECN0 for UDP/TCP at both endpoints. All 1,084 unique UDP payload/endpoint tuples match across captures. No radio-wire, NAT, global IPv6, checksum/offload or packet-loss claim. Windows nonzero DSCP46 rejects before measurement at qWave with access denied. [Evidence](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation).
+
+The existing four independent AF_PACKET UDP/TCP IPv4/IPv6 loopback cases additionally pass on the VMware kernel inside a guarded disposable namespace: directional DSCP46/12, UDP ECN3/TCP ECN0 and zero capture drops. This supplements endpoint captures without claiming routed IPv6 or nonzero Windows support.
+
+### Task 34a: On-link matched port trials (completed)
+
+**Complete for the named functional comparison case, 2026-10-15.** Three A/B pairs per UDP/TCP carrier alternate order over two selected ports, with 1.5-second main phases at 20 messages/s independently in each direction and 200-ms warmup/grace. All six pairs produce descriptive compatible comparisons; raw local skips remain visible and no winner or precision claim is derived. Each main phase plans 30 slots; two completed client trials retain one local skip each. The larger first group remains retained after correctly exceeding the comparison API's 8 MiB aggregate budget; the smaller case changes only declared fixture workload. This on-link IPv4 path has no controlled external load or Internet/ISP qualification. [Evidence](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation).
 
 ### Task 29: controlled delays and spikes (completed)
 
@@ -257,19 +275,21 @@ The full-population reports above are retained named cases. Current CI separates
 
 **Complete for named local cases, 2026-10-13.** Both real carriers run with interface MTU 1200/content 1400, directional 128-kbit/s kernel rate limits and two 150-ms upstream 100-percent interruption intervals. Real stream stall/recovery and partial-write fixtures pass; ten UDP/TCP warmup/main/grace/control-loss/revocation cases retain 20 secret-free partial endpoint reports and unknown missing remote delivery. Qdisc backlog is recorded, then discarded in the owned namespace before readiness/reuse checks. This does not establish physical path MTU, fragmentation captures, sustained deployment or underlying TCP packet loss. [Evidence](WORK_LOG.md#2026-10-13-controlled-validation-and-x86-64-release-scope), [source flow](FLOWCHART.md#controlled-validation-cases).
 
+The 12 isolated kernel cases covering tasks 29/32 also pass on Ubuntu 24.04.4 VMware, kernel 6.17.0-14-generic, 2026-10-15. Both launcher and fixture verify a network namespace different from PID 1 with only loopback before any mutation; raw public reports and qdisc/interface truth are retained. [Native evidence](WORK_LOG.md#2026-10-15-vmware-deployment-and-network-validation).
+
 ### Task 35: current acceptance review
 
-**Reviewed, incomplete, 2026-10-13.** The remaining gates are concrete evidence prerequisites, not unresolved routine choices:
+**Reviewed, incomplete, 2026-10-15.** The remaining gates are concrete evidence prerequisites, not unresolved routine choices:
 
 | Gate | Current state / remaining prerequisite |
 | --- | --- |
 | 23c browser | Completed for the current Test dashboard in connected Chrome above. Native Linux shell/sshd, clock accuracy and live-network qualification remain separate. |
-| 26 Linux baseline | Supplied Ubuntu 24.04.4 x86-64 VMware guest passes SSH/password/sudo inventory, kernel 6.17.0-14-generic; deployment qualification remains unrun. This guest and the existing WSL2 case are separate from selected Ubuntu 22.04.5 qualification, which remains unrun. |
-| 27 marking/ports | Independent Linux loopback packet capture passes with zero capture-socket drops. Windows PktMon driver access, physical endpoint/NAT capture and observation limits still require evidence. |
+| 26 Linux baseline | Ubuntu 24.04.4 VMware runtime/deployment subcase 26a passes. Selected Ubuntu 22.04.5 qualification and native compiler/race remain unrun; no blanket Linux minimum is claimed. |
+| 27 marking/ports | Native IPv4 endpoint capture subcase 27a passes using existing Npcap/tcpdump. Windows qWave nonzero DSCP is denied in the available session; NAT/global-IPv6 and remaining observation/privilege cases remain unqualified. |
 | 28 clocks | Synthetic/causal gates and coherent QPC elapsed-source repair pass focused checks. Independent observations confirm the former Go timestamp plateaus. Production timestamp/model/drift bounds remain unqualified; one-way stays estimated/unavailable. |
 | 29-32 controlled cases | Completed in their named scopes above; retained raw truth/reports do not imply native deployment or live ISP evidence. |
 | 33 references | Pinned iperf2 native build/smokes retain pacing warnings; four isolated Crusader scenarios complete. Supported IRTT loopback alias fixes its MTU receive-buffer failure: ten exploratory pairs retain 200 product/199 reference completions and one reference skip. Independent boundary allowances and valid baseline/held-out trials remain incomplete. |
-| 34 live path | Supplied VMware guest is reachable over non-loopback IPv4 SSH. Repeated matched UDP/TCP trials, achieved workload and topology/capture evidence remain unrun; a virtual/LAN path does not establish Internet/ISP behavior. |
+| 34 live path | On-link VMware subcase 34a passes with actual per-trial workload, captures and descriptive matched comparisons. Internet/ISP, controlled external contention and broader timing/uncertainty qualification remain unrun. |
 | Shipping architecture | Windows/Linux x86-64 only. Retired tasks 24-25 are absent from acceptance requirements. |
 
 The full first slice remains incomplete. Further work resumes at these prerequisites; later carriers, DNS and monitoring keep their existing status.
