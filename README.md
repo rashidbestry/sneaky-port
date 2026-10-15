@@ -1,35 +1,27 @@
 # sneaky-port
 
-Measure FPS connection quality between a Windows 11 x86-64 client and a Linux x86-64 server. Compare UDP/TCP ports and independent directional packet priority using receipt deadlines, RTT, jitter, spikes and stalls. Runs save replayable reports with JSON, JSONL and CSV exports.
+Measure UDP/TCP connection quality between Windows 11 and one Linux server, both x86-64. Reports cover application receipt deadlines, RTT/variation, spikes, stalls, ports and independent directional DSCP.
 
-## Download the preview
+<a id="download-the-preview"></a>
+<a id="start-the-standalone-linux-server"></a>
 
-Get the [Windows or Linux x86-64 preview](https://github.com/rashidbestry/sneaky-port/releases). Go is not required for packaged binaries. Use matching client/server builds; current source may be newer than published previews.
+## Run
 
-From the extracted Windows archive:
+Download the [preview](https://github.com/rashidbestry/sneaky-port/releases), extract it and run:
 
 ```powershell
 .\sneaky-port-dashboard.exe
 ```
 
-No arguments are required. Open the printed `api_url`; settings and a private user-data folder are selected automatically. Enter your Linux server's normal SSH details (usually port **22**) and select **Connect**; the dashboard uploads its matching temporary helper. Review settings, then **Run test**. The selected data port must be reachable. [Optional startup settings](docs/USAGE.md#default-configuration).
+Open the printed `api_url`, enter the Linux server's normal SSH details (usually port 22), connect and run a test. The dashboard uploads its matching temporary Linux helper. No Go installation or startup arguments are needed.
 
-## Start the standalone Linux server
+For the standalone Linux service, run `./sneaky-port-server-linux-amd64`. It uses app SSH **22022**, generated private state and client-supplied test settings; [key pairing](docs/USAGE.md#pair-endpoints-and-check-readiness) is required. Normal SSH and the managed helper are separate.
 
-```sh
-chmod +x ./sneaky-port-server-linux-amd64
-./sneaky-port-server-linux-amd64
-```
+<a id="status"></a>
+<a id="project-documents"></a>
 
-Current source starts app SSH on **22022** with built-in limits and automatically generated private state. No server policy file is required; authenticated clients supply test settings. Follow [key pairing](docs/USAGE.md#pair-endpoints-and-check-readiness) for standalone use. This listener is separate from normal SSH and the dashboard's helper workflow.
+## Status and documentation
 
-## Status
+UDP/TCP is implemented; full release acceptance is incomplete. Latest Linux startup checks are user-deferred; production one-way bounds and broader native/network qualification remain open. TLS, QUIC, WireGuard, Hysteria2 and DNS are future work.
 
-UDP/TCP is implemented; full release acceptance remains incomplete. Production one-way clock bounds and broader platform/network qualification are pending. Linux runtime checks for the latest startup change are deferred. TLS, QUIC, WireGuard, Hysteria2 and DNS remain future work. See the [remaining checks](docs/ROADMAP.md#task-35-current-acceptance-review) and [validation record](docs/WORK_LOG.md).
-
-## Project documents
-
-- [Operator guide](docs/USAGE.md): source builds, pairing, CLI, API, reports and measurement limits.
-- [Design and technical choices](docs/DESIGN.md), [roadmap and future features](docs/ROADMAP.md).
-- [Validation record](docs/WORK_LOG.md) and [history](docs/ARCHIVE.md).
-- [Dependency notices](docs/THIRD_PARTY_NOTICES.md) and [repository instructions](docs/AGENTS.md).
+[Usage](docs/USAGE.md) · [Design/decisions](docs/DESIGN.md) · [Roadmap/features](docs/ROADMAP.md) · [Validation](docs/WORK_LOG.md) · [History](docs/ARCHIVE.md) · [Notices](docs/THIRD_PARTY_NOTICES.md) · [Repository rules](docs/AGENTS.md)

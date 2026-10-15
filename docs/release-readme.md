@@ -1,27 +1,27 @@
 # sneaky-port @@VERSION@@ (@@PLATFORM@@ x86-64)
 
-UDP/TCP connection measurement preview with a browser dashboard and matching Linux helper. Go is not required to run the binaries. Full platform and live-network acceptance remains incomplete.
+UDP/TCP measurement preview with a browser dashboard and matching Linux helper. Go is not needed to run it. Full platform/live-network acceptance is incomplete.
 
-## Start the dashboard
+<a id="start-the-dashboard"></a>
 
-Extract the archive into a writable folder and run this command from that folder:
+## Start
+
+Extract into a writable folder and run:
 
 ```text
 @@START_COMMAND@@
 ```
 
-Windows startup needs no arguments and creates/reuses `%APPDATA%\sneaky-port\client`; `-data-dir FOLDER` optionally selects an existing store. Open the exact `api_url` printed in the terminal. Enter your Linux server's IP, SSH port, username and password, then Connect. The dashboard uploads, verifies and starts its matching Linux x86-64 helper. The SSH account must allow commands and forwarding, with `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir` available. The selected UDP/TCP data port must be reachable between the endpoints.
+Open the printed `api_url`. Windows needs no arguments and stores private state in `%APPDATA%\sneaky-port\client`. Optional `-data-dir FOLDER` selects an existing store; `-profile FILE` supplies a complete YAML/JSON override.
 
-The first SSH fingerprint is trusted after successful authentication; a changed saved fingerprint requires explicit replacement. Passwords are cleared and are not saved. Keep your application store and reports private.
+Enter the Linux server's normal SSH IP/port/username/password, connect, review settings and run. The account needs commands/forwarding plus `mktemp`, `head`, `sha256sum`, `chmod`, `rm` and `rmdir`; the chosen UDP/TCP data port must be reachable. First fingerprints are trusted after authentication; changed pins require replacement. Passwords are transient. Stop cancels a test; Ctrl+C closes the app and owned helper.
 
-Startup uses editable built-in test settings; `-profile FILE` optionally supplies a complete YAML/JSON override. Choose UDP/TCP and review the server, workload, duration, deadline, rates, payload and ports before Run test. Stop cancels the owned test; Ctrl+C shuts down the application.
+The standalone `./sneaky-port-server-linux-amd64` starts app SSH on **22022**, with generated private state and built-in limits. It requires [trusted key pairing](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/docs/USAGE.md#pair-endpoints-and-check-readiness); normal SSH 22 is separate.
 
-Receipt outcomes are application observations. The chart shows client attempt-to-receipt RTT in milliseconds over elapsed seconds. Live results are provisional; terminal replay supplies final or partial results. Production clock calibration and on-wire priority claims remain unverified.
+<a id="cli-and-evidence"></a>
 
-## CLI and evidence
+## Results and notices
 
-The dashboard executable also provides the CLI commands. Run the Linux archive's `./sneaky-port-server-linux-amd64` without arguments to start the standalone app SSH listener on TCP 22022 with built-in limits; no server policy file is needed. Generated identity/authorization state is kept in the user's application directory. The [operator documentation](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/docs/USAGE.md) describes first-time key pairing and client-supplied test profiles. Normal Linux SSH on port 22 and the dashboard's managed-helper workflow remain separate.
+Receipts measure application outcomes; RTT is shown in ms over elapsed seconds. Live results are provisional; terminal replay is authoritative. Production one-way bounds/outer-priority claims remain unverified. TLS, QUIC, WireGuard, Hysteria2 and DNS are future work.
 
-`BUILD_INFO.json` records actual source revision and dirty state, toolchain, compiled build settings, binary sizes and SHA-256 hashes. [Remaining acceptance gates](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/docs/ROADMAP.md#task-35-current-acceptance-review) distinguish package checks from platform qualification and live-network acceptance. TLS, QUIC, WireGuard, Hysteria2 and DNS are future work.
-
-Dependency notices are in [THIRD_PARTY_NOTICES.md](docs/THIRD_PARTY_NOTICES.md) and `licenses/`. No application license is inferred from dependency licenses. Reference tools are not bundled.
+`BUILD_INFO.json` records revision/dirty state, toolchain, binary settings/hashes and packaging checks. See [remaining acceptance](https://github.com/@@REPOSITORY@@/blob/@@REVISION@@/docs/ROADMAP.md#task-35-current-acceptance-review), [dependency notices](docs/THIRD_PARTY_NOTICES.md) and `licenses/`. Keep private state/reports private; reference tools are not bundled and dependency licenses do not imply an application license.

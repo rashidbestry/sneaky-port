@@ -1,748 +1,404 @@
 # Project archive
 
-Historical evidence and earlier choice discussions, archived on 2026-10-11. These records describe their original dates and may be superseded. Current status belongs in [WORK_LOG.md](WORK_LOG.md), current answers/open questions in [technical choices](DESIGN.md#technical-choices), and requirements in [DESIGN.md](DESIGN.md).
-
-## Index
-
-| Source | Archived material |
-| --- | --- |
-| WORK_LOG.md | [Older dated history](#archived-work-log); newest five entries stayed active at migration |
-| CHOICES.md | [Pre-compaction discussion snapshot](#archived-choices-snapshot-2026-10-11), including alternatives, source reviews, answers and decision provenance |
-
-Search by date, feature/choice ID or heading before reading an excerpt. Preserve archived evidence; append later batches instead of replacing records. Archive entries are neither current instructions nor proof of runtime support.
+Historical summaries, not current instructions or runtime qualification. Current answers are in [DESIGN.md](DESIGN.md#technical-choices), statuses in [ROADMAP.md](ROADMAP.md), and recent evidence in [WORK_LOG.md](WORK_LOG.md). Original dates/titles are retained; the full previous Markdown is available from the [pinned Git revision](#full-historical-record). Earlier raw test artifacts were cleaned at the user's request.
 
 ## Archived work log
 
+These 2026-10-10/11 records establish requirements, accepted choices and the initial implementation authorization. Later scope/status changes supersede them.
+
 ### 2026-10-10 — Initial requirements and documentation
 
-- Captured measurement-only scope: Windows/Linux clients, one Linux server, real tool-managed protocols, DNS experiments, ports, independent directional packet priority, and FPS delivery quality.
-- Created agent instructions, four separate design/validation documents, and a repository-local measurement skill; updated the overview and the former Claude entrypoint.
-- Validation at that stage: local links and whitespace checked, skill validator passed, and documentation/skill behavior reviewed. No application builds, runtime tests, services, or network experiments were performed.
-- State: documentation completed; all application features remained unimplemented. Exact historical time was not recorded.
+Captured measurement-only scope: Windows/Linux clients, one Linux server, real tool-managed protocols, DNS experiments, ports, independent directional packet priority, and FPS delivery quality.
 
 ### 2026-10-10 — Optional suggestions saved
 
-- Created the suggestions file originally named `NotImplementedYet.md` (now [feature proposals](ROADMAP.md#future-features-and-proposals)) with S01-S06: staged experiments, burst metrics, coordination separation, size/rate sweeps, exportable recommendations, and separate quality/confidence.
-- Linked the backlog from the overview and instructions. Suggestions remain proposals rather than approved requirements.
-- Validation: local links and whitespace checked. No implementation added. Exact historical time was not recorded.
+Created the suggestions file originally named `NotImplementedYet.md` (now [feature proposals](ROADMAP.md#future-features-and-proposals)) with S01-S06: staged experiments, burst metrics, coordination separation, size/rate sweeps, exportable recommendations, and separate quality/confidence.
 
 ### 2026-10-10 21:28 UTC+03:00 — Documentation consolidation and persistent work tracking
 
-- Consolidated confirmed requirements, protocol/DNS coverage, ports/priority, measurement methods, and acceptance checks into [DESIGN.md](DESIGN.md).
-- Simplified [AGENTS.md](AGENTS.md), added this work log, and linked both from [README.md](../README.md). Future work checks the current-state index and relevant history before assuming a feature is absent or complete.
-- Removed the unused Claude entrypoint, superseded `docs/` documents, and redundant repository-local skill. Preserved the optional backlog with its links updated.
-- Preserved the existing `.gitignore` unchanged; it currently excludes Markdown documents from Git unless already tracked.
-- State: documentation cleanup and tracking only. Application implementation remains on hold; all runtime features remain unimplemented.
-- Validation: all five Markdown files passed local-link and trailing-whitespace checks; `git diff --check` passed. Final inventory confirmed only the five intended Markdown files, with no application code, dependency manifest, or runtime configuration added. No runtime tests were performed.
+Consolidated confirmed requirements, protocol/DNS coverage, ports/priority, measurement methods, and acceptance checks into [DESIGN.md](DESIGN.md).
 
 ### 2026-10-10 21:33 UTC+03:00 — Forward proposals and backward work history
 
-- Renamed `NotImplementedYet.md` to [feature proposals](ROADMAP.md#future-features-and-proposals), preserving S01-S06 and their unapproved status.
-- Added F01-F07 to index the already accepted future scope; all remain not started. No new feature acceptance or implementation authorization was inferred.
-- Updated [AGENTS.md](AGENTS.md), [README.md](../README.md), and [DESIGN.md](DESIGN.md) links and tracking rules. Forward statuses/decisions belong in `PROPOSALS.md`; completed changes and validation belong here, linked by feature/proposal identifier.
-- Simplified this current-state index to actual repository/implementation state; future feature details now live in the proposals index.
-- State: documentation only; application code and runtime features remain unimplemented. The implementation hold and existing `.gitignore` are unchanged.
-- Validation: rename/old-file absence, five-file inventory, local links and section anchors, S01-S06/F01-F07 uniqueness, trailing whitespace, and `git diff --check` all passed. No application tests or network experiments were run.
+Renamed `NotImplementedYet.md` to [feature proposals](ROADMAP.md#future-features-and-proposals), preserving S01-S06 and their unapproved status.
 
 ### 2026-10-11 05:20 UTC+03:00 — Initial technical decisions
 
-- User confirmed Go (T01) and a local browser dashboard (T02). Recorded both in `DESIGN.md` and forward choice progress in `PROPOSALS.md`; F01-F07 are still not started.
-- Added proposed choices T03-T11 for packaging, embedded UI, protocol integrations, measurement boundaries, configuration/results, trust, execution, and platform priority. These are recommendations, not accepted decisions. S01-S06 were not promoted.
-- Inspected primary Go, QUIC, WireGuard, Hysteria2, DNS, and Microsoft QoS sources to identify integration candidates and capability limits. This was source research, not integration validation.
-- DNS source review found the original miekg/dns implementation is receiving specific fixes only and points to a new Codeberg implementation. Kept the DNS dependency choice open for API/stability/integration assessment rather than finalizing the older candidate.
-- State: documentation only; implementation hold remains. No application source, dependency installation/manifest, running service, or network measurement was added.
-- Validation: all five Markdown files passed local-link, section-anchor, and trailing-whitespace checks; `git diff --check` passed. Verified that only T01-T02 are marked confirmed and F01-F07 remain not started. No builds, runtime tests, or network experiments were performed.
+User confirmed Go (T01) and a local browser dashboard (T02).
 
 ### 2026-10-11 05:29 UTC+03:00 — Dedicated technical choices file
 
-- Created [technical choices](DESIGN.md#technical-choices) at the user's request and moved the existing T01-T11 table and research notes out of `DESIGN.md`. Preserved Go/local browser dashboard as the only confirmed technical answers.
-- Added explicit discussion questions for the existing recommendations and T12-T18 for previously unresolved platform, frontend, schema, workload, DNS, priority, and ranking details. No additional feature or choice was approved.
-- Updated `AGENTS.md`, `README.md`, `PROPOSALS.md`, and the current-state index to route technical options/answers to `CHOICES.md`, future features to `PROPOSALS.md`, and completed work/history here. Kept a brief confirmed-stack pointer in `DESIGN.md`.
-- State: documentation only; no implementation, dependencies, runtime configuration, services, or network experiments added. Existing ignore rules are unchanged.
-- Validation: six-file Markdown inventory, local links and heading anchors, T01-T18 identifier uniqueness, exactly two confirmed choices, and whitespace checks passed. `git diff --check` passed. No runtime tests were needed for this documentation change.
+Created [technical choices](DESIGN.md#technical-choices) at the user's request and moved the existing T01-T11 table and research notes out of `DESIGN.md`.
 
 ### 2026-10-11 05:45 UTC+03:00 — Initial roadmap
 
-- Created [ROADMAP.md](ROADMAP.md) at the user's request with only the first actions: settle immediate choices, define a measurement contract, review integration constraints, and agree on an explicitly authorized first implementation slice. Later actions remain open to evidence and discussion.
-- Linked the roadmap from `AGENTS.md`, `README.md`, and `PROPOSALS.md`; added it to this current-state index. Technical answers remain in `CHOICES.md`, feature scope/status in `PROPOSALS.md`, and completed work here.
-- State: documentation only. The possible UDP/TCP starting slice is a suggestion, not an accepted order or implementation authorization. F01-F07 remain not started, S01-S06 remain unapproved, and T01-T02 remain the only confirmed technical choices.
-- Validation: seven-file Markdown inventory, local links/anchors, trailing whitespace, four roadmap steps, unchanged confirmed-choice/feature states, and `git diff --check` passed. No runtime tests were needed. No application code, manifests, runtime configuration, services, or network experiments added; ignore rules and unrelated files preserved.
+Created [ROADMAP.md](ROADMAP.md) at the user's request with only the first actions: settle immediate choices, define a measurement contract, review integration constraints, and agree on an explicitly authorized first implementation slice.
 
 ### 2026-10-11 05:48 UTC+03:00 Foundation discussion started
 
-- Started roadmap step 1 at the user's request. Added a focused first batch in `CHOICES.md` for packaging (T03), dashboard stack (T04/T13), and OS/CPU targets (T12), with alternatives and explicit pending-answer states. T06-T09 remain the next discussion batch.
-- Updated `ROADMAP.md` to in discussion, the current-state index here, and technical-choice progress in `PROPOSALS.md`. No additional technical answer was inferred; only T01-T02 are confirmed.
-- Checked primary Go embedding documentation to support the proposed asset-bundling approach. Platform targets, chart library/layout, and protocol integration feasibility remain unresolved; this research is not runtime support evidence.
-- State: documentation only. F01-F07 remain accepted/not started and S01-S06 remain proposed. No code, dependencies/manifests, runnable configuration, services, or network experiments added. Existing ignore rules and unrelated changes preserved; changes left uncommitted.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks; confirmed-choice states, F01-F07 not-started states, and S01-S06 inventory passed. `git diff --check` passed for tracked files; explicit Markdown checks covered ignored documents. Python was unavailable, so the checks ran through native PowerShell. No runtime tests or network experiments were performed.
+Started roadmap step 1 at the user's request.
 
 ### 2026-10-11 05:50 UTC+03:00 First foundation answers recorded
 
-- Recorded the user's packaging answer (T03: one executable per OS/CPU with client/server modes) and embedded plain HTML/CSS/JavaScript dashboard answer (T04/T13) in `CHOICES.md`, dated 2026-10-11. Chart library/layout remain open; no unasked defaults or dependencies were adopted.
-- Recorded T12 as partly confirmed: Windows 11 client only, Linux server only, ARM/x86 families on both. This supersedes the previous Windows/Linux-client scope. Exact bitness, Linux distributions/versions, and actual server environment remain open; requested clarification rather than silently choosing ARM64/amd64 or 32-bit targets.
-- Updated current scope in `DESIGN.md`, `README.md`, `AGENTS.md`, and F01 in `PROPOSALS.md`; updated roadmap progress and this current-state index. Prepared the next questions for T06-T07; T08-T09 follow. Inspected primary YAML/Go JSON documentation for profile-format options; no parser or schema selected.
-- State: documentation only, implementation still on hold. F01-F07 remain accepted/not started; S01-S06 remain proposed. No application code, manifests, runnable configuration, services, or network experiments added. Ignore rules and unrelated user changes preserved; changes left uncommitted.
-- Validation: checked with the following decision update; no application/runtime checks performed.
+Updated current scope in `DESIGN.md`, `README.md`, `AGENTS.md`, and F01 in `PROPOSALS.md`; updated roadmap progress and this current-state index.
 
 ### 2026-10-11 05:52 UTC+03:00 Architecture and profile answers recorded
 
-- User clarified T12 as 64-bit ARM64 and x86-64 only for Windows 11 clients and Linux servers. Recorded the four intended Go build targets without claiming builds or runtime validation; Linux version/distribution targets remain open.
-- Confirmed T06's shared measurement engine and separate protocol adapters, platform port/priority support, and dashboard/API modules. Confirmed T07's versioned YAML profiles, shared validation rules, and explicit save for dashboard edits. Parser, schema, defaults, and storage paths remain undecided; S03 was not adopted.
-- Updated `CHOICES.md`, the application foundation/platform requirements in `DESIGN.md`, `README.md`, `ROADMAP.md`, F01/choice progress in `PROPOSALS.md`, and this current-state index. Asked the final foundation batch for T08 results, T09 pairing, and T12 Linux versions.
-- State: documentation only; implementation remains on hold. F01-F07 remain accepted/not started, S01-S06 remain proposed, and all changes are uncommitted. No application code, dependency manifests, runnable configuration, services, or network experiments added.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks; confirmed-choice states, primary T01-T18 uniqueness, F01-F07 not-started states, S01-S06 inventory, and current-scope checks passed. The first identifier check counted repeated discussion references; restricting it to the primary choice tables resolved that checker error. `git diff --check` passed for tracked files; explicit checks covered ignored Markdown files. File inventory contains only the seven documents and existing `.gitignore`. No application/runtime checks or network experiments performed.
+User clarified T12 as 64-bit ARM64 and x86-64 only for Windows 11 clients and Linux servers.
 
 ### 2026-10-11 05:59 UTC+03:00 Foundation decisions completed
 
-- Confirmed T08 from the user's answer: per-run JSONL raw observations, JSON summary/settings snapshot, and CSV export. Updated `CHOICES.md` and `DESIGN.md`; exact schemas/file lifecycle remain open under T14, and S05 was not adopted.
-- Recorded T12's broad Linux server distribution scope, including the user's CentOS/Ubuntu/Fedora/Arch examples and other mainstream distributions. Updated `CHOICES.md`, `DESIGN.md`, `README.md`, and F01 in `PROPOSALS.md`. Exact version/kernel/userspace/dependency limits remain open for roadmap action 3; no distribution/runtime compatibility was tested or promised.
-- Explained T09 after the user said the earlier question was unclear; did not infer acceptance. User then selected generated pairing setup plus support for TLS certificates they provide. Recorded the trusted transfer/client dashboard import approach, explicit identity verification, and remaining enrollment/storage/certificate lifecycle details in `CHOICES.md` and `DESIGN.md`. Inspected primary Go TLS verification documentation; this is source research, not a validated integration.
-- Marked roadmap action 1 complete because foundation answers and remaining uncertainties are recorded. Action 2 (measurement contract) is next/not started; schemas, pairing mechanics, chart/layout needs, and Linux support boundaries are assigned to the following discussions. Updated `ROADMAP.md`, choice progress in `PROPOSALS.md`, and this current-state index.
-- State: documentation only; implementation remains on hold. F01-F07 remain accepted/not started and S01-S06 proposed. No code, dependency manifests, runnable configuration, services, or network experiments added. Changes left uncommitted; existing ignore rules and unrelated files/settings preserved.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Primary T01-T18 uniqueness, eight confirmed core choices (T01-T04/T06-T09), unchanged F01-F07/S01-S06 implementation/proposal states, action 1 completion/action 2 not-started states, current-scope consistency, and documentation-only inventory passed. `git diff --check` passed for tracked files; explicit Markdown checks covered ignored documents. No application/runtime checks or network experiments performed.
+Confirmed T08 from the user's answer: per-run JSONL raw observations, JSON summary/settings snapshot, and CSV export.
 
 ### 2026-10-11 06:01 UTC+03:00 Automatic roadmap completion tracking
 
-- Added the user's standing instruction to `AGENTS.md`: after a roadmap task's stated outcome and required checks are complete, mark it complete in `ROADMAP.md` automatically before reporting, without waiting for a reminder. Partial/incomplete tasks retain accurate states.
-- Verified that roadmap action 1 is already complete and action 2 remains next/not started; no additional task was completed by this instruction update. Updated this current-state index.
-- State: documentation only, changes uncommitted. Implementation hold, F01-F07/S01-S06 states, technical decisions, and existing ignore rules are unchanged. No application code or network experiments added.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Verified the automatic tracking instruction, unchanged implementation hold, action 1 complete/action 2 not-started states; `git diff --check` passed. No runtime checks needed or performed.
+Added the user's standing instruction to `AGENTS.md`: after a roadmap task's stated outcome and required checks are complete, mark it complete in `ROADMAP.md` automatically before reporting, without waiting for a reminder.
 
 ### 2026-10-11 06:05 UTC+03:00 Completed roadmap heading format
 
-- Added `(completed)` to action 1's heading in `ROADMAP.md`, matching the user's requested format. Updated `AGENTS.md` so every future completed roadmap task gets this heading suffix automatically as well as a complete state. Updated this current-state index.
-- State: documentation only, changes uncommitted. No additional roadmap action completed; implementation authorization, feature/proposal states, technical decisions, and unrelated user changes remain unchanged.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Verified the exact completed heading format, only action 1 marked completed, and action 2 still next/not started; `git diff --check` passed. No runtime checks needed or performed.
+Added `(completed)` to action 1's heading in `ROADMAP.md`, matching the user's requested format.
 
 ### 2026-10-11 06:14 UTC+03:00 Measurement contract draft started
 
-- Started roadmap action 2 at the user's request. Inspected current documentation, relevant history, branch/status, and file inventory; no application implementation exists to duplicate. Added the measurement-contract draft to `DESIGN.md` and T14/T15/T18 discussion to `CHOICES.md`.
-- Draft covers phase/session/message identities, independent bidirectional data plus correlated receipts, monotonic timing boundaries, separate data/receipt accounting, explicit denominators/incomplete evidence, logical profile/event/report fields, dashboard controls, and generated-pairing/user-certificate flows. Numerical workload, proposed mechanics, comparison thresholds, detailed schemas, and credential lifecycle remain unconfirmed/open.
-- Included a provisional prose workload and explicitly synthetic report with count identities and future acceptance examples. Asked the user to choose the T15 starting workload and T18 initial comparison approach; no acceptance inferred from recommendations or silence. No protocol dependency, chart library, default port, first implementation slice, T10 execution policy, or optional S01-S06 adoption selected.
-- Updated `ROADMAP.md` to in discussion/incomplete, this current-state index, and F07/technical-choice progress in `PROPOSALS.md` with evidence links; F01/F05/F06 design connections recorded. Action 2 awaits decisions and is not marked completed.
-- State: documentation only. All application features remain unimplemented; implementation hold and confirmed foundation choices remain intact. Changes uncommitted; existing ignore rules and unrelated files/settings preserved. No application code, helpers, manifests, runnable configuration, services, or network experiments added.
-- Validation: local-link/heading-anchor, trailing-whitespace, F/S identifiers, roadmap states, documentation-only inventory, and synthetic count reconciliation checked. The initial choice-row checker also counted repeated foundation/discussion references; scoped primary-table checking then passed T01-T18 uniqueness and eight unchanged core confirmations. `git diff --check` passed. No application/runtime tests or network experiments performed.
+Started roadmap action 2 at the user's request.
 
 ### 2026-10-11 06:16 UTC+03:00 Configurable workload and report presentation answers
 
-- User requested configurable packet size, burst time, payload, and other traffic properties (T15), rather than selecting the proposed fixed numbers. Recorded broad configurability in `CHOICES.md` and `DESIGN.md`; values remain illustrative, not accepted defaults. Proposed independent steady/repeating-burst controls, burst duration/gap/rate, and reproducible payload content; asked for the detailed burst answer. Exact outer packet size remains adapter-dependent and must be distinguished from configured payload size.
-- User confirmed T18 presentation: deadline misses first, then p95/p99 RTT and variation, ties/inconclusive, no combined score. Updated `CHOICES.md`/`DESIGN.md`; actual ranking evidence thresholds and repetitions remain open. Also asked about T14's independent bidirectional data plus correlated receipts, with overhead explicit.
-- Updated `ROADMAP.md`/current-state index and F07 choice progress in `PROPOSALS.md`. Action 2 remains in discussion/incomplete; no numerical defaults or optional S01-S06 were adopted. Configuring a workload does not approve automated S04 sweeps or product traffic shaping.
-- State: documentation only, implementation still on hold, changes uncommitted. No application code, runnable profiles, dependencies, services, or network experiments added.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Primary T01-T18 identifiers, unchanged core confirmations, recorded T15/T18 answers, F01-F07 unimplemented/S01-S06 proposed states, incomplete roadmap action 2, documentation-only inventory, synthetic count reconciliation, and `git diff --check` passed. No application/runtime tests performed.
+User requested configurable packet size, burst time, payload, and other traffic properties (T15), rather than selecting the proposed fixed numbers.
 
 ### 2026-10-11 06:18 UTC+03:00 Traffic phase sequences and receipt clarification
 
-- User extended T15's proposed steady/burst controls with an ordered sequence of different traffic phases. Updated `DESIGN.md`/`CHOICES.md` with per-phase duration, independent directional traffic settings, payload controls, an illustrative phase sequence, dashboard phase editing, and proposed phase-aware reporting/accounting. Exact phase transitions, rounding, and deadline overrides remain open; no numerical defaults accepted.
-- User asked for a clearer T14 explanation. Recorded the independent client/server data plus small correlated application-receipt model, extra overhead, separate delivery versus receipt outcomes, and a data-only alternative. The request to explain is not acceptance; T14 remains pending.
-- Updated `ROADMAP.md`, F07 choice-progress evidence in `PROPOSALS.md`, and this current-state index. Roadmap action 2 remains in discussion/incomplete. F01-F07 have no implementation; S01-S06 remain proposed, including automated S04 sweeps.
-- State: documentation only, implementation still on hold, changes uncommitted; user-owned files/settings preserved. No application code, helpers, manifests, runnable configuration, services, or network experiments added.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Primary choice identifiers, unchanged feature/proposal implementation states, incomplete roadmap action 2, documentation-only inventory, confirmed phase-sequence scope, pending T14 decision, and `git diff --check` passed. No application/runtime tests performed.
+User extended T15's proposed steady/burst controls with an ordered sequence of different traffic phases.
 
 ### 2026-10-11 06:24 UTC+03:00 Measurement pattern confirmed and contract milestone completed
 
-- After explanation, user confirmed T14's independently scheduled data in both directions plus correlated application receipts, adding that information is carried in the payload. Updated `CHOICES.md` and `DESIGN.md` with this dated decision and logical payload content: measurement metadata/identities plus configurable test content, and receipt correlation/receiver processing interval where available. Exact encoding/widths and adapter mappings remain open; no final schema selected.
-- Clarified size accounting: example 128 bytes means configurable test content, with measurement metadata/framing, receipt bytes, and outer overhead recorded separately. Timing values remain host-local; mandatory identities are preserved through authentic protocol payloads and do not replace authentication. Added a payload/framing acceptance example for later authorized implementation.
-- Reviewed action 2's outcome: lifecycle, identities, independent scheduling, timing boundaries, delivery accounting, logical result/dashboard fields, configurable steady/burst phase sequences, paired receipt model, pairing/user-certificate flows, editable example profile, synthetic expected-report counts, and future acceptance checks are documented. T15 numerical values were not adopted as defaults. Exact resource/phase rules, schemas, credential lifecycle and recommendation evidence thresholds remain explicit refinements for integration and agreed-slice planning.
-- Marked action 2 complete and appended `(completed)` to its heading in `ROADMAP.md` automatically; action 3 is next/planned. Updated this current-state index and F07/technical-choice progress in `PROPOSALS.md`, linked to this evidence. Completion is a conceptual documentation milestone, not a claim that every schema/mechanism is finalized or runtime behavior exists.
-- State: documentation only, implementation still on hold. F01-F07 remain unimplemented and S01-S06 proposed. Changes uncommitted; unrelated user files/settings preserved. No application code, helpers, manifests, runnable configuration, services, or network experiments added.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Primary T01-T18 identifiers, unchanged foundation decisions, confirmed T14 payload/receipt choice, F01-F07 implementation-not-started/S01-S06 proposed states, exact `(completed)` headings/states for actions 1 and 2, planned documentation-only action 3, synthetic count reconciliation, documentation-only inventory, and `git diff --check` passed. No application/runtime tests performed.
+After explanation, user confirmed T14's independently scheduled data in both directions plus correlated application receipts, adding that information is carried in the payload.
 
 ### 2026-10-11 Integration constraints review completed
 
-- Review recorded at 06:35 UTC+03:00 (Europe/Istanbul). Completed roadmap action 3's documentation/source-review outcome at the user's request. Inspected branch/status, current files, recent history and integration-related entries; repository still contains documentation only, with no application implementation to duplicate.
-- Added `CHOICES.md` integration review for T05/T11/T12/T16/T17: candidate managed protocol lifecycle and socket/port hooks; WireGuard `SO_MARK` versus DSCP and custom-bind gap; QUIC/Hysteria outer-socket, ECN/offload and cleanup checks; Windows arbitrary-DSCP privileges/policy and observation limits; DNS library status and bounded-shutdown question; direct versus recursive delegation, framing, downlink polling and authenticated payload questions; Go/dependency/kernel/userspace/architecture boundaries and proposed distribution validation coverage.
-- Reviewed primary Go, quic-go, WireGuard, Hysteria, DNS package, Microsoft, Linux kernel, DNS RFC, Ubuntu and CentOS sources. Current branch manifests are explicitly snapshots, not selected/pinned compatible dependencies. Published Go/kernel/API requirements are not product runtime validation. Exact Linux release minima, native/cgo packaging, priority presets/backend, DNS framing/polling and dependency choices remain open; recommendations were not treated as user acceptance.
-- Added a review-status pointer in `DESIGN.md`; marked action 3 complete with `(completed)` in `ROADMAP.md` automatically and left action 4 next/planned. Updated this current-state index and integration design progress for F01-F07 in `PROPOSALS.md`, linked to this entry. All accepted protocol/DNS/port/priority coverage remains in scope; all application implementation remains not started, S01-S06 remain unapproved, and implementation is on hold.
-- State: documentation/source research only. No application code, runtime helpers, manifests, runnable profiles, services, captures or network experiments added. No dependencies installed. Changes left uncommitted; existing ignore rules and unrelated files/settings preserved.
-- Validation: all seven Markdown files passed local-link/heading-anchor and trailing-whitespace checks. Initial link checking caught the pending evidence anchor before this entry was appended; an identifier checker initially counted repeated discussion rows, then passed when scoped to the primary T01-T18 tables. F01-F07/S01-S06 identifiers and unimplemented/unapproved states, open T05/T11 recommendations, completed actions 1-3/planned action 4, the implementation hold and documentation-only inventory passed. `git diff --check` passed; Git emitted only LF-to-CRLF normalization warnings. No build, loopback, Windows/Linux adapter, controlled-impairment or live-network tests were performed.
+Review recorded at 06:35 UTC+03:00 (Europe/Istanbul).
 
 ### 2026-10-11 Reference-tool planning recorded
 
-- Recorded at 07:09 UTC+03:00 (Europe/Istanbul). User requested selectively learning from existing tools and improving useful functionality, with documentation only and no implementation. Inspected branch/status, current documents and relevant recent history; preserved the pre-existing uncommitted changes. Used the existing `PROPOSALS.md` rather than creating a duplicate singular-name file.
-- Added a reference inventory in `PROPOSALS.md` for IRTT, iperf2, Crusader, Flent, Graphite Meter, sockperf, dnstt, iodine and bufferbloat-lab, mapped to existing F01-F07/T13-T18. Added proposed S07-S11 for independent reference cross-checks, timing preflight diagnostics, distribution/phase comparison views, controlled contention validation scenarios and continuous responsiveness monitoring. Kept S01-S06 identifiers/statuses, existing configurable workload and independent directional priority requirements; no optional candidate adopted.
-- Added T19/T20 and a focused reuse/validation discussion in `CHOICES.md`: design reference versus embedded/bundled code versus validation-only utility, exact upstream/source/license/platform review, and equivalent workload/timing/accounting/tolerance criteria. Source/reference documentation is not runtime support evidence. Copyleft license statements, whole-ToS versus numeric DSCP inputs, calibrated one-way timing, DNS tunnel reliability/polling and raw-UDP fallback require explicit treatment before reuse; no dependency, license strategy or benchmark version selected.
-- Added completed documentation action 3a and planned evaluation action 3b in `ROADMAP.md`, preserving existing action numbers and completed 1-3 states. Action 4 now uses relevant reuse/validation findings before an explicitly authorized slice; it remains planned. Updated `DESIGN.md` with a brief confirmed planning-direction pointer, `PROPOSALS.md` progress/evidence links and this current-state index. Normal product scope still excludes shaping, router queue management, manual tunnel-service setup and route switching.
-- State: documentation only; F01-F07 remain unimplemented and S01-S11 proposed. No application code, runtime helpers, manifests, runnable profiles, services, installs, captures, network experiments or commits added. Exact component choices, optional adoption, source audits and runtime checks remain open.
-- Validation: all seven Markdown files passed trailing-whitespace and 94 local-link/heading-anchor checks. Primary T01-T20/F01-F07/S01-S11 inventories, unchanged F01-F07 unimplemented and S01-S11 proposed states, completed actions 1-3/3a and planned 3b/4 states, implementation hold and documentation-only inventory passed. The initial identifier check included repeated choice-discussion rows; scoping it to the two primary tables passed. `git diff --check` passed with only LF-to-CRLF normalization warnings. No application/runtime tests or network experiments performed.
+Added a reference inventory in `PROPOSALS.md` for IRTT, iperf2, Crusader, Flent, Graphite Meter, sockperf, dnstt, iodine and bufferbloat-lab, mapped to existing F01-F07/T13-T18.
 
 ### 2026-10-11 Protocol extensibility requirement recorded
 
-- Recorded at 07:17 UTC+03:00 (Europe/Istanbul). User clarified that the requirement is easy addition of probe protocols across future releases, rather than planning particular additional protocols. Inspected current documentation/history and preserved existing uncommitted work.
-- Added `DESIGN.md` extensibility requirements and future acceptance criteria: a common adapter lifecycle/probe/capability/options contract, shared timing/accounting, capability-driven dashboard/configuration/reporting, stable identifiers and compatible versioned profiles/results, and explicit unsupported outcomes. Routine adapter additions should avoid a broad rewrite of shared modules; runtime plugins are not required by this intent.
-- Added accepted F08 in `PROPOSALS.md` with evidence here, and open T21 in `CHOICES.md` for exact contract/registration/schema mechanics. Compile-time registration is a recommendation, not a selected mechanism. No particular new carriers were added to scope or the backlog; existing F01-F07 and proposed S01-S11 retain their states.
-- Updated `AGENTS.md`, `README.md`, roadmap action 4 and this current-state index. Actions 1-3/3a remain completed documentation milestones; 3b/4 remain planned. Extensibility must inform the first slice, with actual implementation checks requiring later authorization.
-- State: documentation only; implementation remains on hold. No application code, manifests, runnable configuration, dependencies, services, network experiments or commits added. Exact interfaces and runtime validation remain outstanding.
-- Validation: all seven Markdown files passed whitespace and 102 local-link/heading-anchor checks. F01-F08 and T21 inventory, contiguous feature table, preserved roadmap completion states, and absence of specific new protocol candidates passed. `git diff --check` passed with only LF-to-CRLF normalization warnings. No application/runtime tests were performed.
+Added `DESIGN.md` extensibility requirements and future acceptance criteria: a common adapter lifecycle/probe/capability/options contract, shared timing/accounting, capability-driven dashboard/configuration/reporting, stable identifiers and compatible versioned profiles/results, and explicit unsupported outcomes.
 
 ### 2026-10-11 Selective reference review completed
 
-- Recorded at 07:31 UTC+03:00 (Europe/Istanbul).
-- User requested the next roadmap task, action 3b. Inspected `main`, clean starting Git status, the seven current Markdown documents, recent/reference/extensibility history and the documentation-only inventory. Current authorization remains documentation/source evaluation only.
-- `CHOICES.md` records T19/T20 component recommendations and pinned IRTT v0.9.2/Crusader v0.3.2 source symbols, timing/denominator differences, socket/priority/lifecycle fit, license texts and native-platform gaps. iperf2 Git refs were read, but accessible source pages showed different revisions; pinned/raw/snapshot retrieval failed. dnstt official HEAD/maintainer protocol documentation were read; source-browser retrieval failed and the remaining attempt was stopped. These limitations are explicit, not a complete release/transitive-license audit.
-- `DESIGN.md` adds a prose acceptance matrix for UDP RTT/receiver delivery, TCP overlap and blockage, ports/directional outer DSCP/ECN, matched external-load phases, DNS framing/polling/limits, native Windows/Linux ARM64/x86-64 and lifecycle/extensibility. Deterministic counts/content/markings require exact agreement; experimental timing bands need later predeclared calibration. No numeric defaults/tolerances or runtime support claims added.
-- User confirmed IRTT/iperf2/Crusader as design references and external validation only, retaining the shared Go engine; accepted all S07-S11 for future scope, superseding suggested deferral of S08/S09/S11. Recorded dated decisions in `CHOICES.md`, individual statuses in `PROPOSALS.md` and affected intent in `DESIGN.md`. S01-S06 remain proposed; F01-F08/S07-S11 remain unimplemented. `ROADMAP.md` marks 3b complete with `(completed)`; action 4 is next and must decide slice inclusion/mechanics. Updated this current-state index; no historical entries removed.
-- State: documentation only; implementation hold remains. No application code, runtime helper, source copy into the workspace, manifest, runnable profile, dependency install, service, capture, network experiment or commit added. Coherent reference releases/native builds, transitive license audits, optional-feature mechanics/slice inclusion, final schemas/limits/trust/adapter mechanics and all runtime acceptance remain open.
-- Validation: all seven Markdown files passed 115 local-link/heading-anchor and whitespace checks. Primary T01-T21/F01-F08/S01-S11 inventories, five accepted S07-S11 and six proposed S01-S06 states, five completed roadmap headings and planned action 4, implementation hold and documentation-only inventory passed. Python launcher was unavailable; PowerShell performed the checks. Initial identifier checks included secondary discussion tables; restricting them to the three primary inventories passed. Final diff reviewed; `git diff --check` passed with LF-to-CRLF normalization warnings only. No application builds, runtime tests, captures or network measurements performed.
+User requested the next roadmap task, action 3b.
 
 ### 2026-10-11 Control and clock calibration requirements recorded
 
-- Recorded at 07:41 UTC+03:00 (Europe/Istanbul).
-
-- User clarified that a server connection must communicate the traffic being tested and maintain a cross-host time relationship for one-way delay. Added F09 as accepted scope, unimplemented, superseding optional one-way support without weakening evidence requirements.
-- Updated `DESIGN.md` for authenticated frozen-plan coordination, role-specific effective settings/readiness, offset/drift calibration with validity and uncertainty, and explicit control/calibration failure outcomes. Timing exchanges alone cannot resolve unknown path asymmetry; uncertain values remain labeled estimates or unavailable. Preserved host-local monotonic evidence and no implicit system-clock/time-service changes.
-- Added open T22/T23 in `CHOICES.md` for control transport and calibration mechanics/evidence thresholds. SSH, TLS, synchronization algorithms, cadence and numerical precision limits are not selected. Source research consulted RFC 7679 and RFC 5905; this is not a synchronization experiment.
-- Linked F09 evidence in `PROPOSALS.md`, clarified its required coordination overlap with still-proposed S03 persistence/recovery additions, updated roadmap action 4 and the current-state index. Existing completed documentation milestones and planned action 4 remain unchanged.
-- State: documentation only; implementation hold remains. No application code, manifests, runnable profiles, dependencies, services, system-clock changes, network experiments or commits added. Actual control/calibration behavior and one-way timing accuracy remain unvalidated.
-- Validation: seven-file inventory, 122 local links/heading anchors, whitespace and F01-F09/T22-T23 identifiers passed. Scope review caught and updated an earlier optional-one-way sentence in the roadmap; historical decision records are preserved. `git diff --check` passed with only LF-to-CRLF normalization warnings. No runtime/synchronization tests performed.
+User clarified that a server connection must communicate the traffic being tested and maintain a cross-host time relationship for one-way delay.
 
 ### 2026-10-11 StarTrinity reference review recorded
 
-- Recorded at 07:46 UTC+03:00 (Europe/Istanbul). User requested checking StarTrinity following the reference-tool planning/review. Inspected branch/status, current-state index, recent decisions and relevant design/choice/proposal/roadmap text before editing; preserved intervening accepted S07-S11, F08 extensibility and F09 coordination/calibrated one-way requirements.
-- Read official Network Tester, CST FAQ/custom-server deployment, SIP Tester product/tutorial and Windows DSCP guidance. Useful documentation covers bidirectional UDP size/rate controls, jitter history/distributions, simultaneous upload/download, quality/downtime thresholds, own-server deployment and worker-delay diagnostics. CST main/Internet Connection Monitor pages returned redirect-loop errors; linked Network Tester downloads are binaries/packages, not reviewed source. No source/license/build/platform audit or runtime validation completed; broader protocol plans and open-source labels are not treated as verified implementation/reuse evidence.
-- Added a StarTrinity reference row and proposed S12 (classified degradation episodes/observed availability) in `PROPOSALS.md`, linked to this evidence. S12 extends monitoring ideas but is not accepted, does not adopt S02, and keeps unknown time, local failures, intentional gaps and control/calibration failures distinct from network outages. Existing F01-F09/S07-S11 acceptance and S01-S06 proposed states preserved.
-- Added a bounded product-by-product documentation review and open T24 in `CHOICES.md` for jitter definitions, event transitions/recovery, thresholds and availability denominators. Captured source/license/native ARM64 gaps, vendor threshold/VoIP-MOS mismatch, CST Center/MySQL/service dependencies and global QoS-policy differences. No carrier, formula, numerical default, StarTrinity runtime dependency or code reuse selected; no confirmed product behavior changed, so `DESIGN.md` required no edit.
-- Added completed documentation-review action 3c in `ROADMAP.md`, carrying relevant findings/S12/T24 evaluation into still-planned action 4. Updated proposal progress and this current-state index; historical entries retained. Completion covers readable vendor documentation, not inaccessible sources or future experiments.
-- State: documentation only; implementation hold remains. No source download into the workspace, application code, helpers, manifests, runnable profiles, installs, services, QoS/clock/network changes, experiments or commits added. Exact source/build/license availability, native support and measurement mechanics remain open.
-- Validation: all seven Markdown files passed whitespace and 132 local-link/heading-anchor checks. Primary T01-T24/F01-F09/S01-S12 identifier inventories, unchanged F01-F09/S07-S11 acceptance, proposed S01-S06/S12, unimplemented feature states, completed actions 1-3/3a/3b/3c and planned action 4, implementation hold, F09 calibration requirement and documentation-only inventory passed. `git diff --check` passed with only LF-to-CRLF normalization warnings. No application/runtime tests or network experiments performed.
+Read official Network Tester, CST FAQ/custom-server deployment, SIP Tester product/tutorial and Windows DSCP guidance.
 
 ### 2026-10-11 First-slice discussion started
 
-- Recorded at 07:52 UTC+03:00 (Europe/Istanbul). User requested roadmap action 4. Inspected `main`, existing uncommitted changes, current-state/recent history, relevant design/choice/proposal/roadmap sections and the documentation-only inventory; preserved prior work.
-- Added a concrete proposed deliverable, feature/addition mapping, first answer batch, necessary mechanics and success criteria in `CHOICES.md`. Recommend UDP/TCP, shared engine/lifecycle/dashboard, pairing/ports/directional-priority reporting, F08 extensibility, F09 maintained clock mapping/evidence, basic S08/S09 and S07/S10 validation gates, with S11 later. Scope/additions/control-transport answers are pending; no recommendation adopted. TLS coordination is distinct from a measured TLS adapter; raw-data authentication/session binding remains a required unresolved mechanism.
-- Read official Go TLS configuration and RFC 7679 uncertainty guidance for the proposed control/calibration discussion. No toolchain/library version, credential mechanism, clock algorithm, numeric defaults/tolerances or support claim selected. Schema/resource/phase/credential/adapter/comparison/platform mechanics remain explicit follow-up choices under existing T identifiers.
-- Marked action 4 in discussion in `ROADMAP.md`, added matching forward progress/evidence in `PROPOSALS.md` and updated this current-state index. Step 4 remains incomplete: agreed scope, necessary mechanics and explicit implementation authorization are outstanding. Earlier completed headings/states and F01-F09/S07-S11 accepted future scope, S01-S06/S12 proposal states are preserved. No confirmed product decision changed, so `DESIGN.md` required no new edit in this task.
-- State: documentation only; implementation remains on hold. No application code, helpers, manifests, runnable profiles, dependencies, services, clock/QoS changes, network experiments or commits added.
-- Validation: all seven Markdown files passed whitespace and 139 local-link/heading-anchor checks. F01-F09/T01-T24 inventories, accepted S07-S11 states, action 4 in-discussion/incomplete state, implementation hold and documentation-only root inventory passed. Reviewed the proposed scope against existing requirements; recommendations remain separate from acceptance. `git diff --check` passed with LF-to-CRLF normalization warnings only. No application/runtime tests or network experiments performed.
+Added a concrete proposed deliverable, feature/addition mapping, first answer batch, necessary mechanics and success criteria in `CHOICES.md`.
 
 ### 2026-10-11 First-slice scope and SSH control confirmed
 
-- Recorded at 07:54 UTC+03:00 (Europe/Istanbul). User answered the first batch: UDP/TCP, recommended basic S08 preflight/S09 phase-distribution views and S07/S10 validation gates with S11 later, and SSH control instead of recommended application TLS. These are planning decisions, not execution authorization.
-- Updated T22 and action 4 discussion in `CHOICES.md`, confirmed slice/control intent in `DESIGN.md`, forward scope progress in `PROPOSALS.md`, in-discussion state in `ROADMAP.md` and this index. SSH coordinates plans/readiness/calibration/results; measurement UDP/TCP travels directly through its adapters. TLS certificate support remains accepted future scope for TLS-capable endpoints, not an SSH identity mechanism. Raw-data session authentication and clock evidence remain required.
-- Read official Go SSH and OpenSSH server documentation to prepare the next T09/T22 batch: existing SSH exec versus embedded SSH endpoint, key-only versus key/password authentication, and partial termination versus segmented reconnect. Documented command/framing separation and independent bounded server cleanup needs. No backend/version, credential mechanism, SSH service setup, deployment or runtime behavior selected/validated.
-- Step 4 remains incomplete pending these answers and necessary schema/resource/phase/credential/adapter/calibration/comparison/platform mechanics, final success criteria and explicit implementation authorization. F01-F09/S07-S11 remain unimplemented; S01-S06/S12 remain proposed. Prior changes/history retained; no code, helper, manifest, runnable profile, installation, service, experiment, system setting change or commit added.
-- Validation: all seven Markdown files passed whitespace and 146 local-link/heading-anchor checks. F01-F09/T01-T24 inventories, accepted S07-S11 states, confirmed T22 SSH decision, selected design scope and incomplete/in-discussion action 4 passed. Updated current transport/inclusion summaries to match the answers while preserving historical records. `git diff --check` passed with LF-to-CRLF normalization warnings only. No application/runtime tests or network experiments performed.
+Updated T22 and action 4 discussion in `CHOICES.md`, confirmed slice/control intent in `DESIGN.md`, forward scope progress in `PROPOSALS.md`, in-discussion state in `ROADMAP.md` and this index.
 
 ### 2026-10-11 Tool-owned SSH lifecycle confirmed
 
-- Recorded at 07:57 UTC+03:00 (Europe/Istanbul). User selected server mode hosting its own SSH endpoint, SSH keys only, and stop/bounded drain/cleanup/partial report on control failure with no automatic reconnect. Existing system SSH remote exec and password authentication remain unselected alternatives.
-- Updated T22 and next T09/T14/T21 discussion in `CHOICES.md`, confirmed control/lifecycle intent in `DESIGN.md`, action 4 progress in `ROADMAP.md`, matching F01/F09 design progress in `PROPOSALS.md` and this index. Endpoint is for application coordination, not an implicitly authorized shell/forwarding feature; direct UDP/TCP measurement remains separate. Generated pairing still requires host/client identity handling without system SSH edits.
-- Prepared recommendations/questions for client-local versus server-generated client keys, compile-time registration versus runtime plugins, and continue-with-accounted-skips versus partial termination on queue saturation. These mechanics are not selected yet; numerical limits and calibration/schema/evidence policies remain open.
-- State: documentation only; step 4 incomplete and implementation on hold. All features remain unimplemented; no helpers, manifests, runnable profiles, dependencies, services, network experiments, settings changes or commits added.
-- Validation: all seven Markdown files passed whitespace and 149 local-link/heading-anchor checks. F01-F09/T01-T24 inventories, accepted S07-S11 states, current T22 tool-owned SSH decision and incomplete/in-discussion action 4 passed. `git diff --check` passed with LF-to-CRLF normalization warnings only. No application/runtime tests or network experiments performed.
+Updated T22 and next T09/T14/T21 discussion in `CHOICES.md`, confirmed control/lifecycle intent in `DESIGN.md`, action 4 progress in `ROADMAP.md`, matching F01/F09 design progress in `PROPOSALS.md` and this index.
 
 ### 2026-10-11 Client-local keys and skip accounting confirmed
 
-- Recorded at 07:59 UTC+03:00 (Europe/Istanbul). User selected client-local SSH private-key generation and public-key/server-pairing-bundle transfer; selected recording a local skip and continuing without catch-up when a scheduled message cannot enter a bounded queue. Exact key storage/revocation, resource/write/receipt bounds remain open.
-- User requested explanation of compile-time registration versus runtime plugins, not acceptance. Explained adapter/descriptor registration and updated-executable delivery versus separate loadable artifacts, common workflow reuse and packaging tradeoffs. Read official Go plugin documentation: its standard loader lacks Windows support and requires matching build/dependency conditions; other portable mechanisms would need separate design review. T21 remains open pending the clarified answer; no mechanism inferred from silence.
-- User additionally asked which is faster/safer. Recommended compile-time registration for fewer runtime loading/build-compatibility concerns and one reviewed executable; explained that compiled execution can be similar, no probe-speed benchmark exists, and adapter code still needs validation. Recommendation remains unaccepted; no measured performance/security result claimed.
-- Updated `CHOICES.md`, confirmed pairing/backpressure intent in `DESIGN.md`, action 4 progress in `ROADMAP.md` and matching F01/F07/F09 progress in `PROPOSALS.md`. Existing scope/SSH answers are preserved. Local skips remain separate from network loss, partial TCP writes retain framing/outcome evidence, and every planned slot remains accounted.
-- State: documentation only, action 4 incomplete and implementation on hold. No code, helper, manifest, runnable configuration, dependency, service, experiment, system-setting change or commit added.
-- Validation: all seven Markdown files passed whitespace and 152 local-link/heading-anchor checks. F01-F09/T01-T24 inventories, accepted S07-S11 states, current T22 decision and incomplete/in-discussion action 4 passed. `git diff --check` passed with LF-to-CRLF normalization warnings only. No application/runtime tests or network experiments performed.
+User requested explanation of compile-time registration versus runtime plugins, not acceptance.
 
 ### 2026-10-11 First-slice planning completed
 
-- Recorded at 08:23 UTC+03:00 (Europe/Istanbul). User explicitly selected compile-time adapter registration and instructed completion of task 4. Inspected `main`, current documents/history and the existing uncommitted documentation changes; retained prior work. This instruction completes the planning/design task, not an explicit request for application implementation, deployment or network experiments.
-- Updated T21 to the user's confirmed answer. Selected the remaining necessary engineering policies under the completion instruction, recording their provenance separately from individually confirmed user answers in `CHOICES.md#first-slice-final-decisions`. Retained UDP/TCP, embedded key-only SSH, client-local keys, partial termination, skip/no-catch-up, basic S08/S09 and S07/S10 checks, with S11 later.
-- Added the first-slice implementation contract in `DESIGN.md`: components/adapter boundaries; public pairing and application-owned key storage/expiry/revocation; SSH application channels, framing, plan digest/readiness/lease; versioned profile/API/probe/event/result schemas and precision; authenticated raw UDP/TCP data plus receipts; exact scheduling/phase/deadline/grace rules; queue/receipt/storage/cleanup limits; constrained offset/drift calibration and propagated calibrated/estimate/unavailable evidence; SVG/ECDF/preflight/comparison/spike/stall policy; and separate runtime acceptance gates. Historical examples remain examples; numerical workload/budget/calibration inputs are explicit, not assumed FPS defaults.
-- Consulted official Go SSH/HMAC, YAML-org parser, Microsoft qWave DSCP and RFC 5905/7679/8785 documentation for mechanism/component choices. Sources establish API/design considerations only. No exact dependency/toolchain/reference release pin, supported Linux minimum, oscillator accuracy or experimental timing tolerance selected without later compatibility/measurement evidence. Native platform/outer-marking/calibration behavior is unvalidated.
-- Scope review corrected late-wake scheduling: account every due slot, skip earlier overdue slots, and allow only the latest due slot within an explicit lag allowance; small unavoidable timer lag cannot cause every slot to be discarded. Verified common header field widths sum to 92 bytes, logical authentication overhead to 124 bytes, and TCP adds a four-byte prefix. These are documentation arithmetic checks, not protocol execution tests.
-- Marked task 4 `(completed)` and state complete as planning in `ROADMAP.md`. Kept the original requirement for explicit authorization before implementation as action 5, which is not started; completion does not imply code or runtime gates passed. Updated matching F01/F02/F05-F09/S07-S11 planning states/evidence in `PROPOSALS.md`, the README pointer and this current-state index. Earlier entries remain history. F03/F04/other F02 modes and accepted S11 retain future scope; S01-S06/S12 remain proposed.
-- State: documentation only; implementation hold remains. No code, runtime helpers, manifests, runnable profiles, dependency installs, services, captures, clock/QoS/network changes, experiments or commits added. Existing unrelated files/settings preserved; changes remain uncommitted. Build, loopback, native endpoint, impairment, independent-reference and live-path checks are future gates, not performed work.
-- Validation: all seven Markdown files passed whitespace and 160 local-link/heading-anchor checks. F01-F09/T01-T24/S01-S12 inventories, accepted S07-S11/proposed S01-S06/S12 states, all seven completed roadmap headings and the unstarted action 5 execution gate, confirmed T21 and the implementation hold passed. Documentation-only root inventory and 92/124/128-byte wire arithmetic checks passed. Scope review kept historical discussions separate from final selections and corrected current stale schema/registration/control summaries. `git diff --check` passed with LF-to-CRLF normalization warnings only. No application builds, runtime tests, calibration experiments or network experiments performed.
+Updated T21 to the user's confirmed answer.
 
 ### 2026-10-11 Documentation guidance condensed
 
-- Recorded at 08:33 UTC+03:00 (Europe/Istanbul).
-
-- User requested short, direct Markdown instructions, ongoing summarization as files grow, and tracking of that maintenance. Rewrote `AGENTS.md` into a compact workflow with essential authorization/correctness constraints and a persistent documentation-maintenance rule.
-- Condensed `ROADMAP.md` completed steps into outcome/evidence links and retained action 5's unstarted implementation gate and checks. Replaced `PROPOSALS.md`'s duplicated decision chronology with current-scope pointers; dated decisions remain in `WORK_LOG.md`, technical provenance in `CHOICES.md`. No F/S/T identifier, feature acceptance or implementation state changed.
-- Shortened this file's recording rules and the choices/proposals maintenance sections. Preserved historical log entries, source research, open questions and detailed technical specifications; larger `DESIGN.md`/`CHOICES.md` reference sections remain for selective reading rather than copying into instructions. Future significant compaction must be logged here.
-- State: documentation only; implementation hold remains. Preserved existing unrelated/uncommitted work. No new files, code, runtime helpers, dependencies, services, configurations, experiments or commits added.
-- Validation: all seven Markdown files passed whitespace and 134 local-link/heading-anchor checks. F01-F09/S01-S12/T01-T24 inventories, seven completed roadmap headings, unstarted action 5, implementation hold and maintenance rule passed. `AGENTS.md` reduced from 40 to 28 lines, `ROADMAP.md` from 94 to 49, and `PROPOSALS.md` from 232 to 197; detailed design/history retained. `git diff --check` passed with LF-to-CRLF normalization warnings only. No runtime tests needed or performed.
+User requested short, direct Markdown instructions, ongoing summarization as files grow, and tracking of that maintenance.
 
 ### 2026-10-11 First implementation foundations
 
-- Recorded at 09:08 UTC+03:00 (Europe/Istanbul). User explicitly requested starting action 5, commenting every function and creating `FLOWCHART.md` to track actual code. Updated authorization/comment/flowchart rules before implementation; retained stable F/S/T decisions and historical entries. Work remains uncommitted.
-- Added `go.mod`/`go.sum`, `cmd/sneaky-port` and `internal/{profile,schedule,probe,adapter,platform,measure,calibration,control,quality,testutil}`. Implemented strict bounded YAML/JSON inputs with required fields/decimal precision, integer/string RFC8785 plan hashes, rational half-open schedules/no-catch-up decisions, 92/124-byte HMAC wire codec/TCP prefix, real owned UDP/TCP sockets, explicit ports, compile-time descriptor/factory registry, local ledgers/receiver-evidence primitives/nearest-rank/gap-aware variation, synthetic feasible clock envelopes and local monotonic preflight. These are foundations, not a connected network measurement engine.
-- Added new local Ed25519 key generation with owner-only Linux permissions and a protected Windows owner/SYSTEM ACL before secret writes; bounded existing-key parsing, exact pinned host identity, enabled/expiry enrollment checks and bounded unique-key control JSON framing. No SSH listener, shell/exec/forwarding, enrollment store, heartbeat/state machine or live calibration sampler is running/implemented. Calibration `Verified` is exercised only by known synthetic fixtures; no real calibrated one-way precision claim.
-- Added Linux per-owned-socket DSCP/ECN preservation and Windows qWave DSCP code. Linux IPv4/IPv6 socket-option readback passes; Windows qWave only compiles, with an untouched unmarked baseline labeled unknown. Packet observations and Windows ECN/privilege/native qWave acceptance remain pending. No global policy, router, firewall, route, resolver or clock settings changed.
-- Resolved pins using workspace-local caches: Go 1.27.1, YAML `v4.0.0-rc.6`, crypto `v0.58.0`, sys `v0.49.0`, SSH test dependency term `v0.47.0`. Retained license texts/notices under `licenses/` and `THIRD_PARTY_NOTICES.md`; YAML's prerelease status and missing Linux minima remain explicit. Initial sandbox dependency resolution was denied; the authorized network download succeeded on escalation. No reference tool installed/bundled.
-- Added `FLOWCHART.md` with CLI/profile/schedule/socket/accounting/trust/clock paths and source/function links, explicitly distinguishing tested primitives from unfinished connections. Added an AST audit of every owned Go function, including anonymous/test functions; final count recorded below. Updated README/roadmap/proposal/index states; kept action 5 incomplete. Added only workspace cache/build/test-output ignores and exact exceptions for the two new Markdown files; preserved the existing general Markdown ignore rule. Current guidance is concise; larger design/choice history remains reference material.
-- Validation: `go test ./...`, `go vet ./...`, `go build ./...`, `go mod verify` and four `CGO_ENABLED=0` builds (`windows/linux` × `amd64/arm64`) passed. Full cross-built foundation tests ran successfully on Ubuntu 24.04.4 and CentOS Stream 9 under WSL2 kernel `6.6.87.2-microsoft-standard-WSL2` x86-64, including real UDP/TCP loopback, restricted keys and Linux DSCP/ECN socket readback. These are WSL process/loopback checks, not bare-metal/distribution minimum/native ARM64/live ISP support. CentOS emitted a systemd-user-session warning; test binaries still completed successfully and no service settings were changed.
-- Checks caught/corrected a Windows file-handle ACL permission issue, harmless ACL auto-inheritance bookkeeping in readback, a malformed-profile fixture that had not removed its field, burst/duration overflow edges and cutoff/warmup/duplicate/sequence/variation accounting. Final review rejected explicit null deadlines and invalid UTF-8 before plan hashing. First Linux shell test launch failed because of argument expansion; fixed literal test paths passed in both environments. A 20 ms/2 ms local preflight emitted 10 explicit timer records; this is a smoke check, not a calibrated timer-accuracy benchmark.
-- Gaps: embedded SSH/pairing persistence, authenticated binding/readiness, independent bounded network engine/queues, maintained calibration, durable raw reports/replay/JSONL/JSON/CSV, protected loopback API/dashboard/SVG/comparisons, spike/stall integration and full extension workflow remain pending. No impairment/reference/contention/live-network/packet-capture/native ARM64 acceptance performed. No available C compiler was found for race instrumentation. All full design gates remain incomplete; final documentation/link/whitespace checks are recorded below after execution.
-- Final review at 09:14 UTC+03:00: **141 function comments** audited; all nine Markdown files, 174 local links/anchors and whitespace passed. Stable F01-F09/S01-S12/T01-T24 inventories, seven completed planning headings and incomplete action 5 state passed. Repeated four builds and refreshed Ubuntu/CentOS profile/comment tests passed after final null/UTF-8 hardening; Windows full tests/vet/build/module verification passed. `git diff --check` passed with LF-to-CRLF warnings only. Mermaid source was reviewed against function paths; rendered visual QA was not performed. Final inventory contains source/manifests/notices and ignored application-owned caches/builds, with no commits or installed/running product service.
+Added `go.mod`/`go.sum`, `cmd/sneaky-port` and `internal/{profile,schedule,probe,adapter,platform,measure,calibration,control,quality,testutil}`.
 
 ### 2026-10-11 09:54 UTC+03:00 Token-efficient workflow
 
-- Added a concise `AGENTS.md` rule for targeted context, batched independent checks, reused verified results and brief updates, without skipping required work/validation. Updated the current-state instruction index; implementation scope/progress is unchanged.
-- Checks: saved-rule readback and instruction whitespace passed; `git diff --check -- AGENTS.md WORK_LOG.md` passed. Documentation-only change; no runtime checks needed. Existing work preserved, no commits.
+Added a concise `AGENTS.md` rule for targeted context, batched independent checks, reused verified results and brief updates, without skipping required work/validation.
 
 ### 2026-10-11 SSH pairing and readiness
 
-Recorded: 2026-10-11 11:00:55 UTC+03:00 (Europe/Istanbul).
+Continued the user's authorized first slice after successful adapter/preflight checks.
 
-- Continued the user's authorized first slice after successful adapter/preflight checks. Added restricted persistent application identity, pairing and revisioned authorization stores, public enrollment/export/import/revocation commands and explicit JSON server ceilings. Generated keys never overwrite existing destinations; referenced/encrypted keys remain unchanged, with masked terminal prompts and no saved passphrase. Synced same-directory updates use a cooperating writer lock; crash/power-loss/nonlocal-filesystem durability remains unvalidated.
-- Connected key-only embedded SSH with pinned imported host identity, current enabled/unexpired client authorization and periodic active-connection revocation. Refuses shell/exec/forwarding and unsupported calibration/report channels. Exact plan hashes, fresh run/session/challenge/directional MAC binding, owned UDP/TCP ports and role-specific effective marking/binding confirmation now lead to readiness. Invalid first UDP tuples receive no acknowledgement and cannot pin the listener. Setup, request/candidate/connection ceilings, stop, EOF, cancellation and heartbeat lease release owned resources; no automatic reconnect.
-- Added readiness-only CLI hold/heartbeat/stop and client application-control byte counters, excluding SSH/network overhead. Public results contain no per-session keys and explicitly report measurement_started=false. Actual scheduled measurement, partial measurement reports, clock sampling and the dashboard are still absent; F01/F02/F05/F06/F08/F09 and roadmap step 5 stay partial.
-- Paths: cmd/sneaky-port/coordination.go, internal/control/{store,session,frame,identity,key_linux,key_windows}.go, internal/adapter/adapter.go, store/session tests and examples/readiness-{policy.json,udp.yaml}. Added direct pinned x/term v0.47.0 for masked prompts; existing checksum/license text retained. Updated README commands, FLOWCHART source paths, DESIGN's current implementation limits, CHOICES/PROPOSALS/ROADMAP and this index. Preserved the Markdown ignore rule with two targeted diagram/license exceptions; example app-data directories are ignored. Unrelated existing AGENTS.md/work-log changes retained; no commit.
-- Checks: Go 1.27.1 Windows x86-64 go test ./..., go vet ./..., go build ./... and go mod verify passed; 240 owned functions passed comment audit. All four CGO-disabled Windows/Linux x86-64/ARM64 binaries built; build/sneaky-port.exe refreshed. Final SSH/readiness/store fixtures and comment audit passed on Ubuntu 24.04.4 and CentOS Stream 9 x86-64 under WSL kernel 6.6.87.2. UDP/TCP IPv4/IPv6 loopback readiness and repeated port reuse pass. Wrong keys/pins, prohibited channels, plan mismatch/ceilings, server busy, foreign UDP tuple, control replay/session mismatch, expiry/disable/corrupt authorization and missing heartbeat cleanup pass. An explicit-expiry fixture caught and corrected pointer-to-time decoding; regression checks cover nullable marking evidence and preservation of preexisting key destinations. Example UDP profile validates.
-- Cross-platform CLI smoke: Windows client initialization/public import and Linux CLI initialization/enrollment/server startup succeeded. Windows-to-WSL readiness did not complete: 127.0.0.1 forwarding refused the connection; actual WSL IPv4 access returned socket-permission denial, and the escalated retry returned Access is denied. No cross-platform readiness result is claimed. Both foreground servers stopped and their temporary private-key stores were removed; no services, firewall/routes/QoS settings or system SSH files changed. CentOS initially printed a systemd-user-session warning but fixture checks passed without service changes.
-- Remaining evidence: cross-platform CLI path, native ARM64, Linux version minima, nonzero Windows qWave/outer capture, maintained clock bounds, impairment/reference/live trials, report persistence and full slice acceptance. Documentation link/whitespace results follow below; Mermaid rendering remains unverified. Active guidance stays canonical in README/DESIGN; older dated log entries preserved.
-- Documentation checks: nine Markdown documents, 186 local links/anchors, stable F/S/T identifiers and trailing whitespace passed; git diff --check passed after removing a trailing blank line in the edited .gitignore. Mermaid was not rendered.
-- Final validation update, 2026-10-11 11:08:15 UTC+03:00: cleared completed client setup/heartbeat operation deadlines before idle holds, bounded server control writes and connected client SSH EOF to owned-data cancellation. The regression with setup/write budgets shorter than heartbeat gaps passes on Windows, Ubuntu and CentOS; final native test/vet/build, four target builds and 240-function audits pass. Refreshed the Windows executable and Linux fixture binaries.
+<a id="index"></a>
+<a id="technical-decisions"></a>
+<a id="foundation-discussion"></a>
+<a id="remaining-technical-choices"></a>
+<a id="questions-for-the-next-discussion"></a>
+<a id="additional-open-choices"></a>
+<a id="measurement-contract-discussion"></a>
+<a id="integration-constraints-review"></a>
+<a id="managed-protocols-sockets-and-ports-t05-t11"></a>
+<a id="directional-priority-and-observation-t11-t17"></a>
+<a id="dns-prerequisites-framing-and-polling-t16"></a>
+<a id="linux-and-packaging-boundaries-t12"></a>
+<a id="handoff-to-the-first-slice-discussion"></a>
+<a id="reference-tool-reuse-and-validation"></a>
+<a id="selective-source-review-and-dispositions"></a>
+<a id="measurement-differences-that-constrain-t20"></a>
+<a id="license-maintenance-and-platform-boundaries"></a>
+<a id="validation-handoff-and-optional-scope-decisions"></a>
+<a id="protocol-extensibility-choices"></a>
+<a id="control-connection-and-one-way-timing-choices"></a>
+<a id="startrinity-documentation-review"></a>
+<a id="first-implementation-slice-discussion"></a>
+<a id="proposed-deliverable"></a>
+<a id="first-answer-batch-and-answers"></a>
+<a id="ssh-lifecycle-and-authentication-discussion"></a>
+<a id="pairing-extensibility-and-backpressure-discussion"></a>
+<a id="mechanics-identified-during-discussion"></a>
+<a id="proposed-success-criteria"></a>
+<a id="first-slice-final-decisions"></a>
+<a id="protocol-traffic-tweak-choices"></a>
+<a id="maintaining-choices"></a>
+<a id="s06-separate-connection-quality-from-measurement-confidence"></a>
+<a id="task-24-native-windows-11-arm64-client"></a>
 
 ## Archived choices snapshot 2026-10-11
 
-Use this file for technical questions, options, recommendations, and confirmed decisions. [DESIGN.md](DESIGN.md) contains product requirements, [feature proposals](ROADMAP.md#future-features-and-proposals) tracks future features, and [WORK_LOG.md](WORK_LOG.md) records completed work and decision history.
-
-A recommendation is not user acceptance, and a confirmed technology choice alone is not implementation permission. Preserve stable T identifiers. User explicitly authorized the first slice on 2026-10-11; [foundation pins/checks](THIRD_PARTY_NOTICES.md) and [actual progress](#2026-10-11-first-implementation-foundations) supersede earlier historical hold statements.
-
-## Technical decisions
-
-Updated: 2026-10-11. T01-T04/T06-T09 and T12/T13's role/architecture/frontend scope are confirmed. The later implementation instruction authorizes the first slice; foundation UDP/TCP tests pass, while complete integration/platform acceptance remains pending.
-
-| ID | Area | Choice / recommendation | State |
-| --- | --- | --- | --- |
-| T01 | Backend/application language | Go | Confirmed by user |
-| T02 | First-release interface | Local browser dashboard | Confirmed by user |
-| T03 | Packaging and roles | One executable per OS/CPU with client and server modes; supported deployments are Windows 11 client and Linux server | Confirmed by user, 2026-10-11 |
-| T04 | Dashboard implementation | Embedded plain HTML/CSS/JavaScript assets, locally bundled with no runtime CDN dependency | Confirmed by user, 2026-10-11; first-slice native SVG layout selected under T13 |
-| T05 | Protocol integrations | First-slice UDP/TCP uses Go standard networking; future TLS/QUIC/WireGuard/Hysteria2/DNS candidates remain as reviewed below | UDP/TCP design selected under completion instruction, 2026-10-11; future candidates/pins/platform feasibility unvalidated |
-| T06 | Internal boundaries | One shared measurement engine; separate protocol adapters, platform port/priority support, and dashboard/API modules; UI does not drive probe scheduling | Confirmed by user, 2026-10-11 |
-| T07 | Configuration | Versioned YAML profiles with shared validation/explicit save; YAML-org v4 parser and first-slice schema below | Confirmed format/design; parser pinned and strict foundation validator tested; saved-profile/dashboard integration pending |
-| T08 | Results | Per-run JSONL raw observations plus JSON summary/settings; precise CSV export, explicit cutoff/completeness and bounded file lifecycle | Formats confirmed by user; first-slice schema/storage policy selected under completion instruction, 2026-10-11; unimplemented |
-| T09 | Trust and pairing | Generated client-local keys and public pairing/enrollment; application-owned identity/authorization stores with explicit revocation; future user-provided TLS certificates retained | High-level workflow/client-local keys confirmed by user; first-slice storage/revocation design selected under completion instruction, 2026-10-11; future TLS lifecycle open |
-| T10 | Experiment execution | One measured run per endpoint at a time; sequential repeated/alternating matched comparisons with explicit varied axes | Selected for first slice under completion instruction, 2026-10-11; automatic screening remains proposed S01 |
-| T11 | Priority implementation | Owned Linux IP_TOS/IPV6_TCLASS and Windows qWave marking backends; capability/privilege results, ECN preservation and outer evidence separate | Partial backends; Linux socket readback/ECN fixture passed, Windows qWave/native outer observations pending; other adapters open |
-
-Go's [embed package](https://pkg.go.dev/embed) supports bundling dashboard files. Recommend a localhost-only HTTP API for actions and an event stream for live summaries; keep UI updates bounded so rendering cannot drive probe scheduling. Protect local state-changing requests with session/origin controls. First-slice API routes, bounded update policy and native SVG layout are settled below; plain HTML/CSS/JavaScript remains confirmed, without a chart dependency or frontend build requirement.
-
-For T05, the current preferred candidates are:
-
-- TCP/UDP/TLS: Go's standard networking and TLS packages.
-- QUIC: [quic-go](https://quic-go.net/docs/quic/datagrams/), with streams and datagrams reported separately and app-supplied socket integration assessed for priority/source-port control.
-- WireGuard: [wireguard-go's userspace netstack](https://git.zx2c4.com/wireguard-go/tree/tun/netstack/examples/http_client.go), using real WireGuard without making separately configured OS tunnel services part of the normal workflow. This is a userspace implementation profile; do not claim it reproduces kernel WireGuard overhead. Outer binding/priority integration and both-platform behavior still need validation.
-- Hysteria2: its Go [client configuration](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/client/config.go) and [server configuration](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/server/config.go) expose connection integration hooks. Prefer embedded core APIs; verify dependency compatibility, supported modes, cleanup, and markings before adoption. Hysteria2's QUIC implementation must not be conflated with the separate baseline QUIC adapter.
-- DNS: evaluate the maintainer's [new Codeberg implementation](https://pkg.go.dev/codeberg.org/miekg/dns) alongside compatibility needs of [the original GitHub implementation](https://github.com/miekg/dns). The original repository now states it receives only specific fixes and may be archived; library selection is therefore explicitly unresolved. Verify the new API/version stability and socket integration before adopting it. DoH/DoQ transport support and project-specific data-tunnel framing must be assessed separately; a DNS library does not supply the full tunnel.
-
-For T11, [Windows QOSSetFlow](https://learn.microsoft.com/en-us/windows/win32/api/qos2/nf-qos2-qossetflow) and its [DSCP operation](https://learn.microsoft.com/en-us/windows/win32/api/qos2/ne-qos2-qos_set_flow) are candidate mechanisms, not proven support across every adapter. Inspect actual socket ownership, OS permissions, and DSCP/ECN behavior before finalizing the backend. Preserve explicit unavailable/unknown outcomes and the existing requirement for independent directions.
-
-The earlier source inspection was design evidence only. The subsequently authorized foundation pins/license notices and build/fixture results are in [WORK_LOG.md](#2026-10-11-first-implementation-foundations); they do not validate future protocol integrations.
-
-## Foundation discussion
-
-Historical step 1 discussion, completed 2026-10-11: packaging, frontend stack, OS roles/architectures, broad Linux distribution scope, shared-engine boundaries, profiles, results, and pairing approach. The discussion below retains answers and gaps at that milestone; [final first-slice decisions](#first-slice-final-decisions) supersede its pending chart/schema/SSH mechanics. Exact Linux support minima and future-carrier credentials remain open.
-
-| Choice | Recommended starting point | Alternative / tradeoff | Answer status |
-| --- | --- | --- | --- |
-| T03 | One executable per OS/CPU with client/server modes | Separate role executables were considered. A single executable is a packaging target, subject to protocol integration constraints; it does not promise privilege-free or dependency-free operation. Supported roles follow T12. | Confirmed, 2026-10-11 |
-| T04/T13 | Embedded plain HTML/CSS/JavaScript for the initial dashboard, with locally bundled assets and no runtime CDN | A compiled frontend framework was considered. Chart library, layout, and optional asset build tooling remain open; a frontend framework is not selected. | Stack confirmed, 2026-10-11; remaining T13 details open |
-| T12 | Windows 11 client only; Linux server only; 64-bit ARM64 and x86-64 on both; broad major Linux distributions including CentOS, Ubuntu, Fedora, Arch, and other mainstream distributions | Supersedes the previous Windows/Linux client scope. User clarified 64-bit only: Go targets `windows/arm64`, `windows/amd64`, `linux/arm64`, and `linux/amd64`. Exact distribution/version support matrix, minimum kernel/userspace requirements, and actual server environment remain unspecified; review during integration work. No runtime support is validated. | Roles/architectures/distribution scope confirmed, 2026-10-11; version limits open |
-
-Source check: Go's [embed documentation](https://pkg.go.dev/embed) supports embedding static web assets and serving them through `net/http`. This supports the bundling approach, not protocol integration or platform-support claims. Consult Go's [minimum requirements](https://go.dev/wiki/MinimumRequirements) and each selected integration when assessing requested platform targets; compiler support alone is insufficient.
-
-Confirmed on 2026-10-11: T06 uses one measurement engine with protocol adapters, platform port/priority support, and separate dashboard/API modules. This module boundary does not adopt S03's separate coordination-path proposal. T07 uses versioned YAML profiles with explicit save and a single validation model shared by file loading and dashboard edits; JSON was considered as an alternative. YAML supports comments in its [format specification](https://yaml.org/spec/1.2.2/); Go provides [JSON encoding/decoding](https://pkg.go.dev/encoding/json). No parser dependency or exact schema has been selected.
-
-Confirmed on 2026-10-11: T08 saves JSONL raw observations and a JSON summary/settings snapshot per run, with CSV export. Exact schemas and file lifecycle belong to T14. This does not adopt S05's future-proxy recommendation export.
-
-T09 initially needed a clearer explanation; no acceptance was inferred from that response. After clarification, the user chose generated pairing setup **plus support for TLS certificates they provide**. Intended workflow: generate protocol-appropriate server identity/client authorization material, transfer pairing information through an already trusted channel such as the user's SSH session, and import it into the client dashboard. Retain explicit server identity verification; never silently accept an unknown identity or bypass verification. TLS-capable owned-server endpoints also accept user-supplied certificates with an explicit trust/identity configuration. A server TLS certificate does not itself authorize a client. Protocols such as WireGuard retain their native credentials; encrypted recursive-resolver endpoint authentication remains independent.
-
-Detailed pairing format, client enrollment, secret storage, certificate loading/renewal, and credential rotation/revocation remain open for the contract/integration review. Pairing transfer must not export the server's private identity key; reports exclude credentials/private keys. Go's [TLS verification documentation](https://pkg.go.dev/crypto/tls#Config) provides certificate-verification mechanisms, not a complete pairing workflow or runtime validation.
-
-T12 requires broad mainstream Linux server coverage, with CentOS, Ubuntu, Fedora, and Arch explicitly named by the user as examples, not an exhaustive list. Do not narrow the product to the development host's distribution. Exact versions and compatibility requirements remain unresolved; intended broad coverage is not a claim of support for every historical release. This discussion does not adopt optional S01-S06 or authorize implementation.
-
-## Remaining technical choices
-
-Action 4's first-slice decisions are settled in [final decisions](#first-slice-final-decisions) and the [design contract](DESIGN.md#first-slice-implementation-contract). Foundation dependency pins, retained licenses and four builds are recorded in [notices](THIRD_PARTY_NOTICES.md) and [WORK_LOG.md](#2026-10-11-first-implementation-foundations); native environments/Linux support minima, reference-tool builds and empirical timing bands remain pending. Workload/resource/calibration values are explicit configurable inputs. Future carriers/DNS, TLS credential lifecycle, named QoS presets, continuous-monitoring mechanics and automatic-recommendation/confidence alternatives remain outside this slice and open where applicable; these future features are not implemented or runtime-validated.
-
-T19/T20 additionally track selective reference-tool reuse and independent validation choices. IRTT/iperf2/Crusader design/external-validation-only use and S07-S11 future scope are confirmed; other components, exact builds/dependencies, detailed mechanics and experiments remain open.
-
-## Questions for the next discussion
-
-- **Next implementation task:** the first slice is authorized; [task 8, independent UDP workers](ROADMAP.md#8-implement-independent-udp-senderreceiver-workers), is next. Work one bounded task at a time.
-- **T05/T07/T11/T12/T19/T20 remaining evidence:** native machines/images, intended Linux versions, exact reference builds/licenses and predeclared empirical comparison bands must be recorded before related support/performance claims. Foundation pins/build checks already exist; unavailable runtime evidence stays explicit.
-- **Future scope:** T05/T09/T14/T16 cover the remaining authentic carriers/DNS and TLS/native credential mechanics; S11 rolling retention/reconnect and proposed S01-S06/S12 stay outside this finite slice. Do not reopen settled first-slice product choices unless evidence or a user change warrants it.
-
-## Additional open choices
-
-T12 and T13 have partial answers recorded below; other answers and numerical defaults remain open. These expand the unresolved areas above without creating new product features.
-
-| ID | Question | State |
-| --- | --- | --- |
-| T12 | Windows 11 client only; Linux server only; 64-bit ARM64/x86-64 on both; broad mainstream Linux coverage including CentOS/Ubuntu/Fedora/Arch. Which exact version/support matrix? | Roles/architectures/distribution scope confirmed by user, 2026-10-11; version limits open |
-| T13 | Plain HTML/CSS/JavaScript confirmed. Which dashboard layout, chart library, and optional asset build tooling? | Native SVG time/ECDF plots, phase tables and bounded updates selected for slice under completion instruction, 2026-10-11; no chart dependency/build pipeline required |
-| T14 | What versioned API, configuration validation, probe wire format, and stored-result schemas should be defined? | Data/receipt pattern confirmed by user; version-1 UDP/TCP profile/control/API/probe/result, resource and file contracts settled under completion instruction, 2026-10-11; other-adapter framing open |
-| T15 | Which traffic controls and initial example values should be offered? Include ordered traffic phases, size/content, directional rates, bursts, duration, warmup, deadline, and grace. | Controls/phases confirmed by user; rational schedules, phase/deadline/cutoff/content rules selected for slice under completion instruction, 2026-10-11; numerical workload/budget values explicit inputs, no tuned defaults |
-| T16 | Which DNS records, encodings, framing, polling, fragmentation, and transport-specific limits should the tunnel use? | Open; related to T05 |
-| T17 | What priority presets and sender/receiver observation capabilities should be exposed on each platform? | Numeric DSCP 0-63, capability-gated marking and explicitly located external observation evidence selected for slice under completion instruction, 2026-10-11; presets/other adapters/runtime support open |
-| T18 | What FPS decision criteria, confidence rules, and minimum evidence should qualify a recommendation? | Confirmed presentation retained; descriptive matched comparisons, named variation/spike/stall rules and no automatic winner selected for slice under completion instruction, 2026-10-11; future recommendation thresholds/S06 remain open |
-| T19 | How should suitable functionality from existing tools be adapted: design reference, embedded code/library, bundled managed component or validation-only utility? | User confirmed IRTT/iperf2/Crusader as design references and external validation only, 2026-10-11; no embedding/bundling; exact future validation builds open |
-| T20 | Which independent reference tools and isolated scenarios can validate equivalent measurements, and with what boundaries/tolerances? | S07/S10 matrix accepted and first slice authorized; reference builds/fixtures and numerical tolerance calibration remain pending |
-
-## Measurement contract discussion
-
-Historical action 2 discussion, completed as documentation on 2026-10-11. The [conceptual contract](DESIGN.md#measurement-contract-draft) records confirmed T14 data/receipt, T15 configurable traffic/phase and T18 presentation answers. Proposed/open mechanics and absent setup helpers below describe that milestone; the later [first-slice decisions](#first-slice-final-decisions) and [implementation evidence](#2026-10-11-ssh-pairing-and-readiness) supersede them for UDP/TCP. Numerical examples were not accepted as defaults.
-
-| Choice | Recommendation | Alternatives / unresolved details | Answer status |
-| --- | --- | --- | --- |
-| T14 | Independently scheduled data in each direction plus correlated application receipts for local RTT; metadata and test content carried in the protocol payload. Conceptual lifecycle/profile/event/summary fields and unknown/incomplete outcomes documented. | Final field names, binary framing/API endpoints, bounded queue policy, schema evolution, and persistent-file lifecycle remain open. The receipt overhead must be visible. This does not select a separate coordination transport (S03). | Data/receipt pattern and in-payload information confirmed by user, 2026-10-11; detailed schemas open |
-| T15 | Independent steady/repeating-burst controls with burst duration, gap, intra-burst rate, payload size/content, and an ordered sequence of different traffic phases. | User requested tweakable traffic rather than accepting fixed numbers. Example remains 128-byte application payload, 60 messages/sec each direction, 5 s warmup, 60 s measurement, 100 ms scheduled-origin RTT deadline, 5 s grace; no defaults selected. Exact phase boundaries, rounding, deadline overrides, and content-generator format remain open. | Controls plus ordered phase sequences confirmed by user, 2026-10-11 |
-| T18 | Compare matched runs by deadline misses first, then p95/p99 completed RTT and RTT variation; show underlying counts, ties, and inconclusive outcomes without a combined score | Repetition count, minimum evidence, uncertainty, material-difference thresholds, and spike/stall rules remain open; no automatic winner yet. Existing evidence limits do not adopt S06's extra confidence model. | Presentation confirmed by user, 2026-10-11; ranking/evidence details open |
-
-First batch answered: the user wants packet size, burst timing, payload, and other workload properties configurable (T15), and chose deadline misses first, then p95/p99 RTT and variation, ties/inconclusive, no combined score (T18). Numerical starting values were not accepted. In the next batch, the user added an ordered sequence of different traffic phases to the proposed steady/burst controls, and asked for a clearer explanation of T14 instead of choosing it. Pairing details and comparison evidence rules remain to review. T10 execution policy and later adapter-specific DNS/priority details remain distinct choices; do not adopt sequential execution or optional S01-S06 by implication. Configuring one workload does not adopt S04's automated sweeps.
-
-T14 explanation: client sends numbered data C1 and server sends a small application receipt referring to C1; the client measures that round trip on its own clock. Server independently sends numbered workload data S1 and the client returns a receipt referring to S1. Both schedules continue without waiting for receipts. Receipts are extra measured overhead, including for TCP/reliable QUIC stream modes with native transport acknowledgments; the application receipt confirms receipt of the complete logical test message. Delivery counts and receipt/RTT outcomes stay separate. Data-only scheduling with separate sparse RTT probes was considered as an alternative. After clarification, the user answered "Yep, we carry information in payload", confirming the proposed pattern and in-payload information on 2026-10-11. Exact data/receipt encoding and sizes remain open; configured test content and measurement metadata are accounted for separately.
-
-Pairing draft follows the already confirmed T09 approach: import a versioned setup bundle with public server identity/trust information and client-specific authorization through a trusted channel; show intended identity before connecting. User-provided TLS certificates retain explicit name/trust validation and separate client authorization. Exact enrollment proof, bundle encoding, secret storage, expiry/rotation/revocation, and certificate reload behavior are unresolved. No executable setup or certificate-generation helper has been created.
-
-Roadmap action 2's outcome is now documented: a configurable example profile and synthetic expected-report accounting, lifecycle/identities/scheduling/timing/result/control concepts, selected measurement pattern, pairing/certificate flows, and future acceptance checks. Completion covers this documentation milestone. Final schemas, queue limits, burst/phase boundaries, credential mechanics, numerical defaults, and automatic recommendation evidence thresholds must be resolved as needed for the later explicitly agreed implementation slice; they were not silently selected here. The initial report compares the confirmed metrics and preserves ties/inconclusive outcomes rather than inventing a winner from unspecified thresholds.
-
-## Integration constraints review
-
-Historical source/API review: 2026-10-11, roadmap action 3. No dependency was installed/pinned or build/endpoint/capture/experiment/test run during that review. Candidate/open states below describe its findings; [final first-slice decisions](#first-slice-final-decisions) and [foundation evidence](#2026-10-11-first-implementation-foundations) supersede them for selected UDP/TCP components. Branch-head sources remain snapshots; future-carrier/DNS mechanics and exact Linux support minima remain open.
-
-### Managed protocols, sockets, and ports (T05, T11)
-
-The table records integration expectations inferred from the cited APIs. Every row still needs implementation and runtime evidence on Windows 11 clients and Linux servers, ARM64 and x86-64. Each endpoint must configure its own outer sender; socket access alone does not prove DSCP survives OS policy or reaches the peer.
-
-| Mode / candidate | Lifecycle and port expectations | Outer-priority integration and remaining gaps |
-| --- | --- | --- |
-| UDP / Go `net` | Own the UDP socket; explicitly bind local address/source or server port and select the remote port. Close owned sockets on cancellation. | Native socket handle is the marking boundary; validate IPv4/IPv6 and connected/unconnected sends. Accepted writes are not wire evidence. |
-| TCP / Go `net` | Own dialer/listener and accepted connections; client `LocalAddr` controls requested source binding. Fixed-source reconnects can collide with existing connections/TIME_WAIT. | Configure outgoing client sockets and each server connection; prove listener/accepted-socket behavior rather than assuming inheritance. Include setup versus established traffic. |
-| TLS / Go `crypto/tls` | Wrap owned TCP connections/listeners; preserve certificate/name verification and separate client authorization. | Mark the underlying TCP socket, including setup packets where supported; the TLS object itself is not a distinct IP socket. |
-| QUIC streams/datagrams / quic-go | Supply a bound UDP socket to `quic.Transport`; remote port is explicit. Close connections, listener, transport, and owned socket according to ownership. | Configure the supplied outer UDP socket. Preserve out-of-band capabilities, ECN, MTU discovery and offloads; inspect per-packet control messages for conflicts with DSCP. Datagram negotiation/size/queue rejection remain separate from network delivery. |
-| WireGuard UDP/TCP / wireguard-go + netstack | An in-memory TUN/netstack can host measurement endpoints without an OS tunnel service. Device accepts a `conn.Bind`; `Open(port)` reports the outer local port and peer endpoint selects remote port. Inner ports are separate. | Default bind owns private UDP sockets. A platform-aware custom bind or suitable socket exposure is needed for DSCP; effort and correctness are unvalidated. `SetMark` means Linux `SO_MARK`, not DSCP. Validate both families, reopen/rekey/cleanup, batching and authentic handshakes. |
-| Hysteria2 UDP/TCP / embedded core | Client `ConnFactory.New` returns the outer `net.PacketConn`; server `Config.Conn` accepts one. Core exposes client TCP/UDP sessions and server Serve/Close. Bind outer ports before supplying sockets. | Hook access makes marking plausible, not proven. Keep Hysteria's apernet QUIC fork separate from baseline quic-go; examine ECN/control messages and wrappers. Route forwarding only to tool-owned measurement endpoints on the same server, never an unrestricted proxy. Inner target ports differ from outer ports. |
-| Direct DNS UDP/TCP/DoT / DNS library + owned sockets | Reviewed Codeberg API exposes client dialer/existing-connection exchange and server `Listener`/`PacketConn`. TLS uses explicit trust; DNS TCP framing is distinct from arbitrary framed TCP. | Configure actual UDP/TCP sockets. Verify shutdown bounds, retries, pooling, connection reuse and accepted sockets. The reviewed server Shutdown documentation says its context limit is not currently used; bounded teardown requires assessment. |
-| Direct / resolver-access DoH and DoQ | DNS message codec plus dedicated HTTPS or DoQ adapter; no complete data tunnel comes from the DNS library alone. | DoH TCP uses controlled HTTP dial hooks; HTTP/3 uses a separate owned QUIC transport. DoQ needs authentic DNS stream mapping. Pin transport/version, trust, pooling and socket ownership; record unsupported resolver endpoints explicitly. |
-
-Sources: Go [dialer/socket APIs](https://pkg.go.dev/net#Dialer) and [TLS wrappers](https://pkg.go.dev/crypto/tls#Client); quic-go [transport ownership](https://quic-go.net/docs/quic/transport/), [listener lifecycle](https://quic-go.net/docs/quic/server/) and [datagram negotiation](https://quic-go.net/docs/quic/datagrams/); WireGuard [netstack APIs](https://git.zx2c4.com/wireguard-go/plain/tun/netstack/tun.go), [Bind contract](https://git.zx2c4.com/wireguard-go/plain/conn/conn.go) and [standard bind implementation](https://raw.githubusercontent.com/WireGuard/wireguard-go/master/conn/bind_std.go); Hysteria [client configuration](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/client/config.go), [server configuration](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/server/config.go), [client lifecycle](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/client/client.go) and [server lifecycle](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/server/server.go); DNS [v0.6.118 API snapshot](https://pkg.go.dev/codeberg.org/miekg/dns@v0.6.118); Go [HTTP dial hooks](https://pkg.go.dev/net/http#Transport).
-
-T05 recommendation remains embedded integrations. The Codeberg DNS API reviewed is a pre-v1 version, and the original GitHub library's maintainer limits it to specific fixes and plans eventual archival. Neither has been selected. Assess compatible released versions, API churn, transitive dependencies, licenses/redistribution, security updates and all four targets before pinning. [Codeberg package/version status](https://pkg.go.dev/codeberg.org/miekg/dns@v0.6.118), [original maintainer statement](https://github.com/miekg/dns#readme).
-
-Hysteria's native congestion controller and negotiated bandwidth behavior are protocol conditions to record, not new product shaping controls. The reviewed client chooses Brutal when a nonzero negotiated rate is available and otherwise uses its configured congestion controller; exact settings remain unselected. Core forwarding can carry independent server data after a client establishes the TCP/UDP session; establish and measure UDP association lifetime before treating downlink as ready. [Client behavior](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/client/client.go), [server behavior](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/server/server.go).
-
-### Directional priority and observation (T11, T17)
-
-| Platform / hop | Candidate mechanism | Limits and later checks |
-| --- | --- | --- |
-| Linux owned sockets | IPv4 `IP_TOS`, IPv6 `IPV6_TCLASS`; Go x/net exposes `SetTOS` / `SetTrafficClass` | Supply DSCP in the upper six bits while preserving the transport's ECN bits. Readback is configured socket state, not observed packets. Verify packet-control overrides, firewall/policy rewriting, privileges and accepted/recreated sockets. |
-| Windows 11 owned sockets | qWAVE socket flow plus `QOSSetOutgoingDSCPValue` | Microsoft requires Administrators or Network Configuration Operators membership for arbitrary DSCP. Assess `QOS_NON_ADAPTIVE_FLOW` to avoid path-estimation traffic; do not request outgoing-rate shaping. API/DLL/service availability, policy restrictions, actual token behavior, IPv4/IPv6 and ARM64 still need tests. |
-| Sender/receiver observations | Supported UDP ancillary metadata or authorized packet capture/OS telemetry | Socket readback/API success cannot fill observed fields. TCP/TLS generally need packet-level evidence. Capture availability, permissions, overhead, offload interpretation and per-run correlation remain open; no capture driver is a selected dependency. |
-| Recursive DNS | Mark client-to-resolver access socket and owned authoritative server response socket independently | This does not mark resolver-to-authority queries or resolver-to-client replies. A client sees the resolver's markings; the owned server sees the resolver's source. Do not present them as a single controlled bidirectional connection. |
-
-Sources: [Go IPv4 marking API](https://pkg.go.dev/golang.org/x/net/ipv4#Conn.SetTOS), [IPv6 marking API](https://pkg.go.dev/golang.org/x/net/ipv6#Conn.SetTrafficClass), Microsoft [socket-flow registration](https://learn.microsoft.com/en-us/windows/win32/api/qos2/nf-qos2-qosaddsockettoflow) and [arbitrary DSCP permissions/errors](https://learn.microsoft.com/en-us/windows/win32/api/qos2/nf-qos2-qossetflow). Windows policy may override application markings; [Microsoft QoS policy documentation](https://learn.microsoft.com/en-us/windows-server/networking/technologies/qos/qos-policy-manage) describes policy precedence. No global policy changes are authorized or proposed as an automatic workaround.
-
-T17 remains open: recommend numeric DSCP 0-63 with accurately named optional presets, but no preset list/default has been accepted. Keep requested, OS-applied, sender-observed and receiver-observed values separate, per direction/family/socket/hop. Include protocol handshakes, receipts, keepalives and retransmissions in the outer-flow scope and report any marking boundary that cannot cover them. Failed marking leaves that requested experiment unsupported/failed; an explicitly selected unmarked comparison is a separate profile.
-
-### DNS prerequisites, framing and polling (T16)
-
-Direct DNS reaches an explicitly selected owned endpoint/port and does not require public delegation merely to exchange valid queries. Ordinary recursive forwarding requires a delegated zone/subdomain: parent NS records, reachable authoritative name-server addresses, glue where required, an authoritative zone with valid SOA/NS responses, and reachable UDP/TCP port 53. A regular NS delegation does not advertise a custom port. Selected client-to-resolver ports/transports work only when that resolver offers them. These are external prerequisites; the tool should manage its endpoint and check readiness, while preserving existing DNS services. [DNS delegation and transport specification](https://www.rfc-editor.org/rfc/rfc1035).
-
-Proposed framing is case-insensitive encoded uplink data plus run/message/fragment identities in unique query names and a suitable answer record such as TXT for downlink. TXT versus other records, encoding alphabet, authenticated envelope, capacity negotiation, fragment budgets, retry/deduplication, cache/TTL and negative-answer behavior remain open. Arbitrary query additional records are not assumed to survive recursive forwarding. A resolver-authenticated encrypted access connection does not authenticate the owned authoritative payload; preserve end-to-end session authentication. Protocol size limits include 63-octet labels, 255-octet wire names and 255-octet TXT character strings; suffixes/metadata/encoding reduce usable content. Larger logical payloads need explicit fragmentation or an unsupported outcome, never silent shortening. [RFC 1035 size/record formats](https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4).
-
-| Access transport | Authentic framing / constraints |
-| --- | --- |
-| UDP DNS | Classic non-EDNS messages are limited to 512 bytes; EDNS advertises receive capacity rather than guaranteeing safe path MTU or resolver acceptance. Record truncation, IP fragmentation, retry and TCP fallback. [EDNS, RFC 6891](https://www.rfc-editor.org/rfc/rfc6891) |
-| TCP / DoT | Length-prefixed DNS messages on real TCP / authenticated TLS; record connection reuse, setup and blocking. DoT standard port is 853, with alternatives only by endpoint agreement. [RFC 1035 TCP framing](https://www.rfc-editor.org/rfc/rfc1035#section-4.2.2), [DoT, RFC 7858](https://datatracker.ietf.org/doc/html/rfc7858) |
-| DoH | DNS wire message in HTTPS (`application/dns-message`), endpoint URI and identity explicit. Distinguish HTTP version, caching, connection reuse and redirects; a plain lookup API is not the same experiment. [DoH, RFC 8484](https://www.rfc-editor.org/rfc/rfc8484) |
-| DoQ | Negotiated `doq` ALPN, one client-initiated bidirectional stream per query, two-byte message length and DNS ID zero; streams, not generic QUIC datagrams. Standard port is 853 with mutually agreed alternatives. [DoQ, RFC 9250](https://datatracker.ietf.org/doc/html/rfc9250) |
-
-Server-origin data remains independently scheduled/ready, but DNS responses require client queries. Recommend a bounded per-session downlink queue with readiness time, polling gap, empty polls, batching, backlog and expiry recorded separately from workload generation. Queries can carry uplink data or polling/receipt information; exact multiplexing and receipt rules are open. A receipt for downloaded server data needs a subsequent query; that delay belongs in the server's locally measured round trip. Neither an empty poll nor a DNS transport acknowledgment proves logical data receipt. Queue bounds protect measurement resources and do not add product queue management. No server-push shortcut or QUIC stream substitution may be labeled DoQ.
-
-Later DNS checks must prove authority receipt for fresh identities; detect caches, interception, resolver retries/coalescing and dropped/rewritten records; reconcile fragments and receipts; and sustain independent bidirectional data with bounded polling work. Selected resolver endpoints, domain access/delegation and public reachability are currently unknown. No delegation or live resolver experiment has been performed. The access transport says nothing about the resolver's onward transport or priority.
-
-### Linux and packaging boundaries (T12)
-
-The confirmed targets remain `windows/amd64`, `windows/arm64`, `linux/amd64` and `linux/arm64`. No versioned platform/protocol cell is validated. The review supports a compatibility strategy, not a support promise:
-
-| Boundary | Source finding / assessment | Unresolved support work |
-| --- | --- | --- |
-| Go runtime | Published minimum for Go 1.24+ is Linux kernel 3.2; Go 1.21+ supports Windows 10+ | Windows 11 meets that OS floor, but dependencies/APIs still need validation. Kernel 3.2 is a toolchain floor, not sneaky-port's accepted minimum. Below it cannot meet the reviewed modern toolchain floor. [Go requirements](https://go.dev/wiki/MinimumRequirements) |
-| Dependency toolchain | Reviewed quic-go and Hysteria core branch heads declare Go 1.26.0; WireGuard declares Go 1.23.1 and includes gVisor | Compare compatible released revisions and transitive requirements; dependency coexistence/builds are untested. [quic-go manifest](https://raw.githubusercontent.com/quic-go/quic-go/master/go.mod), [Hysteria manifest](https://raw.githubusercontent.com/HyNetworks/hysteria/master/core/go.mod), [WireGuard manifest](https://git.zx2c4.com/wireguard-go/tree/go.mod) |
-| Linux optional optimizations | quic-go documents Linux GSO from kernel 4.18 with fallback when unavailable | Older eligible kernels might use a different send path; retain actual optimization state and validate fallback rather than equating GSO's floor with the entire product floor. [quic-go optimizations](https://quic-go.net/docs/quic/optimizations/) |
-| Userspace/native components | Recommend assessing a pure-Go build of embedded protocol/netstack paths for broad libc compatibility | `CGO_ENABLED=0` is a proposed build approach, not a tested property. Verify dependency imports/build tags, trust-store availability and all four artifacts; any cgo/native DLL/driver requirement needs explicit packaging and version boundaries. |
-| Privileged ports and observation | Linux's per-namespace privileged-port threshold defaults to 1024; binding below it requires root or `CAP_NET_BIND_SERVICE` | Port 53/443 eligibility, capture privileges, firewall/SELinux/container restrictions and namespace policy are separate from protocol availability. No automatic firewall/sysctl/route changes. [Kernel port policy](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables) |
-
-Proposed validation matrix: Ubuntu LTS releases (record exact release and GA/HWE kernel), CentOS Stream and related enterprise Linux releases (record exact release/kernel), supported Fedora releases, an explicitly dated Arch rolling snapshot, and another mainstream family such as Debian. Cover both server architectures and both Windows 11 client architectures; record build and each protocol/port/priority/lifecycle outcome separately. Exact release minima remain unselected until compatible dependencies and actual validation are available. [Ubuntu kernel variants](https://ubuntu.com/kernel/lifecycle), [CentOS Stream identity](https://www.centos.org/centos-stream/).
-
-CentOS Linux and CentOS Stream must be distinguished: CentOS Linux 8 is end-of-life, per the [CentOS project](https://www.centos.org/centos-linux-eol/). Older CentOS installations remain a compatibility question under the user's broad scope, not implicitly rejected or promised. Inspect their exact kernel/architecture/userspace and decide legacy test scope explicitly; a distribution name or sufficient kernel number alone proves neither maintained status nor integration support. Recommend baseline CPU targets without optional instruction extensions until dependencies are audited; no higher CPU floor is selected.
-
-### Handoff to the first-slice discussion
-
-Roadmap action 3's outcome is documented: managed integration expectations, port/socket/priority limits, DNS prerequisites/framing/polling questions, Linux/toolchain/userspace boundaries, and later validation gaps. All F01-F07 remain in scope and unimplemented; S01-S06 remain unapproved. No source hook is labeled runtime support.
-
-Before the selected slice is implemented, resolve only its needed choices: compatible pinned integrations/licenses (T05), priority backend/privileges/observation policy (T11/T17), exact platform validation targets (T12), DNS envelope/polling/resource rules if DNS is included (T16), and the contract's schema/phase/credential/evidence details (T09/T14/T15/T18). T10 execution policy remains open. Build, loopback, real Windows/Linux adapters, controlled impairment and live path evidence are separate gates in [DESIGN.md](DESIGN.md#validation-before-supportperformance-claims); they require later authorization. Completion of this review does not select an implementation slice or lift the hold.
-
-## Reference-tool reuse and validation
-
-Recorded: 2026-10-11. The user agreed to selectively learn from functionality in the researched tools and improve it where useful, explicitly requesting planning only. This confirms an evaluation direction under T19, not every proposal, a dependency, a license choice, code copying or execution. [Candidate mapping and S07-S11](ROADMAP.md#reference-tool-candidates), [roadmap review](ROADMAP.md#3b-evaluate-selective-reuse-and-validation-baselines-completed), [decision evidence](#2026-10-11-reference-tool-planning-recorded).
-
-| Choice | Alternatives and recommendation | Remaining decision |
-| --- | --- | --- |
-| T19: reuse boundary | Learn from designs while implementing our contract; embed suitable compatible code/library; bundle a tool-owned component; keep a utility external for validation. Recommend design references and independent cross-checks first, selecting code reuse only after source/API/platform/license review. | For each component record exact upstream version/commit and symbols, changes needed, maintenance burden, lifecycle/socket/priority control, transitive dependencies, attribution and redistribution requirements. No reference replaces the shared engine or requires manually configured tunnel services in the normal workflow. |
-| T20: equivalent validation | Compare overlapping measurements against IRTT/iperf2/sockperf; use Crusader/Flent for loaded-path comparisons; assess DNS tunnel references separately. Recommend a small explicit matrix rather than treating one benchmark as universal ground truth. | Match actual workload, metadata/receipt overhead, timing boundary, direction, setup/warmup/cutoff/grace, denominators and environment; justify tolerances from resolution/overhead and repeated variation. Separate raw UDP/TCP agreement from authentic tunnel/DNS, priority, platform and live-path evidence. No numeric tolerance or tool version selected. |
-
-Existing decisions stay in their original choices: timer/receipt/result mechanics in T14; configurable burst/phase controls in T15; DNS encoding/fragmentation/polling in T16; independent outer DSCP/ECN and observation in T11/T17; charts in T13; comparison evidence in T18. Basic scheduling, receiver accounting and explicit incomplete outcomes are already required independently of S07-S11. The subsequent action 3b answers below accept optional monitoring, preflight and richer plots for future scope; detailed mechanics remain open.
-
-Upstream semantics require scrutiny. [IRTT's client manual](https://github.com/heistp/irtt/blob/master/doc/irtt-client.md) documents a whole-ToS-byte `--dscp` option and request/response settings, not our independently controlled directions. [iperf2](https://iperf2.sourceforge.io/iperf-manpage.html) documents isochronous bursts, source-port binding and reverse-direction ToS behavior; these still require actual Windows/Linux outer-packet verification. [IRTT](https://github.com/heistp/irtt) requires external clock synchronization for one-way delay. Numeric DSCP and ToS-byte inputs must not be confused, and external clocks do not establish validated calibration merely by being enabled.
-
-[Graphite Meter](https://github.com/zR-JB/graphite-meter) and [Crusader](https://github.com/Zoxc/crusader) inform workflow/evidence presentation without changing our plain embedded browser frontend. [dnstt](https://www.bamsoftware.com/software/dnstt/) and [iodine](https://github.com/yarrick/iodine) inform T16, but a reliable TCP-over-DNS tunnel is not an unreliable UDP measurement and iodine's raw-UDP fallback must not be reported as DNS. Authentic direct/recursive DNS and required transports remain in scope; neither project is a selected adapter.
-
-License review is a technical prerequisite for actual copying/embedding/bundling, separate from learning functionality or using a reference for validation. IRTT's [license](https://github.com/heistp/irtt/blob/master/LICENSE) is GPL-2.0 and Graphite Meter's [repository license statement](https://github.com/zR-JB/graphite-meter#license) is AGPL-3.0-or-later; permissive licensing must not be assumed across references. Verify exact chosen revisions, files and transitive components before selecting a reuse strategy; this records a review need, not a legal conclusion or a project-license decision.
-
-No authenticated server/control design is borrowed by assumption. In particular, bufferbloat-lab's unauthenticated router controls and queue-changing functions do not fit our normal workflow; shaping/CAKE/router telemetry belong only to isolated external validation where explicitly authorized. No runtime capability has been validated by this planning.
-
-### Selective source review and dispositions
-
-Reviewed and decisions recorded: 2026-10-11, roadmap action 3b. The user confirmed **IRTT, iperf2 and Crusader as design references and external validation tools only**, retaining our shared Go engine, and **accepted all S07-S11 for future scope**. Other component dispositions below remain review recommendations. No reference code/tool was copied, installed, built or executed during this review. The subsequently authorized [first slice](#first-slice-final-decisions) includes basic S08/S09 and S07/S10 gates; exact reference builds and empirical comparison bands remain open, with S11 later.
-
-**Review identities and limits.** IRTT tag `v0.9.2` resolves through annotated tag `c523ec79d03c4285cdc002517606e18193fcc5a9` to commit `0d612bb790034e5257a4979bcf655609f644d08a`; Crusader `v0.3.2` resolves to `ac0c5b67040fb5cf07c1a97205b26c9af701ebc5`. Their source files were read at these commits. These are review baselines, not selected dependency or benchmark versions.
-
-For iperf2, official Git metadata returned HEAD `fcac4245061232f1616874a04843f7ca13a41fba` and branch `2-2-1` at `5fe98129177e1a9a5b3313ecda88b1a8a308b05e`. Accessible SourceForge source pages instead identify `Client.cpp`, `Server.cpp` and `LICENSE` at `1779e3e3770a080cbd77ca77acaffdfff83c7c2b`, and `PerfSocket.cpp` at `c08f083b11b9b4be2473bf08ebb2c541d9821ea1`. Findings below refer to those displayed snapshots plus the current unversioned manual; they are not a coherent release audit. Pinned source-page retrieval failed, raw retrieval met an access challenge, and a source-snapshot URL returned 404. Reconcile the exact runnable version, manual and build before any future comparison or reuse.
-
-dnstt's official Git HEAD was `0c5c52a57d899c05428c116898941761a2ed83c2`. The maintainer's current overview/protocol documentation was readable, but the linked source browser could not be reached. DNS findings are documentation-level; source-symbol, revision-specific license and platform audits remain open. Other inventory candidates were not source-audited in this task.
-
-| Component / existing choices | Reviewed evidence | Recommended disposition and integration gap |
-| --- | --- | --- |
-| IRTT timing/accounting: F02/F07, T14/T18 | Pinned `client.go`: `Client.Run`, `send`, `wait`; `recorder.go`: `recordPreSend`, `recordPostSend`, `recordReceive`, `RoundTripData.RTT`, `ServerProcessingTime`; `result.go`: `newResult`; `timesrc_win.go`; `conn.go`: `dial`, `listen`, `setDSCP`. [Source tree](https://github.com/heistp/irtt/tree/0d612bb790034e5257a4979bcf655609f644d08a) | Design reference for separate local timer/send/processing records and duplicate-aware receipts; candidate external UDP RTT cross-check. Embedding its echo engine would require replacing scheduling, independent downstream workload and ledgers; retain our shared engine. Its internal socket construction/ToS path is not our common outer-socket/Windows QoS contract. |
-| iperf2 traffic/ports: F02/F05-F07, T15/T17 | Displayed `Client::Run`, `RunTCP`, `RunRateLimitedTCP`, `WritePacketID`, `AwaitServerFinPacket`; `Server::RunUDP`, `RunTCP`; `SetSocketOptions`, `SetSocketOptionsIPTos`, timeout helpers. [Client](https://sourceforge.net/p/iperf2/code/ci/master/tree/src/Client.cpp), [server](https://sourceforge.net/p/iperf2/code/ci/master/tree/src/Server.cpp), [sockets](https://sourceforge.net/p/iperf2/code/ci/master/tree/src/PerfSocket.cpp) | Design reference and candidate external UDP-rate/receiver-count/TCP-bounceback utility. Do not embed or bundle by default: C/C++ build/ABI, threads, signals, socket ownership and reports would create a separate engine/lifecycle. The reviewed Windows path disables IPv6 ToS support; warnings/socket readback do not establish outer-wire marking. No qWAVE backend was established by this review. |
-| Crusader workflow: F01/F07, T13-T15/T18 | Pinned `src/crusader-lib/src/common.rs`: `Config`, `measure_latency`, `ping_send`, `ping_recv`; `test.rs`: `test_async`; `serve.rs`: `client`, `listen`; `protocol.rs`: `RawLatency`, `Ping`; release workflow. [Source tree](https://github.com/Zoxc/crusader/tree/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/src/crusader-lib/src) | Design reference for staged load labels, grace, receiver evidence and visible termination problems; candidate external idle/loaded-path comparison. Rust/Tokio and its GUI/plot dependencies do not fit direct Go/plain-browser reuse without an additional boundary. TCP control/load plus UDP pings is a different measured workload; no common directional-DSCP/socket injection API was established. |
-| dnstt DNS framing/polling: F04, T05/T16 | Maintainer [protocol description](https://www.bamsoftware.com/software/dnstt/protocol.html) and [overview](https://www.bamsoftware.com/software/dnstt/) | Design reference only at this stage. Its TXT/query encoding, polling and limit handling merit an exact source audit. KCP/Noise/smux provide reliable streams; this is not an unreliable inner UDP baseline or coverage of all required direct/recursive DNS transports. Client authorization and managed lifecycle/socket hooks need our own assessment. |
-| Flent / sockperf | Existing inventory identifies loaded-path and TCP/UDP comparison gaps; no exact source/build/license audit here | Reserve as alternative external validation utilities if the initial matrix leaves a specific gap. Do not make them mandatory dependencies. |
-| Graphite Meter | Existing receiver/partial-report and chart references; no exact source audit here | Design reference only, if T13/T14 needs it. Browser HTTP/WebTransport does not validate authentic raw/tunnel carriers; no frontend or code adoption. |
-| iodine | Existing DNS framing/negotiation reference; no exact source audit here | Defer deeper source review until a concrete T16 gap remains. Any raw-UDP fallback must be labeled separately; no adapter selection. |
-| bufferbloat-lab | Existing external queue/load fixture reference; no exact source audit here | External validation design reference under accepted S10; this specific fixture/tool remains unselected. No router-control, shaping, queue policy or automatic route changes in the product. |
-
-### Measurement differences that constrain T20
-
-- **IRTT:** `recordPreSend` timestamps before the UDP send path; `recordPostSend` keeps send-call duration. `RoundTripData.RTT` subtracts any available server-processing interval, whereas our elapsed RTT and optional corrected RTT stay separate. The inspected implementation subtracts an available interval without the upper-bound guard suggested by its comment; do not copy that comment as a validated correction policy. `recordReceive` labels a reply late when its sequence is below the previously received sequence, rather than our highest-seen rule or a time deadline. `newResult` infers timer misses from first/last-send span, not the full intended phase ledger. Its reply-loss fraction uses successful sends and received RTT samples; server count includes duplicates and receipt windows have finite coverage. Recompute only compatible quantities from raw records, keeping unknown final delivery explicit. [Recorder](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/recorder.go), [results](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/result.go)
-- **IRTT ports/priority:** its reviewed `--dscp` value goes directly to whole-byte IPv4 ToS / IPv6 Traffic Class socket setters, and the negotiated value covers requests/replies. Numeric DSCP 46 corresponds to DS-field byte 184 with ECN zero; passing 46 as a whole byte is different. Treat names/examples in its manual cautiously and verify packets. Length includes IRTT framing; wait can end early when all replies arrive. Neither packet length, observation window nor directional marking maps directly to our configurable contract. [Connection source](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/conn.go), [client manual](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/doc/irtt-client.md)
-- **iperf2:** UDP reporting measures a receiver stream with sequence/termination exchange, not correlated receipts for every datum. TCP bounceback is a write/read exchange that waits for responses; it cannot verify independent planned slots under stream blockage. Its jitter, packet-rate windows and histogram percentiles need their own definitions rather than sharing our labels. The manual distinguishes six-bit `--dscp` from whole-byte ToS, reflected reverse marking and server override; actual build support and ECN preservation must be checked. Match buffer/framing size, observed rates and TCP_NODELAY/QUICKACK policy. One-way `--trip-times` needs clock evidence, and a sync-error detector alone does not prove calibration. [Manual](https://iperf2.sourceforge.io/iperf-manpage.html)
-- **Crusader:** `measure_latency` estimates a server clock offset using the midpoint of lower-RTT samples; `RawLatency.down` derives a component using saturating subtraction. Treat those up/down displays as estimates under symmetry assumptions, not calibrated one-way data. Retain local total RTT and separate server receipt evidence. Its throughput-load phases and UDP ping overhead do not reproduce independent FPS data plus receipts on every adapter. The overview's residual-load warning is a reason to verify quiescence before a following run. [Timing source](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/src/crusader-lib/src/common.rs), [protocol source](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/src/crusader-lib/src/protocol.rs), [overview](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/README.md)
-- **dnstt:** downlink requires client queries; polling, encoded capacity and reliable retransmission affect workload/queue residence. Its Noise layer authenticates the server, not the client. Native cryptographic protection therefore does not settle T09 enrollment/client authorization. Study the mechanism while preserving all F04 transport/path requirements and explicit unsupported capabilities. [Protocol](https://www.bamsoftware.com/software/dnstt/protocol.html)
-
-### License, maintenance and platform boundaries
-
-| Reference | Read evidence and reuse consequence | Platform / dependency gap |
-| --- | --- | --- |
-| IRTT pinned v0.9.2 | [LICENSE](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/LICENSE) contains GPL version 2. Embedding/copying requires a compatible distribution plan and notices/source obligations; do not infer a project-license selection or that bundling avoids obligations. | [go.mod](https://github.com/heistp/irtt/blob/0d612bb790034e5257a4979bcf655609f644d08a/go.mod) declares Go 1.25.0 and pinned x/net/x/sys plus other dependencies. Windows clock code uses QueryPerformanceCounter; resolution does not prove timer accuracy. All four intended OS/CPU runtime combinations, ToS behavior and Linux minima remain untested. |
-| iperf2 displayed snapshots | [LICENSE](https://sourceforge.net/p/iperf2/code/ci/master/tree/LICENSE) and source headers contain permissive redistribution, retained-notice/disclaimer and non-endorsement conditions from multiple copyright holders. Exact chosen files, auxiliary code and build-linked libraries need an inventory; avoid a blanket compatibility conclusion. | C/C++/configure/platform feature probes and Windows builds vary by version. Exact Windows ARM64 availability, Linux ARM64/x86-64 distribution minima and feature flags are unverified. Cached revisions/manual must first be reconciled. |
-| Crusader pinned v0.3.2 | [MIT](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/LICENSE-MIT) and [Apache-2.0](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/LICENSE-APACHE) texts are supplied. Any actual reuse requires the selected license's notices/conditions and separate transitive-license review. | [Release workflow](https://github.com/Zoxc/crusader/blob/ac0c5b67040fb5cf07c1a97205b26c9af701ebc5/.github/workflows/release.yml) lists Linux musl ARM64/x86-64 and Windows x86-64/x86-32, with no Windows ARM64 entry. Source availability or Windows emulation does not establish native ARM64 coverage. Rust/Tokio, lockfile/toolchain and optional UI libraries need review before any reuse. |
-| dnstt | Maintainer overview states public-domain code. Revision-specific declaration and KCP/smux/Noise/DNS dependency licenses were not audited; upstream's statement does not cover all transitive code by assumption. | Source/browser access gap; no four-target build or runtime evidence, managed socket/priority audit or all-transport coverage. |
-
-User confirmed **no embedding or bundling of IRTT/iperf2/Crusader**, with design lessons and separately executed external validation instead. This does not reject future compatible protocol libraries under T05 or select other inventory components. No reference replaces shared timing/accounting or F08's adapter/capability contract. Exact dependency/license selection remains open; external benchmark execution requires later authorization.
-
-### Validation handoff and optional-scope decisions
-
-The [prose acceptance matrix](DESIGN.md#reference-comparison-acceptance-matrix) specifies UDP/TCP overlap, directional ports/outer priority, matched idle/loaded phases, receiver reconciliation and DNS limits, including timing and tolerance rules. User accepted S07-S11 for future scope on 2026-10-11, superseding the review's suggested deferral of S08/S09/S11. Existing S01-S06 remain proposed. At review time, execution and first-slice inclusion were not authorized; the later [first-slice decisions](#first-slice-final-decisions) and implementation instruction include basic S08/S09 and S07/S10 gates, while S11 remains later.
-
-At this review milestone, T14/T15 queue/phase/receipt schemas, T09 trust, T21 registration and S07-S11 slice inclusion were deferred to action 4. Those first-slice decisions are now settled. Remaining work includes coherent reference builds and predeclared empirical tolerances under T20; S11 retention/windows/reconnect/eligibility remains future work. A missing reference build blocks that comparison and provides no evidence for another protocol/platform. Source-review completion does not complete runtime acceptance.
-
-## Protocol extensibility choices
-
-User confirmed the requirement on 2026-10-11: protocols must be easy to add in later releases without broadly rewriting shared modules. See [design contract](DESIGN.md#protocol-extensibility), F08 in [feature proposals](ROADMAP.md#future-features-and-proposals), and [decision evidence](#2026-10-11-protocol-extensibility-requirement-recorded). This extends T06's confirmed adapter boundaries; it does not select additional protocols or authorize implementation.
-
-| ID | Question | State |
-| --- | --- | --- |
-| T21 | How should the adapter contract, capability/option descriptions, registration, and profile/result compatibility be expressed? Compile-time registration or runtime plugins? | Compile-time registration explicitly confirmed by user, 2026-10-11; first-slice boundaries/descriptors/version compatibility and test-only adapter acceptance settled; no runtime loader selected or implemented |
-
-Selected: compile-time registration, explicitly confirmed by user on 2026-10-11 after explanation. Shared metrics remain authoritative and adapters declare unsupported capabilities. The [first-slice contract](DESIGN.md#components-and-adapter-boundaries) defines descriptors/lifecycle/event ownership and compatibility acceptance; concrete Go type names follow during authorized implementation. Runtime plugins remain an unselected alternative; no interface/loader is implemented.
-
-## Control connection and one-way timing choices
-
-Confirmed requirement on 2026-10-11: communicate the intended traffic to the server and maintain clock calibration for directional one-way measurements (F09). See [design](DESIGN.md#control-connection-and-clock-calibration) and [decision evidence](#2026-10-11-control-and-clock-calibration-requirements-recorded). This supersedes the earlier optional status of one-way support; trustworthy values remain gated by calibration evidence. User selected tool-owned key-only SSH and partial termination during action 4; final first-slice framing/lifecycle/calibration policy is recorded below. Runtime behavior remains unvalidated.
-
-| ID | Question | State |
-| --- | --- | --- |
-| T22 | Which authenticated control transport should coordinate the run plan, effective settings, readiness, calibration metadata and results: application TLS channel, SSH channel, or another suitable mechanism? | Tool-owned/key-only SSH and partial termination confirmed by user; framing/channels/plan/readiness/lease design settled under completion instruction, 2026-10-11; timeout values explicit inputs and runtime behavior unvalidated |
-| T23 | How should clock offset/drift be calibrated and bounded, with what timestamp mapping, cadence, external evidence, asymmetry assumptions, expiry and permitted error? | Four-timestamp constrained application-local offset/drift mapping, propagated uncertainty and calibrated/estimate/unavailable gates selected under completion instruction, 2026-10-11; numeric quality inputs require provenance and later fixture validation |
-
-Initial recommendation: application-local clock mapping, preserving monotonic measurement evidence and leaving system clocks untouched. Evaluate timestamp exchanges and available independent clock-quality evidence; neither SSH nor TLS alone establishes timing accuracy. Repeated two-way exchanges cannot eliminate unknown fixed directional asymmetry. Define explicit calibrated, assumption-dependent estimate, and unavailable outcomes before selecting a method. Source guidance: [RFC 7679 clock uncertainty](https://www.rfc-editor.org/rfc/rfc7679.html#section-3.7.1). The first-slice contract now selects constrained four-timestamp mapping/evidence gates under the completion instruction; no runtime mechanism or precision is validated.
-
-## StarTrinity documentation review
-
-Reviewed: 2026-10-11. User requested checking StarTrinity as another reference. This is vendor-documentation research, not a source-code audit, feature acceptance, implementation or execution. Existing confirmed IRTT/iperf2/Crusader dispositions, S07-S11 acceptance, F08 extensibility and F09 control/calibrated one-way requirements remain intact. [Candidate mapping/S12](ROADMAP.md#s12-classified-degradation-episodes-and-observed-availability), [review evidence](#2026-10-11-startrinity-reference-review-recorded).
-
-| Product / evidence | Useful mapping | Limits and recommended disposition |
-| --- | --- | --- |
-| [UDP / Multiprotocol Network Tester](https://startrinity.com/VoIP/NetworkTester/NetworkTester.aspx) | F02/F07, T14/T15; configurable bidirectional UDP streams, packet size and bandwidth, jitter distribution and history/CSV; S09 presentation | Design reference and potential S07 UDP cross-check after exact build/metric verification. The page calls it open source, but no source archive/repository or applicable source license was verified. Its changelog describes broader protocol stress testing as planned in 2015; the title/list does not establish implemented DNS data tunnels, QUIC, WireGuard or Hysteria2. Listed Windows/Linux downloads do not prove modern native ARM64 support. |
-| CST [FAQ](https://startrinity.com/InternetQuality/ContinuousSpeedTesterFAQ.aspx) and [custom-server guide](https://startrinity.com/InternetQuality/CST/UseCases/MonitoringWithCustomServer.aspx) | F01/F07, S11; simultaneous upload/download monitoring and a Windows-client/Linux-x64-server example. Configurable no-receive, packet-loss, instant-jitter, RFC3550-jitter and RTT thresholds inspire proposed S12. | Documentation/design reference only; formulas, clocks, accounting windows, runtime capability, source/license and exact builds unverified. This deployment describes vendor-specific Center/MySQL, services and a license key; none is adopted. Use our one owned server and bounded reports, not the vendor's multi-server/central-collection architecture. Example threshold values are not FPS defaults. |
-| [SIP Tester tutorial](https://startrinity.com/VoIP/SipTester/SipTesterTutorial.aspx) and [product page](https://startrinity.com/VoIP/SipTester/SipTester.aspx) | S08/S09; per-worker media/signaling/GUI delay diagnostics, historical/distribution views and clear session failures inform diagnosis/presentation. | Design reference only. SIP/RTP/SRTP, codec/jitter-buffer simulation, MOS scores and telephony sessions are not our required carriers or FPS quality model. The product documents freeware/commercial licensing and .NET/Npcap dependencies; it is not established as reusable open-source code. Do not infer our one-way accuracy or Linux server support from it. |
-
-The main CST and Internet Connection Monitor pages returned redirect-loop errors through the web tool. Findings use the readable official Network Tester page, CST FAQ/custom-server guide and SIP Tester documentation. Download links point to executables/packages, not inspected source; no package was downloaded, installed or run. Public source availability, revision-specific licensing, maintained builds and test packet format/timing mechanics remain gaps under T19/T20.
-
-The [Windows DSCP guide](https://startrinity.com/VoIP/CustomizeIpDscp/ChangeIpDscpFieldInWindows.aspx) proposes registry edits and policy-based QoS, and the SIP settings discuss raw packet/capture paths. These are not selected T11/T17 backends or permission to mutate global settings. Retain independent directional outer DSCP, ECN preservation and actual packet evidence; prioritized treatment is a hypothesis, not a consequence of marking alone. Vendor diagnostic advice and generic acceptable-loss thresholds are not our attribution rules or acceptance limits.
-
-| ID | Question | State |
-| --- | --- | --- |
-| T24 | Which directional variation/jitter definitions and monitoring event criteria should be used: raw inter-arrival/transit variation, RFC3550-style smoothed jitter, no-arrival gaps or thresholded degradation windows? How are episodes, recovery and observed availability denominators defined? | Open; related to T14/T18/T23, accepted S09/S11 and proposed S12; no formula, threshold or additional feature accepted |
-
-Recommend retaining raw local scheduling/arrival evidence and existing RTT variation, with any additional jitter metric explicitly named, defined and independently reproducible. An inter-arrival gap alone confounds planned bursts with network variation; any transit-variation metric needs sender timestamps and clock-rate/drift treatment. Smoothed RFC3550-style jitter can conceal spikes and is not p99 RTT or calibrated one-way delay. Decide its suitability under T24 before adding it; if adopted, retain raw/tail/deadline evidence beside it. S12 should distinguish unknown measurement state, no-arrival episodes and degraded delivery before producing any time fraction; no overall score or email notification integration is proposed.
-
-## First implementation slice discussion
-
-Completed as planning: 2026-10-11, action 4. Scope/policies settled before the subsequent action 5 authorization. Discussion batches retain historical recommendations/answers; [final decisions](#first-slice-final-decisions) supersede earlier pending options. [Initial discussion](#2026-10-11-first-slice-discussion-started), [scope answers](#2026-10-11-first-slice-scope-and-ssh-control-confirmed), [planning completion](#2026-10-11-first-slice-planning-completed).
-
-### Proposed deliverable
-
-A Windows 11 client imports pairing, edits/saves a finite workload in the local dashboard, coordinates it with one Linux server, runs real bidirectional UDP or TCP data plus receipts, and exports a reproducible report. Both endpoints manage their own resources. The report exposes deadline outcomes, receiver evidence, local timing limits, directional ports/priority, and calibrated/estimated/unavailable one-way outcomes. All four intended OS/CPU targets remain in scope; build and native runtime evidence must be reported separately.
-
-| Existing scope | Proposed first-slice inclusion | Remaining scope |
-| --- | --- | --- |
-| F01 | Client/server executable modes, managed prepare/run/cancel/drain/reconcile/cleanup and pairing import appropriate to selected SSH control | Exact Linux release minima and platform support claims need evidence; credential mechanics remain open; user-provided TLS certificates remain future scope for TLS-capable endpoints |
-| F02 | Authentic raw UDP and framed TCP measurement adapters using the same engine | Measured TLS, QUIC, WireGuard/Hysteria2 and all DNS coverage remain accepted future work under F02-F04; no rollout order selected |
-| F05/F06 | Explicit destination/listener and optional source ports; independently requested directional outer DSCP, applied status and available observations; explicit unsupported/unknown outcomes | Adapter/platform capabilities need runtime proof; no capture dependency or global QoS change selected |
-| F07 | Independent steady/burst traffic and ordered phases; data/receipt ledgers; bounded scheduling; partial reports; versioned YAML and JSONL/JSON/CSV; selected matched-run comparison with counts/ties/inconclusive outcomes | Automatic winner/evidence thresholds and exact schema/resource mechanics remain open; no combined score |
-| F08 | Adapter descriptors, capability-driven validation/dashboard/reporting, shared accounting and compile-time registration as a recommendation | Exact contract/version compatibility needs agreement; no runtime plugin requirement or particular additional carrier selected |
-| F09 | Authenticated plan agreement/readiness, maintained application-local clock mapping, raw calibration evidence and uncertainty-gated directional one-way results | Transport, timestamp mapping/calibration algorithm, cadence, uncertainty/expiry limits and failure policies require decisions; RTT alone cannot complete F09 |
-| S08/S09 | Optional basic timing preflight plus phase tables and completed-sample distributions, with visible sample counts and incomplete evidence | Detailed diagnostic advice, chart/layout/binning/update limits require decisions |
-| S07/S10 | Use the existing acceptance matrix to define independent cross-check and external-contention checks for this slice | Exact reference builds, platform availability and calibrated tolerances remain open; execution is not authorized by planning |
-| S11 | Retain accepted continuous monitoring for a later slice | Retention/windows/reconnect/eligibility are not settled here |
-| S01-S06/S12 | Leave proposed additions outside this candidate slice | S12 degradation episodes/availability and additional T24 jitter/event definitions require separate acceptance; existing required jitter/spike/stall semantics still need refinement |
-
-User confirmed on 2026-10-11: UDP/TCP carriers, recommended basic S08/S09 additions and S07/S10 validation gates, S11 later, and **SSH control**. This selects initial scope, not all mechanics in the table or implementation permission. Generated pairing and user-provided TLS certificates retain confirmed future scope; SSH uses host/client identity mechanisms, and measured TLS certificate handling is outside this raw UDP/TCP slice.
-
-SSH coordinates the test; UDP/TCP measurement data travels directly through its selected adapter, not SSH forwarding. Raw data still requires authenticated session binding appropriate to those modes; pairing alone is not a data-message authentication mechanism.
-
-### First answer batch and answers
-
-1. **Carrier scope (T05/F02):** recommend UDP and TCP together, exercising both unreliable delivery and stream backpressure. Alternative: include measured TLS immediately, with distinct handshake/certificate/established-session checks. All other required carriers remain accepted whichever option is chosen.
-2. **Accepted additions (T13/T14, S07-S11):** recommend basic S08 preflight and S09 phase/distribution views now, S07/S10 validation gates for the included carriers, and S11 continuous monitoring later. Alternative: include S11 now, which also requires rolling windows, bounded retention, cancellation and reconnect decisions.
-3. **Control transport (T22):** recommend a tool-managed application TLS connection, with explicit server identity verification and client authorization, carrying versioned plan/readiness/calibration/results messages. Alternative: an SSH channel, requiring its own managed lifecycle, identity and authentication rules. Go's [TLS configuration documentation](https://pkg.go.dev/crypto/tls#Config) describes certificate and client-verification mechanisms; selecting TLS does not settle our enrollment or framing design.
-
-Answers: user selected UDP/TCP, recommended additions with monitoring later, and SSH. Application TLS remains an unselected control alternative. Other mechanics remain recommended/open; no implementation permission given.
-
-### SSH lifecycle and authentication discussion
-
-T09/T22 next batch, recommendations only:
-
-1. **Server startup:** recommend using the owned Linux server's existing SSH service to start the installed sneaky-port server executable in a noninteractive exec session, with versioned control messages over stdin/stdout and diagnostics separate. Alternative: sneaky-port server mode hosts its own SSH endpoint after the user starts it. Existing SSH introduces an explicit service/account prerequisite, not a separately configured measurement tunnel/proxy. Binary installation/update and exact startup restrictions remain open; no deployment authorized now.
-2. **Client authentication:** recommend SSH keys with verified server host identity, supporting generated pairing and existing user key references. Alternative: also support password authentication. Enrollment, key/passphrase storage/access, expiry/revocation and authorization must be specified for the chosen lifecycle. Do not disable host verification or silently edit SSH/user settings; no credential mechanism selected yet.
-3. **Broken control connection:** recommend stopping new data, bounded drain/cleanup and a partial report at both endpoints when the channel fails or its liveness lease expires; no automatic reconnect in this finite slice. Alternative: recover into a new segment, requiring idempotent readiness, fresh session binding/calibration, retained remote evidence and reconnect limits. Disconnect detection/lease/grace bounds remain open.
-
-Feasibility references: Go's [SSH package](https://pkg.go.dev/golang.org/x/crypto/ssh) exposes client/server and session stdin/stdout operations; [OpenSSH server documentation](https://man.openbsd.org/sshd.8) describes authenticated command execution and key access restrictions. These support candidate designs, not a selected package version or validated lifecycle/platform behavior. Remote exec must constrain/quote commands and separate framing from login diagnostics. Do not assume SSH process termination reliably cleans measurement listeners; the server needs its own bounded lifecycle/lease.
-
-**User answers, 2026-10-11:** server mode hosts its own SSH endpoint; SSH keys only; control failure stops new data, performs bounded drain/cleanup and saves a partial report, without automatic reconnect. Existing-system-SSH remote exec and password authentication are unselected alternatives. The exec/quoting concerns above apply only to that alternative, not the chosen embedded endpoint. [Decision evidence](#2026-10-11-tool-owned-ssh-lifecycle-confirmed).
-
-### Pairing, extensibility and backpressure discussion
-
-Next T09/T14/T21 batch, recommendations only:
-
-1. **Key enrollment:** recommend generating each client's private SSH key on that client. Import its public key into the server's application-specific authorized-client store, and import a server-generated public pairing bundle (endpoint, host identity and schema/version) into the client through a trusted channel. Alternative: server generates a client keypair, authorizes its public key and includes the client private key in the trusted pairing transfer. Both preserve generated pairing and existing user-key references; neither exports the server's private host key or edits system SSH settings. Exact storage/expiry/revocation mechanics still need specification.
-2. **Adapter registration (T21):** recommend compile-time descriptors/registration with stable identifiers, options/capabilities and shared lifecycle/events. New releases can add an adapter without broad core/UI/report rewrites. Alternative: runtime plugin loading, adding ABI/version/loading concerns without being required by F08.
-3. **Backpressure (T14/T15):** recommend bounded per-direction writers/queues and accounting for each planned slot. If a slot cannot be admitted within the agreed policy, record a local skip/failure and continue the schedule without catch-up bursts. Alternative: stop the affected run as partial on resource saturation. Both retain blocked/partial-write evidence and bound receipts/logging; neither silently reduces offered rate or abandons part of a TCP frame and resumes framing as if nothing happened. Exact limits/write timeout and receipt admission policy remain open.
-
-**User answers, 2026-10-11:** generate the private SSH key on the client; transfer/import its public authorization key to the application server and the public server pairing bundle to the client through a trusted channel. On queue saturation, record the local skip and continue scheduling without catch-up. Exact storage/revocation/bounds remain open. User requested an explanation of registration, so T21 remains unselected. [Decision evidence](#2026-10-11-client-local-keys-and-skip-accounting-confirmed).
-
-Registration explanation: with compile-time registration, an adapter's code/descriptors are built into the executable. Adding an adapter means writing it against the shared contract, registering it and shipping new executables; capability-driven validation/dashboard/reporting discovers it without broad shared-module changes. With runtime plugins, the main executable loads a separate adapter artifact after installation, requiring loading and compatibility rules. F08 requires easy additions across releases, not installation without an executable update. Recommend compile-time registration for the confirmed one-executable packaging. Go's [standard plugin documentation](https://pkg.go.dev/plugin) lists Linux/FreeBSD/macOS support, not Windows, and requires matching builds/dependencies; a portable runtime approach would need a different mechanism and its own review. This limitation applies to Go's standard plugin mechanism, not to every possible plugin design. No loader/package selected.
-
-User then asked which is faster and safer. Recommendation remains compile-time registration: it avoids a separate runtime loading path and keeps shipped adapters in one reviewed build. Compiled adapter execution may have similar performance in either approach; no benchmark establishes a probe-speed advantage, and registration does not make adapter code inherently safe. Removing plugin-loading/build-compatibility complexity fits the current Windows/single-executable requirements. This explanation is not a user selection; T21 remains open.
-
-### Mechanics identified during discussion
-
-The following table preserves the issues raised before completion. Their first-slice policies are now resolved in the final decisions/design contract; numerical operator inputs and later empirical evidence are distinguished from unresolved product choices.
-
-| Existing choice | Required slice decision / proposed starting policy |
-| --- | --- |
-| T09/T14 | Pairing bundle contents, client enrollment/authentication, raw-data session binding/integrity/replay policy, secret storage/access, expiry/revocation, certificate replacement and local dashboard/API request protection |
-| T07/T08/T14 | Profile/API/wire/event/summary versions and exact fields/units/framing; mandatory versus adapter-specific fields; unsupported/unknown representation; compatibility/migration; bounded raw-file storage, finalization and CSV precision; YAML parser/version/license if needed |
-| T14/T15 | Explicit bounds on per-direction queued messages/bytes, outstanding receipts, writes, logging and dashboard updates; account every planned slot when a bound is reached. Recommend bounded writers and explicit skip/failure accounting without catch-up bursts; never abandon a partial TCP frame and continue as if framing were intact |
-| T15 | Half-open phase/burst intervals, slot rounding, boundary attribution, quiet phases, deadline inheritance, warmup/grace/cancellation cutoff and deterministic content generation; numerical defaults and hard limits remain unselected |
-| T10/T18 | Recommend one measured profile/run at a time with user-selected matched comparisons and no automatic winner initially. Set comparison compatibility, repetitions/evidence gates, percentile/variation definitions and required spike/stall semantics; preserve inconclusive outcomes rather than selecting thresholds by assumption |
-| T11/T12/T17 | Priority values/API/privileges, optional packet-observation method, IPv4/IPv6 capability boundaries, selected validation environments and honest Linux support claims; API success cannot populate observed fields |
-| T13/T14 | Dashboard layout, distribution rendering method/binning/sample visibility, bounded update cadence and preflight metrics/limits; engine remains independent of rendering |
-| T21 | Recommend stable adapter IDs plus compile-time registration; define descriptors/options/capabilities, prepare/readiness/send/receive/cancel/cleanup boundaries and shared event ownership. Validate with a test-only adapter, which does not claim a new production carrier |
-| T22 | Control framing/versioning and port; role-specific plan agreement, readiness/start exchange, result transfer and failure handling. Recommend ending the affected run as partial on control loss, without automatic reconnect; exact drain/resource timeouts remain open |
-| T23 | Timestamp boundaries, application-local offset/drift mapping, calibration sampling/cadence/expiry, uncertainty propagation and allowed-error policy. Recommend retaining calibrated, assumption-dependent estimate and unavailable states, leaving system clocks untouched. [RFC 7679](https://www.rfc-editor.org/rfc/rfc7679.html#section-3.7) requires clock/timestamp uncertainty to be considered; exchanges alone do not establish an asymmetry-free mapping |
-| T19/T20 | Choose coherent external reference builds and compatible overlaps, predeclare experimentally justified tolerances, and keep missing native reference support explicit |
-
-### Proposed success criteria
-
-- An end-to-end dashboard workflow validates/saves a workload, verifies pairing, freezes the agreed plan, reports both endpoints' readiness/effective settings, runs UDP/TCP, cancels safely, exports evidence and preserves unrelated resources.
-- Deterministic accounting checks reproduce the synthetic report and reconcile planned/accepted/failed/skipped slots, receiver data and receipts, duplicates/reordering, deadline-late completions and partial/unknown evidence. Blocking a TCP writer does not stop planned-slot accounting or create unbounded queues.
-- Phase/burst/quiet boundaries, warmup/main/grace attribution, clock jumps, malformed/foreign/replayed data, wrong identity, busy ports, missing remote records and cleanup failures have explicit checked outcomes.
-- Calibration checks use known offset/drift, expiry and asymmetric-delay fixtures; valid directional values carry uncertainty, unsupported evidence yields estimates/unavailable, and RTT/accounting remains usable. F09 is incomplete until maintained mapping and these gates are exercised.
-- A test-only adapter is discovered through the same capability/configuration/dashboard/report workflow without broadly rewriting shared modules; existing UDP/TCP metric semantics stay unchanged.
-- Builds for Windows/Linux ARM64/x86-64, loopback, native endpoint behavior, controlled impairment, outer-port/DSCP/ECN observations, independent reference comparisons and live-path measurements are separate evidence categories under the [acceptance matrix](DESIGN.md#reference-comparison-acceptance-matrix). Unavailable environments/checks remain gaps; compilation cannot complete native support or live-performance claims.
-
-Action 4's discussion is concluded by the final decisions below. Planning completion itself did not authorize implementation; the user subsequently authorized the original action 5, now split into bounded [roadmap tasks](ROADMAP.md#first-slice-task-index).
-
-### First-slice final decisions
-
-Settled: 2026-10-11. User explicitly answered **compile-time registration** and instructed completion of task 4. This authorizes finishing the documentation/design work using engineering judgment. Prior explicit scope/SSH/key/skip answers remain confirmed user decisions; the remaining policies below are design selections under that completion instruction, not claims that the user individually chose each new detail. [Product contract](DESIGN.md#first-slice-implementation-contract), [completion evidence](#2026-10-11-first-slice-planning-completed).
-
-| Choices / scope | Final first-slice disposition |
-| --- | --- |
-| T05/T06/T21, F02/F08 | Standard Go UDP/TCP, shared engine with explicit descriptor/lifecycle/event/option/capability boundaries and compile-time registration; a test-only adapter exercises extension without a core/UI/report rewrite |
-| T07/T08/T14, F07 | YAML-org v4; version-1 normalized profiles, local JSON API/control/results, precise decimal-string 64-bit quantities, bounded append-only JSONL and atomically finalized JSON, CSV with units/unknown status; release pins and builds are later gates |
-| T09/T22, F01/F09 | Local host/client keys, public bundle/enrollment, restricted application-owned storage, explicit client expiry/revocation and host re-import; key-only embedded SSH, application channels/length framing, frozen-plan digest, authenticated data binding/readiness, bounded lease/partial termination; future TLS-certificate mechanics remain outside this slice |
-| T14/T15, F07 | Fixed authenticated common header with data/receipt identities, content and outer overhead separated; raw UDP/TCP remain unencrypted test carriers; no baseline UDP fragmentation/retry/endpoint migration; partial streams preserve evidence or terminate safely |
-| T14/T15, F07 | Rational independent schedules, half-open phases/bursts/grace, inherited explicit deadlines, repeated-byte payload content, bounded FIFO admission with receipt reserve, every slot accounted, user-selected skip/no-catch-up policy and explicit scheduler-lag allowance |
-| T10/T18, F07 | Sequential repeated/alternating selected matched runs; nearest-rank tails and gap-aware RTT variation; explicit thresholded spikes and receipt-completion stalls; descriptive counts/deltas, ties/incompatible/inconclusive and no automatic winner/confidence score |
-| T11/T17, F05/F06 | Explicit source/destination ports, per-direction numeric outer DSCP, selected Linux/Windows socket backends, applied/observed fields and external evidence locations distinct; nonzero unsupported requests reject readiness, no silent policy/port/carrier substitution |
-| T13/T14, S08/S09 | Optional local timer preflight, phase/report tables and native SVG time/ECDF plots; bounded/coalesced live updates independent of engine timing, no chart dependency/runtime CDN |
-| T23, F09 | Repeated authenticated four-timestamp exchanges, feasible offset/drift envelope plus timestamp/model-error provenance and validity/expiry; propagated directional intervals with calibrated/estimate/unavailable states, no clock changes or fixed-asymmetry/precision assumptions |
-| T12/T19/T20, S07/S10 | Four build/native target families and intended mainstream Linux cases; exact environment/build pins and predeclared experimental bands recorded during later authorized validation; reference tools remain external, missing native coverage explicit |
-| S11 / F02-F04 / S01-S06/S12 | Continuous monitoring and remaining authentic carriers/DNS retain accepted future scope without a rollout order; original/proposed additions retain proposal status; no runtime plugin, proxy, shaping, queue management, route switching or vendor-service adoption |
-
-All workload/rate/port/deadline/resource/lease/calibration-quality values required by the profile must be supplied and validated explicitly. The 1 MiB frame/document caps, 92-byte header/124-byte overhead and four-per-second dashboard limit are engineering contract choices, not FPS optimum defaults or experimentally validated capacities. No experimental millisecond tolerance, oscillator accuracy, benchmark build or Linux release minimum is invented.
-
-The acceptance table completes task 4's **documented success criteria**, not runtime acceptance. Wire/schema/count fixtures, loopback, native priority/calibration, impairment, independent references and live paths remain separate gates. F09 cannot be completed merely because estimates exist. User subsequently authorized the original action 5; foundations, SSH/readiness and bounded queues are partial delivery, with engine/calibration/report/UI gates pending. Its execution is now split into bounded [roadmap tasks](ROADMAP.md#first-slice-task-index). [Readiness evidence](#2026-10-11-ssh-pairing-and-readiness), [queue evidence](WORK_LOG.md#2026-10-11-bounded-writer-queues), [pins/licenses](THIRD_PARTY_NOTICES.md).
-
-## Protocol traffic-tweak choices
-
-Confirmed on 2026-10-11: the dashboard should offer protocol-related traffic tweaks, including supported fragmentation and header/payload size controls (F10). [Requirements](DESIGN.md#protocol-specific-traffic-controls), [evidence](WORK_LOG.md#2026-10-11-protocol-traffic-tweak-requirement).
-
-| ID | Question | State |
-| --- | --- | --- |
-| T25 | Which typed adapter controls, fragmentation/reassembly layer, header/framing/padding options, version changes and effective-setting evidence should each mode support? | Dashboard/tweak requirement confirmed by user, 2026-10-11; exact per-adapter mechanisms, option limits and schema changes open |
-
-Preserve current required identity/authentication and the fixed version-1 framing until a compatible extension is selected. Controls must advertise actual capabilities; application fragments, stream segmentation and IP fragments are distinct experiments. Do not adopt automatic tweak sweeps by implication (S04 remains proposed).
-
-## Maintaining choices
-
-- Keep stable T identifiers, options/recommendations, dependencies, explicit state and dated answer provenance. Silence or recommendations do not mean acceptance; choices do not authorize implementation.
-- Retain a short superseded-choice reference and log significant changes in `WORK_LOG.md`; update affected design/proposal status using F/S links. Selection does not mean implemented or validated.
-- Keep current answers concise, link detailed research instead of duplicating it, and log significant compaction. Preserve unresolved questions and evidence.
-
+- The user confirmed Go/local browser, embedded assets, shared engine/adapters, typed profiles, JSONL/JSON/CSV, endpoint-local keys and trusted public enrollment. Configurable ordered phases and independent bidirectional data plus receipts replaced proposed fixed workload values.
+- Compile-time adapter registration and tool-owned SSH were explicitly confirmed. Remaining first-slice mechanics were engineering selections under task-4 completion; first-slice implementation was then authorized. Current T01-T25 answers/provenance are canonical in [DESIGN.md](DESIGN.md#technical-choices).
+- Source reviews distinguished SO_MARK routing from DSCP, arbitrary Windows marking privileges, recursive DNS/authoritative-hop limits and genuine carrier boundaries. IRTT/iperf2/Crusader were selected as external design/validation references, not bundled code. StarTrinity informed candidate diagnostics/monitoring ideas without adopting MOS/outage thresholds.
+- S07-S11 were accepted for future scope on 2026-10-11. Later user instructions limited current work to UDP/TCP; S01-S05/S12 remain deferred proposals. Broader carrier/DNS/monitoring choices are still open.
 
 ## S06 discussion snapshot before release resolution, 2026-10-12
 
-Preserved active proposal/discussion text before the scoped current-release resolution. This is historical planning, not current instructions or implementation evidence.
-
-## S06: Separate connection quality from measurement confidence
-
-- [ ] Proposed feature; per-metric label/reason presentation confirmed by user, 2026-10-12. Criteria remain in discussion; not implemented.
-
-Present quality metrics and evidence confidence separately. Confidence should account for sample count, repeated-run variation, local scheduling errors, missing server records, and unobservable settings.
-
-Purpose: prevent an apparently excellent connection from winning on weak or incomplete evidence, while avoiding classification of a measurement limitation as a network problem.
-
-Presentation decision, 2026-10-12: user selected option A, per-metric evidence labels with specific reasons, instead of a numeric confidence score. Relevant inputs are RTT sample/window/missing counts, compatible receiver evidence, one-way status/uncertainty, marking observations and repeated compatible trial agreement. Existing quality quantities stay visible. Label vocabulary, per-metric applicability, sample/repetition targets and whether additional targets are advisory or comparison eligibility gates remain open; selecting the presentation does not authorize implementation or settle full feature adoption.
-
-Keep actual poor-delivery outcomes distinct from lack of evidence. Unknown marking observations limit claims about marking preservation; they do not automatically invalidate independently sound delivery measurements. Existing missing/invalid/incompatible evidence gates remain in force independently of any new sample targets.
-
-Task 16 milestone suggestion (still proposed): one-way results now retain uncertainty, expiry, missing/inconsistent-clock reasons and explicit detail omissions alongside unchanged local RTT/delivery. These inputs can support descriptive evidence labels such as “clock bounds unverified” or “missing receiver records,” without a combined score or automatic winner. User requested an explanation on 2026-10-11; acceptance remains open. Before later implementation, decide which labels apply per metric, how repeated-run evidence is described, and verify that poor timely-delivery results remain visible beside measurement limitations.
-
-
-Task 21 milestone suggestion (still proposed): S06 can now use exact repeated delta ranges, per-trial incompatibility/completeness and phase failures to explain conflicting evidence without obscuring deadline outcomes. The inputs exist; the label vocabulary, per-metric applicability and validation of mixed/incomplete repetitions remain decisions. No confidence score, recommendation threshold or S06 implementation is accepted by this suggestion.
-
+Earlier confidence/presentation alternatives are historical. The user selected per-metric coverage/basis/count/reason labels, no numeric confidence score or automatic winner. Current advisory targets and mandatory gates are in [DESIGN.md](DESIGN.md#presentation-comparison-and-acceptance-handoff) and [USAGE.md](USAGE.md#evidence-presentation-and-live-run-progress).
 
 ## Retired native ARM acceptance checklist
 
-Archived 2026-10-13 after the user removed ARM from shipping scope. The following is the original, unexecuted task-24 checklist and its 2026-10-12 prerequisite state. It is historical planning, superseded by Windows/Linux x86-64 scope; task 25 was also unstarted. No native ARM acceptance is inferred.
+Tasks 24-25 originally required native ARM hardware and real runtime evidence. The user removed ARM on 2026-10-13; those cases are historical and impose no current release prerequisite.
 
-### Task 24: native Windows 11 ARM64 client
+## Implementation history through 2026-10-14
 
-**Deferred by user, incomplete; awaiting hardware, 2026-10-12.** F01/F07/F09, T08/T09/T12. The available host is x86-64 and the user confirmed no ARM64 machine is available. [Prerequisite audit](WORK_LOG.md#2026-10-12-native-arm64-client-prerequisite-audit). Resume only after a later selection when native hardware is available; task 25 is also deferred and has not started.
+The following dated records are condensed from the former work log. A completed local task means its named scope/checks passed, not full release acceptance. Exact commands, quantities, failures and original caveats remain in the pinned text.
 
-- [ ] Record physical ARM64 hardware/model, Windows 11 version/build, native ARM64 process/toolchain and product binary hash; document the Linux server's OS/kernel/architecture, permissions and path. Build/emulation evidence cannot replace the native client run.
-- [ ] Use fresh isolated stores, endpoint-local keys, public enrollment/import and explicit profiles/ports; preserve existing services/settings. Validate UDP/TCP exact-plan readiness and explicit wrong-identity/bind-collision failures.
-- [ ] Run finite UDP/TCP completion with authenticated server evidence transfer/reconciliation; retain endpoint manifests, raw evidence and actual Windows/ARM64 identity. Preserve deadline misses and unsupported/unknown clock/outer observations.
-- [ ] Exercise setup/data/grace cancellation and repeated reuse; verify bounded partial reports, unknown remote delivery where evidence is missing, released reservations/ports and joined owned processes.
-- [ ] Replay and export JSON/JSONL/CSV through fresh processes on both endpoints; compare exact summaries/identities and record artifact locations, checks and gaps before marking complete.
+### 2026-10-11 11:25:29 UTC+03:00 Bounded roadmap tasks
 
-The [task 23 fixture](../cmd/sneaky-port/cross_endpoint_windows_test.go) currently hardcodes `GOARCH=amd64` for both binaries and replay assertions. Adapt its architecture/build/evidence checks or use an equivalent reviewed native procedure when the actual endpoint is available; an unchanged rerun cannot validate ARM64. No fixture code or runtime behavior changed in this prerequisite audit.
+At the user's request, replaced the oversized original task 5 with separately checked tasks 5-35 in ROADMAP.md.
+
+### 2026-10-11 Bounded writer queues
+
+Completed selected task 7 only (F02/F07, T06/T15).
+
+### 2026-10-11 Windows race instrumentation
+
+User supplied successful terminal output from the current Windows x86-64 checkout after installing MSYS2 UCRT64 GCC 16.2.0 (Rev4) and setting session-local PATH, CC=gcc, CGO_ENABLED=1 and workspace caches. `go test -race ./internal/writer -count=20` passed (3.250 s); `go test -race ./...` passed every tested package with no race report.
+
+### 2026-10-11 Protocol traffic tweak requirement
+
+User requested protocol selection with related traffic tweaks, including fragmentation and header/payload sizes.
+
+### 2026-10-11 Documentation state consistency
+
+Corrected stale design-only/implementation-hold and execution-gate statements in `DESIGN.md` and `CHOICES.md` against current code, roadmap and recorded evidence.
+
+### 2026-10-11 Archive created and active records shortened
+
+Kept the current-state index and newest five prior entries in `WORK_LOG.md`; condensed `CHOICES.md` to all T01-T25 current answers, first-slice selection provenance and open details.
+
+### 2026-10-11 Proposal suggestions at suitable milestones
+
+Updated this index.
+
+### 2026-10-11 Independent UDP workers
+
+Completed selected task 8 only (F02/F07, T06/T15).
+
+### 2026-10-11 UDP phase accounting
+
+Completed selected task 9 only (F02/F07, T14/T15/T18), in three checked outcomes: multi-phase UDP workers, event/ticket-ledger integration, and metric/boundary fixtures.
+
+### 2026-10-11 TCP integration
+
+Completed selected task 10 only (F02/F07, T06/T14/T15/T18), in three checked outcomes: shared worker integration, complete/partial framing, and accounting/platform fixtures.
+
+### 2026-10-11 Finite run lifecycle
+
+Completed selected task 11 only (F01/F02/F06/F07/F09, T09/T11/T14/T15/T17/T22), in three checked outcomes: authenticated start/control ownership, finite phase/grace/cancellation engine, and CLI/platform fixtures.
+
+### 2026-10-11 Current traffic smoke check
+
+User asked whether traffic can run now.
+
+### 2026-10-11 Windows-to-Ubuntu UDP enrollment and traffic
+
+Diagnosed the user's SSH public-key rejection.
+
+### 2026-10-11 Local evidence persistence
+
+Completed selected task 12 only (F07/F09, T08/T14/T22).
+
+### 2026-10-11 Local report replay and export
+
+Completed selected task 13 only (F07/F09, T08/T14/T22).
+
+### 2026-10-11 Authenticated server evidence transfer and reconciliation
+
+Selected task 14 only (F07/F09, T08/T14/T22), split before implementation into authenticated bounded transfer, directional reconciliation, and persisted replay/export/fault validation.
+
+### 2026-10-11 Repository privacy cleanup
+
+User requested cleanup after a read-only audit confirmed the GitHub repository is public, its main branch matches the local commit, and 15 branch-history commits / 218 file versions contain no detected private-key markers, passwords or recognizable service/API tokens.
+
+### 2026-10-11 Live SSH clock sampling
+
+Completed selected task 15 only (F09, T22/T23), split into authenticated capture, bounded sampling/persistence and fault/platform fixtures.
+
+### 2026-10-11 Uncertainty-gated one-way integration
+
+Completed selected task 16 only (F09, T22/T23), split into causal model revisions, matched directional report/replay/export integration and timing/fault fixtures.
+
+### 2026-10-11 Protected local run API
+
+Completed selected task 17 only (F01/F08/F09, T06/T14/T22), in three checked outcomes: loopback request protection, finite-run ownership/idempotency, and security/lifecycle/platform fixtures.
+
+### 2026-10-11 Saved configuration and report API
+
+Completed selected task 18 only (F01/F07/F08/F09, T06/T14/T22), in three checked outcomes: saved profile revisions, public pairing/client-key operations, and report replay/import/export.
+
+### 2026-10-11 Dashboard setup and run controls
+
+Completed selected task 19 only (F01/F08/F10, T04/T06/T14/T25), in three bounded outcomes: embedded protected-origin shell/setup, pairing/profile controls, and frozen run controls/recovery fixtures.
+
+### 2026-10-12 Example evidence budget repair
+
+Investigated the user's dashboard failure before measurement.
+
+### 2026-10-12 Diagnostic and distribution views
+
+Completed selected task 20 only (F01/F07, T13/T14, basic S08/S09) in three separately checked outcomes: protected saved diagnostic projection, native SVG/paginated views, and explicit local-preflight controls.
+
+### 2026-10-12 Matched saved-run comparisons
+
+Completed selected task 21 only (F05/F07, T10/T18/T14) in three checked outcomes: bounded saved comparison/provenance, protected API/dashboard integration, and deterministic/file/script/real sequential endpoint fixtures.
+
+### 2026-10-12 Current launch state and Linux build refresh
+
+Checked the user's requested current state/run instructions against source, README, task 20/21 entries and their recorded validation.
+
+### 2026-10-12 Adapter extension gate
+
+Completed selected task 22 only (F08, T06/T14/T21): startup registry propagation and a common-workflow test adapter.
+
+### 2026-10-12 Windows-to-Linux CLI validation
+
+Completed selected task 23 only (F01/F07/F09, T08/T09/T12).
+
+### 2026-10-12 S06 evidence presentation choice
+
+User selected A in the S06 discussion: per-metric evidence labels with specific reasons, rather than a numeric confidence score.
+
+### 2026-10-12 Current UDP/TCP release choice resolution
+
+User instructed resolving all decisions, then explicitly limited scope to the current UDP/TCP release.
+
+### 2026-10-12 Native ARM64 client prerequisite audit
+
+Selected task 24 only (F01/F07/F09, T08/T09/T12).
+
+### 2026-10-12 Dashboard evidence and live progress
+
+User deferred ARM versions/validation and authorized the remaining dashboard work together.
+
+### 2026-10-12 Dashboard section navigation
+
+Paths: `internal/localapi/web/{index.html,dashboard.css,navigation.js,dashboard.js,diagnostics.js,compare.js,dashboard_test.cjs}`, `internal/localapi/dashboard{,_test}.go`; canonical operator/requirements/choice/proposal/roadmap/source-flow documents updated.
+
+### 2026-10-12 Dashboard password SSH workflow
+
+Automatic access: `POST /api/v1/dashboard-session` requires exact loopback authority/Origin, same-origin fetch metadata, a custom bootstrap header, safe request identity and no body/query.
+
+### 2026-10-12 Copied helper startup repair
+
+Checkpoint 23f fixes two independent causes: optional absolute **Server executable** selection resolves copies outside PATH; accepted host pins are now persisted immediately after successful SSH authentication, independently of helper initialization.
+
+### 2026-10-12 Managed helper and top connection bar
+
+Managed setup (23g): `build-dashboard.ps1` builds the matching unbundled Linux x86-64 server, compresses its artifact and embeds it into tagged Windows/Linux dashboards.
+
+### 2026-10-12 Dashboard usability and automatic results
+
+23i normal workflow: new `web/workspace.js` and dark console/cards/chart CSS; normal sidebar is Test/Saved results/Compare, with complete previous settings/run diagnostics and JSON behind Advanced.
+
+### 2026-10-12 Single-page conditional dashboard settings
+
+Removed both sidebar columns and replaced conflicting layered CSS with a single viewport layout.
+
+### 2026-10-12 Test-only dashboard and sixty-second repair
+
+23l: removed Saved results/Compare sections, activity navigation, comparison script loading and comparison setup controls.
+
+### 2026-10-13 Numeric receipts and live latency
+
+Replaced both main plot panels with one client-origin attempt-to-receipt RTT chart: elapsed seconds, explicit ms axis labels and completed-sample envelopes.
+
+### 2026-10-13 Controlled validation and x86-64 release scope
+
+Authorization/scope: user requested the remaining tasks together, autonomous routine choices, then explicitly removed ARM from the project.
+
+### 2026-10-13 Reference runtime and rendered browser progress
+
+User reaffirmed current UDP/TCP release only and confirmed no native server is available.
+
+### 2026-10-14 Final release evidence review
+
+Independent final review found no additional locally actionable implementation work.
+
+### 2026-10-14 First GitHub prerelease (completed)
+
+At the user's request, published [v0.1.0-alpha.1](https://github.com/rashidbestry/sneaky-port/releases/tag/v0.1.0-alpha.1), the repository's first release, as a prerelease targeting clean existing commit `5594182658b86bc1fbc49f0e787fabac4dc0217f`.
+
+### 2026-10-14 GitHub Actions workflow files (completed)
+
+Added `.github/workflows/ci.yml`: branch push/PR/manual and reusable exact-revision checks on Windows Server 2025/Ubuntu 24.04 x86-64.
+
+### 2026-10-14 Windows CI checkout formatting repair (completed)
+
+Inspected the user-supplied `Downloads/logs_104376436249` bundle for commit `87d37b7be391458c200d10591cad0a5f95de68fc`.
+
+### 2026-10-14 Windows CI grace cancellation fixture repair (completed)
+
+Inspected user-supplied `Downloads/logs_104380511001` for commit `760ff0130d6afbbe063e5b959098b1bd7fddfd68`.
+
+### 2026-10-14 CI live clock and controlled delay fixture repair (completed)
+
+User-supplied `Downloads/logs_104385833959` checks commit `5d130ca59e9dfce5f23afed38ddd50933abe1ef5`.
+
+### 2026-10-14 CI controlled population fixture repair (completed)
+
+User-supplied `Downloads/logs_104396312335` checks commit `b7d264eebe4383abcc1eaf682df06d77367577fd`.
+
+### 2026-10-14 CI lifecycle and comparison deadline repair (completed)
+
+`Downloads/logs_104460933501` checks clean commit `fbe694665f2cb5ca15f2e047018feafcebe0c8d3`.
+
+### 2026-10-14 CI reconciliation and empty-RTT fixture repair (completed)
+
+`Downloads/logs_104484007996` checks clean commit `357c25a450274cbff87033857059387e1d1ff3a5`.
+
+## Full historical record
+
+All nine pre-summary Markdown files are preserved in local Git revision **046eb60ce740064974ccc2983490de64552e678a**. Retrieve any original file with `git show REVISION:PATH`, for example:
+
+```text
+git show 046eb60ce740064974ccc2983490de64552e678a:docs/ARCHIVE.md
+git show 046eb60ce740064974ccc2983490de64552e678a:docs/WORK_LOG.md
+git show 046eb60ce740064974ccc2983490de64552e678a:docs/DESIGN.md
+```
+
+This preserves complete prior wording without duplicate snapshot files. It does not restore ignored raw reports/logs already deleted during authorized cleanup. Historical ARM plans, former dashboards, paths and superseded options are not current requirements.

@@ -1,33 +1,31 @@
 # Repository instructions
 
-## Scope and authorization
+<a id="scope-and-authorization"></a>
 
-sneaky-port measures FPS connection quality between Windows 11 clients and one Linux server. The gaming proxy is a separate project.
+## Scope
 
-**First-slice implementation authorized, 2026-10-11.** The user requested the original roadmap step 5, now split into bounded tasks in `ROADMAP.md`: implement and validate the agreed UDP/TCP slice in `DESIGN.md`. Other carriers and later features retain their existing scope/status. Preserve user-owned services and settings.
+sneaky-port measures FPS connection quality; the gaming proxy is separate. The user authorized the UDP/TCP first slice on 2026-10-11. Shipping targets are Windows 11/Linux x86-64; ARM was removed on 2026-10-13. Future protocols retain their [scope/status](ROADMAP.md#future-features-and-proposals). Latest user instructions win.
 
 ## Task workflow
 
-- Optimize context and tokens: use targeted searches/reads and concise updates, batch independent checks, and reuse verified results. Expand context only when needed; never skip required work or validation to save tokens.
+- Inspect Git status, affected files and [WORK_LOG.md](WORK_LOG.md). Verify behavior in code; old log claims may be stale. Consult [DESIGN.md](DESIGN.md) for requirements/decisions and [ROADMAP.md](ROADMAP.md) for tasks/features. Search [ARCHIVE.md](ARCHIVE.md) only for relevant older context.
+- Work on the selected task. Split large work into checkable outcomes; do not absorb adjacent work without authorization. Make routine choices autonomously within the authorized scope.
+- Batch independent reads/checks and keep updates concise. Never skip required validation to save time or tokens.
+- After meaningful changes, update affected docs/statuses and append dated Europe/Istanbul evidence: what/why, paths, checks/results, failures and gaps. Mark a finished roadmap heading with exact ` (completed)` only after its required checks; report the next step.
+- At relevant milestones, suggest eligible F/S features with benefit, prerequisites and remaining decisions. Proposed/accepted scope does not itself authorize implementation; avoid repeated suggestions without new evidence.
+- Preserve unrelated files, settings, services and uncommitted work. Leave changes uncommitted unless requested.
+- Comment every function, including test/helper functions, with purpose and timing/accounting limits. Link useful implementation notes directly to source; no separate flowchart is maintained.
+- Run checks appropriate to the change. Distinguish build, component/loopback, WSL, native, impairment, rendered-browser and live evidence. Current Linux runtime testing is user-deferred.
+- After validation, remove task-owned temporary binaries, logs, fixture stores/profiles/reports and smoke staging/archives. Keep concise results in the log; preserve user data, current deliverables and reusable dependencies. Prefer automatically cleaned test directories.
 
-- Read [WORK_LOG.md](WORK_LOG.md)'s current index/recent entries and inspect Git status/affected files. Search [ARCHIVE.md](ARCHIVE.md) by date, feature/choice ID or heading only when older evidence is needed; read relevant excerpts. Verify behavior from code before duplicating/fixing it; log claims can be stale.
-- Consult [DESIGN.md](DESIGN.md) for requirements and technical decisions, and [ROADMAP.md](ROADMAP.md) for next actions and feature statuses. Latest user instructions win; plans/recommendations do not imply acceptance or execution authorization.
-- Split large roadmap work into separately checkable outcomes before implementation. Work on the selected task only, record its checks/status and report the next step; do not absorb adjacent tasks into the same conversation unless the user requests them. Split expanding scope again before proceeding.
-- At relevant milestones, review [future features](ROADMAP.md#future-features-and-proposals) and proactively suggest functionalities whose prerequisites are now met. Explain the benefit, why the timing fits, and remaining decisions/checks using stable F/S IDs; avoid repeating suggestions without new evidence. Keep proposed versus accepted status explicit; a suggestion does not accept or authorize additional work.
-- After meaningful changes, update affected documents/statuses and the work-log index; append dated evidence with what/why, paths, actual state, checks/results and gaps. Use known Europe/Istanbul timestamps; never invent results. Preserve stable F/S/T identifiers, decision provenance and historical log entries.
-- After validation, remove task-owned temporary binaries, logs, fixture profiles/stores/reports and smoke-test staging/archives. Record concise results and failures in `WORK_LOG.md`; preserve user data, current deliverables and reusable dependencies. Prefer automatically cleaned temporary directories for tests.
-- Automatically mark finished roadmap outcomes complete and append ` (completed)` to their headings after required checks. Keep partial/unvalidated work explicit; planning completion is not implementation.
+<a id="essential-constraints"></a>
 
-## Essential constraints
+## Measurement constraints
 
-- Preserve real, tool-managed TCP/UDP/TLS/QUIC/WireGuard/Hysteria2/DNS coverage and extensible adapters using shared measurement/UI/configuration/reporting contracts.
-- Include direct/resolver-mediated DNS and port controls; DNS prioritization is an ISP-specific hypothesis. Independent directional priority applies to actual outer traffic, with requested/applied/observed evidence. No product shaping, queue management or automatic routing.
-- Preserve independent scheduling, local monotonic timing, honest loss/late/stream-stall accounting and evidence-based comparisons. One-way delay needs valid clock calibration and uncertainty; eventual stream delivery does not prove zero network loss. Report unsupported capabilities without silent substitutions.
-- Preserve unrelated files/settings; leave changes uncommitted unless requested. Check documentation links, whitespace and scope. Later code uses applicable `DESIGN.md` acceptance gates; distinguish build, loopback, native platform, impairment and live-network evidence.
-- Comment every function, including test/helper functions, explaining its purpose and any important timing/accounting limits. Link implementation notes directly to source; distinguish implemented paths from remaining work.
+Preserve authentic adapters and shared engine/UI/config/report contracts, direct/resolver DNS and port controls, independent outer-traffic priority, monotonic timing and honest skipped/late/loss/stall accounting. Require calibrated bounds/uncertainty for one-way claims and relevant capture evidence for priority claims. Unsupported requests reject visibly. No silent carrier/port substitutions, shaping, queue management, automatic routing, automatic winner or numeric confidence score.
 
-## Keep documentation concise
+<a id="keep-documentation-concise"></a>
 
-Review affected Markdown guidance during meaningful changes. Summarize oversized sections, remove repetition/stale instructions and link to the canonical document instead of copying details. Keep active instructions and next actions short; do not create redundant instruction files or skills.
+## Documentation
 
-Preserve requirements, stable IDs, decisions, open questions and evidence when shortening. Keep current/recent evidence in `WORK_LOG.md` and current answers in `DESIGN.md`; archive older history/superseded discussions in `ARCHIVE.md`, preserving dated text and updating links. Log each migration, retained coverage and checks; never treat archived plans as current instructions or runtime evidence.
+Keep every Markdown file short and canonical. Preserve stable F/S/T IDs, decisions/provenance, open questions, evidence limits and dates. Current summaries belong in `WORK_LOG.md`, older summaries in `ARCHIVE.md`, decisions in `DESIGN.md` and features/actions in `ROADMAP.md`. When summarizing committed history, record the exact Git revision for retrieving the full text. Check links/anchors, scope and whitespace; do not create duplicate snapshot documents.
