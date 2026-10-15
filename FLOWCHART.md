@@ -220,6 +220,8 @@ Sources: [epoch.go](internal/elapsed/epoch.go) (`New`, `Now`, `ticksNS`, `Metada
 
 Production starts at offset zero in this epoch; no QPC/Go origin bridge or mid-run source fallback exists. Socket/context deadlines remain operational timeouts. Legacy component configurations deliberately retain their supplied Go anchor. Reports preserve optional `clock_details`; old reports remain replayable, while saved comparisons distinguish different or missing clock provenance. Counter frequency/tick precision establishes neither oscillator accuracy nor verified one-way bounds. [Arithmetic/failure/concurrency tests](internal/elapsed/epoch_test.go), [real UDP/TCP capture/replay tests](internal/control/elapsed_test.go), [observation and repair evidence](WORK_LOG.md#2026-10-13-reference-runtime-and-rendered-browser-progress).
 
+The real provenance fixture's `elapsedSampleAccounting` checks both endpoints' exact eligible warmup/main/phase populations, deadline classes and observed RTT extrema. Empty populations retain unavailable values; equal captured timestamps retain zero intervals. It never requires a host-dependent positive RTT sample. [Synthetic production-ledger cases](internal/control/elapsed_population_test.go) cover empty/zero/mixed populations, cutoff equality, duplicates and invalid summaries; native source progress and counter failure tests remain separate.
+
 ## Profiles and planned slots
 
 ```mermaid
