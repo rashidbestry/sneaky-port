@@ -1,6 +1,6 @@
 # Project archive
 
-Historical evidence and earlier choice discussions, archived on 2026-10-11. These records describe their original dates and may be superseded. Current status belongs in [WORK_LOG.md](WORK_LOG.md), current answers/open questions in [CHOICES.md](CHOICES.md), and requirements in [DESIGN.md](DESIGN.md).
+Historical evidence and earlier choice discussions, archived on 2026-10-11. These records describe their original dates and may be superseded. Current status belongs in [WORK_LOG.md](WORK_LOG.md), current answers/open questions in [technical choices](DESIGN.md#technical-choices), and requirements in [DESIGN.md](DESIGN.md).
 
 ## Index
 
@@ -22,7 +22,7 @@ Search by date, feature/choice ID or heading before reading an excerpt. Preserve
 
 ### 2026-10-10 — Optional suggestions saved
 
-- Created the suggestions file originally named `NotImplementedYet.md` (now [PROPOSALS.md](PROPOSALS.md)) with S01-S06: staged experiments, burst metrics, coordination separation, size/rate sweeps, exportable recommendations, and separate quality/confidence.
+- Created the suggestions file originally named `NotImplementedYet.md` (now [feature proposals](ROADMAP.md#future-features-and-proposals)) with S01-S06: staged experiments, burst metrics, coordination separation, size/rate sweeps, exportable recommendations, and separate quality/confidence.
 - Linked the backlog from the overview and instructions. Suggestions remain proposals rather than approved requirements.
 - Validation: local links and whitespace checked. No implementation added. Exact historical time was not recorded.
 
@@ -37,7 +37,7 @@ Search by date, feature/choice ID or heading before reading an excerpt. Preserve
 
 ### 2026-10-10 21:33 UTC+03:00 — Forward proposals and backward work history
 
-- Renamed `NotImplementedYet.md` to [PROPOSALS.md](PROPOSALS.md), preserving S01-S06 and their unapproved status.
+- Renamed `NotImplementedYet.md` to [feature proposals](ROADMAP.md#future-features-and-proposals), preserving S01-S06 and their unapproved status.
 - Added F01-F07 to index the already accepted future scope; all remain not started. No new feature acceptance or implementation authorization was inferred.
 - Updated [AGENTS.md](AGENTS.md), [README.md](../README.md), and [DESIGN.md](DESIGN.md) links and tracking rules. Forward statuses/decisions belong in `PROPOSALS.md`; completed changes and validation belong here, linked by feature/proposal identifier.
 - Simplified this current-state index to actual repository/implementation state; future feature details now live in the proposals index.
@@ -55,7 +55,7 @@ Search by date, feature/choice ID or heading before reading an excerpt. Preserve
 
 ### 2026-10-11 05:29 UTC+03:00 — Dedicated technical choices file
 
-- Created [CHOICES.md](CHOICES.md) at the user's request and moved the existing T01-T11 table and research notes out of `DESIGN.md`. Preserved Go/local browser dashboard as the only confirmed technical answers.
+- Created [technical choices](DESIGN.md#technical-choices) at the user's request and moved the existing T01-T11 table and research notes out of `DESIGN.md`. Preserved Go/local browser dashboard as the only confirmed technical answers.
 - Added explicit discussion questions for the existing recommendations and T12-T18 for previously unresolved platform, frontend, schema, workload, DNS, priority, and ranking details. No additional feature or choice was approved.
 - Updated `AGENTS.md`, `README.md`, `PROPOSALS.md`, and the current-state index to route technical options/answers to `CHOICES.md`, future features to `PROPOSALS.md`, and completed work/history here. Kept a brief confirmed-stack pointer in `DESIGN.md`.
 - State: documentation only; no implementation, dependencies, runtime configuration, services, or network experiments added. Existing ignore rules are unchanged.
@@ -295,7 +295,7 @@ Recorded: 2026-10-11 11:00:55 UTC+03:00 (Europe/Istanbul).
 
 ## Archived choices snapshot 2026-10-11
 
-Use this file for technical questions, options, recommendations, and confirmed decisions. [DESIGN.md](DESIGN.md) contains product requirements, [PROPOSALS.md](PROPOSALS.md) tracks future features, and [WORK_LOG.md](WORK_LOG.md) records completed work and decision history.
+Use this file for technical questions, options, recommendations, and confirmed decisions. [DESIGN.md](DESIGN.md) contains product requirements, [feature proposals](ROADMAP.md#future-features-and-proposals) tracks future features, and [WORK_LOG.md](WORK_LOG.md) records completed work and decision history.
 
 A recommendation is not user acceptance, and a confirmed technology choice alone is not implementation permission. Preserve stable T identifiers. User explicitly authorized the first slice on 2026-10-11; [foundation pins/checks](THIRD_PARTY_NOTICES.md) and [actual progress](#2026-10-11-first-implementation-foundations) supersede earlier historical hold statements.
 
@@ -478,7 +478,7 @@ Before the selected slice is implemented, resolve only its needed choices: compa
 
 ## Reference-tool reuse and validation
 
-Recorded: 2026-10-11. The user agreed to selectively learn from functionality in the researched tools and improve it where useful, explicitly requesting planning only. This confirms an evaluation direction under T19, not every proposal, a dependency, a license choice, code copying or execution. [Candidate mapping and S07-S11](PROPOSALS.md#reference-tool-candidates), [roadmap review](ROADMAP.md#3b-evaluate-selective-reuse-and-validation-baselines-completed), [decision evidence](#2026-10-11-reference-tool-planning-recorded).
+Recorded: 2026-10-11. The user agreed to selectively learn from functionality in the researched tools and improve it where useful, explicitly requesting planning only. This confirms an evaluation direction under T19, not every proposal, a dependency, a license choice, code copying or execution. [Candidate mapping and S07-S11](ROADMAP.md#reference-tool-candidates), [roadmap review](ROADMAP.md#3b-evaluate-selective-reuse-and-validation-baselines-completed), [decision evidence](#2026-10-11-reference-tool-planning-recorded).
 
 | Choice | Alternatives and recommendation | Remaining decision |
 | --- | --- | --- |
@@ -543,7 +543,7 @@ At this review milestone, T14/T15 queue/phase/receipt schemas, T09 trust, T21 re
 
 ## Protocol extensibility choices
 
-User confirmed the requirement on 2026-10-11: protocols must be easy to add in later releases without broadly rewriting shared modules. See [design contract](DESIGN.md#protocol-extensibility), F08 in [PROPOSALS.md](PROPOSALS.md), and [decision evidence](#2026-10-11-protocol-extensibility-requirement-recorded). This extends T06's confirmed adapter boundaries; it does not select additional protocols or authorize implementation.
+User confirmed the requirement on 2026-10-11: protocols must be easy to add in later releases without broadly rewriting shared modules. See [design contract](DESIGN.md#protocol-extensibility), F08 in [feature proposals](ROADMAP.md#future-features-and-proposals), and [decision evidence](#2026-10-11-protocol-extensibility-requirement-recorded). This extends T06's confirmed adapter boundaries; it does not select additional protocols or authorize implementation.
 
 | ID | Question | State |
 | --- | --- | --- |
@@ -564,7 +564,7 @@ Initial recommendation: application-local clock mapping, preserving monotonic me
 
 ## StarTrinity documentation review
 
-Reviewed: 2026-10-11. User requested checking StarTrinity as another reference. This is vendor-documentation research, not a source-code audit, feature acceptance, implementation or execution. Existing confirmed IRTT/iperf2/Crusader dispositions, S07-S11 acceptance, F08 extensibility and F09 control/calibrated one-way requirements remain intact. [Candidate mapping/S12](PROPOSALS.md#s12-classified-degradation-episodes-and-observed-availability), [review evidence](#2026-10-11-startrinity-reference-review-recorded).
+Reviewed: 2026-10-11. User requested checking StarTrinity as another reference. This is vendor-documentation research, not a source-code audit, feature acceptance, implementation or execution. Existing confirmed IRTT/iperf2/Crusader dispositions, S07-S11 acceptance, F08 extensibility and F09 control/calibrated one-way requirements remain intact. [Candidate mapping/S12](ROADMAP.md#s12-classified-degradation-episodes-and-observed-availability), [review evidence](#2026-10-11-startrinity-reference-review-recorded).
 
 | Product / evidence | Useful mapping | Limits and recommended disposition |
 | --- | --- | --- |

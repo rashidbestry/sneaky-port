@@ -30,6 +30,6 @@ UDP/TCP is implemented; full release acceptance remains incomplete. Production o
 ## Project documents
 
 - [Operator guide](docs/USAGE.md): source builds, pairing, CLI, API, reports and measurement limits.
-- [Design](docs/DESIGN.md), [technical choices](docs/CHOICES.md) and [code flow](docs/FLOWCHART.md).
-- [Roadmap](docs/ROADMAP.md), [feature proposals](docs/PROPOSALS.md) and [history](docs/ARCHIVE.md).
+- [Design and technical choices](docs/DESIGN.md), [roadmap and future features](docs/ROADMAP.md).
+- [Validation record](docs/WORK_LOG.md) and [history](docs/ARCHIVE.md).
 - [Dependency notices](docs/THIRD_PARTY_NOTICES.md) and [repository instructions](docs/AGENTS.md).
